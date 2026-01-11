@@ -28,11 +28,14 @@ class CustomerRepo(BaseCRUDRepo[Customer, CustomerCreate, CustomerUpdate]):
 
     async def get_by_name(self, name: str) -> Customer | None:
         async with self.db.session() as session:
-            result = await session.execute(select(self.model).where(self.model.name == name))
+            result = await session.execute(
+                select(self.model).where(self.model.name == name)
+            )
             return result.scalars().first()
 
     async def get_by_email(self, email: str) -> Customer | None:
         async with self.db.session() as session:
-            result = await session.execute(select(self.model).where(self.model.email == email))
+            result = await session.execute(
+                select(self.model).where(self.model.email == email)
+            )
             return result.scalars().first()
-

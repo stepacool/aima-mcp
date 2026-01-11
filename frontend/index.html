@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoMCP - MCP Server Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AutoMCP</h1>
+            <p class="subtitle">Create custom MCP servers through conversation</p>
+        </header>
+
+        <main>
+            <div class="chat-container">
+                <div id="chat-messages" class="chat-messages">
+                    <div class="message assistant">
+                        <div class="message-content">
+                            Hello! I'm here to help you create a custom MCP server.
+                            Tell me what kind of tools and capabilities you'd like your server to have,
+                            and I'll help you design and generate it.
+                        </div>
+                    </div>
+                </div>
+
+                <form id="chat-form" class="chat-input-container">
+                    <textarea
+                        id="message-input"
+                        placeholder="Describe what you want your MCP server to do..."
+                        rows="3"
+                    ></textarea>
+                    <button type="submit" id="send-btn">Send</button>
+                </form>
+            </div>
+
+            <div id="design-panel" class="design-panel hidden">
+                <h2>MCP Server Design</h2>
+                <div id="design-content"></div>
+                <div class="action-buttons">
+                    <button id="generate-btn" class="primary">Generate Code</button>
+                    <button id="refine-btn" class="secondary">Continue Refining</button>
+                </div>
+            </div>
+
+            <div id="code-panel" class="code-panel hidden">
+                <h2>Generated Code</h2>
+                <pre><code id="code-content"></code></pre>
+                <div class="deploy-section">
+                    <h3>Deploy</h3>
+                    <select id="deploy-target">
+                        <option value="standalone">Standalone (Local)</option>
+                        <option value="modal">Modal</option>
+                        <option value="vercel">Vercel</option>
+                        <option value="cloudflare">Cloudflare Workers</option>
+                    </select>
+                    <button id="deploy-btn" class="primary">Generate Deployment Package</button>
+                </div>
+            </div>
+
+            <div id="deploy-panel" class="deploy-panel hidden">
+                <h2>Deployment Package</h2>
+                <div id="deploy-instructions"></div>
+                <div id="deploy-files"></div>
+            </div>
+        </main>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script src="api-client.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

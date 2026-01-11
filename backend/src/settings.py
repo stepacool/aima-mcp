@@ -16,6 +16,12 @@ class MonitoringSettings(BaseSettings):
     LOGFIRE_TOKEN: str = ""
 
 
+class LLMSettings(BaseSettings):
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    DEFAULT_MODEL: str = "anthropic/claude-3.5-sonnet"
+
+
 class PostgresSettings(BaseSettings):
     """
     docker run --name postgres-test -e POSTGRES_USER=myuser -e POSTGRES_PASSWORD=mypassword -e POSTGRES_DB=test_aimalabs_database -p 5432:5432 -d postgres:latest
@@ -31,7 +37,9 @@ class PostgresSettings(BaseSettings):
     SYNC_DB_DSN: AnyUrl | str | None = None
 
     @staticmethod
-    def _make_db_uri(scheme: str, value: str | None, values: ValidationInfo) -> AnyUrl | str:
+    def _make_db_uri(
+        scheme: str, value: str | None, values: ValidationInfo
+    ) -> AnyUrl | str:
         if isinstance(value, str):
             return value
         return AnyUrl.build(
@@ -45,18 +53,23 @@ class PostgresSettings(BaseSettings):
 
     @field_validator("ASYNC_DB_DSN", mode="before")
     @classmethod
-    def async_postgres_dsn(cls, v: str | None, values: FieldValidationInfo) -> AnyUrl | str:
+    def async_postgres_dsn(
+        cls, v: str | None, values: FieldValidationInfo
+    ) -> AnyUrl | str:
         return cls._make_db_uri(scheme="postgresql+asyncpg", value=v, values=values)
 
     @field_validator("SYNC_DB_DSN", mode="before")
     @classmethod
-    def sync_postgres_dsn(cls, v: str | None, values: FieldValidationInfo) -> AnyUrl | str:
+    def sync_postgres_dsn(
+        cls, v: str | None, values: FieldValidationInfo
+    ) -> AnyUrl | str:
         return cls._make_db_uri(scheme="postgresql", value=v, values=values)
 
 
 class Settings(
     AppSettings,
     MonitoringSettings,
+    LLMSettings,
     PostgresSettings,
     BaseSettings,
 ):

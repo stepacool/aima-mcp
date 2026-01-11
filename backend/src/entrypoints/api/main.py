@@ -1,17 +1,24 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import logfire
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
-
-from infrastructure.repositories.repo_provider import Provider
-from settings import settings
 from opentelemetry.sdk.trace.sampling import (
     ALWAYS_OFF,
     ALWAYS_ON,
     ParentBased,
     Sampler,
 )
+
+from entrypoints.api.routes import api_router
+from infrastructure.repositories.repo_provider import Provider
+from settings import settings
+
+FRONTEND_DIR = Path(__file__).parent.parent.parent.parent.parent / "frontend"
 
 
 @asynccontextmanager
@@ -72,7 +79,34 @@ class Application:
         return self.app
 
     def register_urls(self) -> None:
-        pass
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        self.app.include_router(api_router)
+
+        # Serve frontend static files
+        if FRONTEND_DIR.exists():
+            self.app.mount(
+                "/static",
+                StaticFiles(directory=FRONTEND_DIR),
+                name="static",
+            )
+
+            @self.app.get("/")
+            async def serve_index():
+                return FileResponse(FRONTEND_DIR / "index.html")
+
+            @self.app.get("/{path:path}")
+            async def serve_frontend(path: str):
+                file_path = FRONTEND_DIR / path
+                if file_path.exists() and file_path.is_file():
+                    return FileResponse(file_path)
+                return FileResponse(FRONTEND_DIR / "index.html")
+
     def create_database_pool(self) -> None:
         Provider.get_db(
             connect_args={

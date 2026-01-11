@@ -16,8 +16,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from uuid import UUID, uuid4
 
-from sqlalchemy import String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase, declarative_base, mapped_column, Mapped
 
@@ -29,9 +28,15 @@ class CustomBase(AsyncAttrs, DeclarativeBase):
     def __tablename__(cls):
         return cls.__name__.lower()
 
-    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), nullable=True)
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), onupdate=func.now(), nullable=True
+    )
 
 
 Base = declarative_base(cls=CustomBase)
