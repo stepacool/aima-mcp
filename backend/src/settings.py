@@ -22,10 +22,10 @@ class PostgresSettings(BaseSettings):
     """
 
     POSTGRES_HOST: str = "0.0.0.0"
-    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT: int = 5433
     POSTGRES_USER: str = "myuser"
     POSTGRES_PASSWORD: str = "mypassword"
-    POSTGRES_DB: str = "mydatabase"
+    POSTGRES_DB: str = "test_aimalabs_database"
 
     ASYNC_DB_DSN: AnyUrl | str | None = None
     SYNC_DB_DSN: AnyUrl | str | None = None
