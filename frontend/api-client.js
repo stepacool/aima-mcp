@@ -31,39 +31,61 @@ class APIClient {
         return response.json();
     }
 
-    // Chat endpoints
-    async sendMessage(message) {
-        const body = {
-            message,
-            session_id: this.sessionId,
-        };
-
-        const response = await this.request('/api/chat/message', {
+    // Step 1: Describe system and get suggested actions
+    async describeSystem(description) {
+        const response = await this.request('/api/chat/describe', {
             method: 'POST',
-            body,
+            body: {
+                description,
+                session_id: this.sessionId,
+            },
         });
-
         this.sessionId = response.session_id;
         return response;
     }
 
-    async getSession() {
+    // Step 2: Refine actions with feedback
+    async refineActions(feedback) {
         if (!this.sessionId) {
             throw new Error('No active session');
         }
-        return this.request(`/api/chat/session/${this.sessionId}`);
+        return this.request('/api/chat/refine', {
+            method: 'POST',
+            body: {
+                session_id: this.sessionId,
+                feedback,
+            },
+        });
     }
 
-    async confirmDesign() {
+    // Confirm actions and move to auth step
+    async confirmActions() {
         if (!this.sessionId) {
             throw new Error('No active session');
         }
-        return this.request(`/api/chat/session/${this.sessionId}/confirm-design`, {
+        return this.request(`/api/chat/actions/confirm?session_id=${this.sessionId}`, {
             method: 'POST',
         });
     }
 
-    // Server endpoints
+    // Step 3: Configure authentication
+    async configureAuth(authType, oauthConfig = {}) {
+        if (!this.sessionId) {
+            throw new Error('No active session');
+        }
+        return this.request('/api/chat/auth/configure', {
+            method: 'POST',
+            body: {
+                session_id: this.sessionId,
+                auth_type: authType,
+                oauth_provider_url: oauthConfig.providerUrl || null,
+                oauth_client_id: oauthConfig.clientId || null,
+                oauth_scopes: oauthConfig.scopes || null,
+            },
+        });
+    }
+
+    // Generate code
     async generateCode() {
         if (!this.sessionId) {
             throw new Error('No active session');
@@ -73,13 +95,7 @@ class APIClient {
         });
     }
 
-    async getCode() {
-        if (!this.sessionId) {
-            throw new Error('No active session');
-        }
-        return this.request(`/api/servers/code/${this.sessionId}`);
-    }
-
+    // Deploy
     async deploy(target = 'standalone') {
         if (!this.sessionId) {
             throw new Error('No active session');
@@ -87,21 +103,24 @@ class APIClient {
         return this.request('/api/servers/deploy', {
             method: 'POST',
             body: {
-                server_id: this.sessionId,
+                session_id: this.sessionId,
                 target,
             },
         });
     }
 
-    async getDeploymentTargets() {
-        return this.request('/api/servers/targets');
+    // Get session state
+    async getSession() {
+        if (!this.sessionId) {
+            throw new Error('No active session');
+        }
+        return this.request(`/api/chat/session/${this.sessionId}`);
     }
 
-    // Session management
+    // Reset session
     resetSession() {
         this.sessionId = null;
     }
 }
 
-// Export singleton instance
 const apiClient = new APIClient();

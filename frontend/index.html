@@ -3,72 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoMCP - MCP Server Generator</title>
+    <title>AutoMCP - MCP Server Builder</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>AutoMCP</h1>
-            <p class="subtitle">Create custom MCP servers through conversation</p>
+            <p class="subtitle">Build MCP servers through conversation</p>
         </header>
 
+        <!-- Progress Steps -->
+        <div class="progress-bar">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Describe</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Actions</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Auth</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Deploy</div>
+            </div>
+        </div>
+
         <main>
-            <div class="chat-container">
-                <div id="chat-messages" class="chat-messages">
-                    <div class="message assistant">
-                        <div class="message-content">
-                            Hello! I'm here to help you create a custom MCP server.
-                            Tell me what kind of tools and capabilities you'd like your server to have,
-                            and I'll help you design and generate it.
+            <!-- Step 1: Describe System -->
+            <section id="step-describe" class="wizard-step active">
+                <h2>What should your MCP server do?</h2>
+                <p class="step-desc">Describe the system or service you want to create. We'll suggest actions based on your description.</p>
+
+                <textarea
+                    id="system-description"
+                    placeholder="Example: A server that manages my GitHub repositories - list repos, create issues, manage pull requests..."
+                    rows="4"
+                ></textarea>
+
+                <button id="describe-btn" class="primary large">Generate Actions</button>
+            </section>
+
+            <!-- Step 2: Review Actions -->
+            <section id="step-actions" class="wizard-step hidden">
+                <div class="step-header">
+                    <div>
+                        <h2 id="server-name">MCP Server</h2>
+                        <p class="step-desc" id="server-description"></p>
+                    </div>
+                </div>
+
+                <div class="actions-list" id="actions-list">
+                    <!-- Actions will be rendered here -->
+                </div>
+
+                <div class="refine-section">
+                    <input type="text" id="refine-input" placeholder="Add more actions or modify existing ones...">
+                    <button id="refine-btn" class="secondary">Refine</button>
+                </div>
+
+                <div class="step-actions">
+                    <button id="back-to-describe" class="secondary">Back</button>
+                    <button id="confirm-actions-btn" class="primary">Configure Auth</button>
+                </div>
+            </section>
+
+            <!-- Step 3: Configure Auth -->
+            <section id="step-auth" class="wizard-step hidden">
+                <h2>Authentication Setup</h2>
+                <p class="step-desc">How should actions that require authentication be handled?</p>
+
+                <div class="auth-options">
+                    <label class="auth-option" data-auth="none">
+                        <input type="radio" name="auth-type" value="none" checked>
+                        <div class="auth-option-content">
+                            <strong>No Authentication</strong>
+                            <span>Actions don't require auth or handle it internally</span>
+                        </div>
+                    </label>
+
+                    <label class="auth-option" data-auth="ephemeral">
+                        <input type="radio" name="auth-type" value="ephemeral">
+                        <div class="auth-option-content">
+                            <strong>Ephemeral Credentials</strong>
+                            <span>Credentials passed at runtime (API keys, tokens)</span>
+                        </div>
+                    </label>
+
+                    <label class="auth-option" data-auth="oauth">
+                        <input type="radio" name="auth-type" value="oauth">
+                        <div class="auth-option-content">
+                            <strong>OAuth Integration</strong>
+                            <span>Connect to your OAuth provider</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="oauth-config" class="oauth-config hidden">
+                    <input type="text" id="oauth-provider" placeholder="OAuth Provider URL">
+                    <input type="text" id="oauth-client-id" placeholder="Client ID">
+                    <input type="text" id="oauth-scopes" placeholder="Scopes (comma-separated)">
+                </div>
+
+                <div class="step-actions">
+                    <button id="back-to-actions" class="secondary">Back</button>
+                    <button id="confirm-auth-btn" class="primary">Review & Deploy</button>
+                </div>
+            </section>
+
+            <!-- Step 4: Review & Deploy -->
+            <section id="step-deploy" class="wizard-step hidden">
+                <h2>Ready to Deploy</h2>
+
+                <div class="summary-card">
+                    <h3 id="summary-name">Server Name</h3>
+                    <p id="summary-description"></p>
+                    <div class="summary-stats">
+                        <div class="stat">
+                            <span class="stat-value" id="summary-actions-count">0</span>
+                            <span class="stat-label">Actions</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="summary-auth-type">None</span>
+                            <span class="stat-label">Auth Type</span>
                         </div>
                     </div>
                 </div>
 
-                <form id="chat-form" class="chat-input-container">
-                    <textarea
-                        id="message-input"
-                        placeholder="Describe what you want your MCP server to do..."
-                        rows="3"
-                    ></textarea>
-                    <button type="submit" id="send-btn">Send</button>
-                </form>
-            </div>
-
-            <div id="design-panel" class="design-panel hidden">
-                <h2>MCP Server Design</h2>
-                <div id="design-content"></div>
-                <div class="action-buttons">
-                    <button id="generate-btn" class="primary">Generate Code</button>
-                    <button id="refine-btn" class="secondary">Continue Refining</button>
+                <div class="deploy-options">
+                    <h3>Select Deployment Target</h3>
+                    <div class="deploy-targets">
+                        <label class="deploy-target selected">
+                            <input type="radio" name="deploy-target" value="standalone" checked>
+                            <div class="target-content">
+                                <strong>Standalone</strong>
+                                <span>Run locally with Python</span>
+                            </div>
+                        </label>
+                        <label class="deploy-target">
+                            <input type="radio" name="deploy-target" value="modal">
+                            <div class="target-content">
+                                <strong>Modal</strong>
+                                <span>Serverless deployment</span>
+                            </div>
+                        </label>
+                        <label class="deploy-target">
+                            <input type="radio" name="deploy-target" value="vercel">
+                            <div class="target-content">
+                                <strong>Vercel</strong>
+                                <span>Edge functions</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
-            </div>
 
-            <div id="code-panel" class="code-panel hidden">
-                <h2>Generated Code</h2>
-                <pre><code id="code-content"></code></pre>
-                <div class="deploy-section">
-                    <h3>Deploy</h3>
-                    <select id="deploy-target">
-                        <option value="standalone">Standalone (Local)</option>
-                        <option value="modal">Modal</option>
-                        <option value="vercel">Vercel</option>
-                        <option value="cloudflare">Cloudflare Workers</option>
-                    </select>
-                    <button id="deploy-btn" class="primary">Generate Deployment Package</button>
+                <div class="step-actions">
+                    <button id="back-to-auth" class="secondary">Back</button>
+                    <button id="deploy-btn" class="primary large">Deploy</button>
                 </div>
-            </div>
 
-            <div id="deploy-panel" class="deploy-panel hidden">
-                <h2>Deployment Package</h2>
-                <div id="deploy-instructions"></div>
-                <div id="deploy-files"></div>
-            </div>
+                <!-- Code Preview (collapsed by default) -->
+                <details class="code-preview">
+                    <summary>View Generated Code</summary>
+                    <pre><code id="code-content"></code></pre>
+                </details>
+            </section>
+
+            <!-- Deployment Result -->
+            <section id="step-result" class="wizard-step hidden">
+                <h2>Deployment Package Ready</h2>
+                <div id="deploy-instructions" class="instructions"></div>
+                <div id="deploy-files" class="files-list"></div>
+                <button id="start-over-btn" class="secondary">Create Another Server</button>
+            </section>
         </main>
 
         <div id="loading" class="loading hidden">
             <div class="spinner"></div>
-            <p>Processing...</p>
+            <p id="loading-text">Processing...</p>
         </div>
     </div>
 

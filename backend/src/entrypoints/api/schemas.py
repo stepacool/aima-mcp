@@ -3,95 +3,95 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from services.chat_service import ActionSpec, AuthType, FlowStep
+
 
 class ChatMessageRequest(BaseModel):
     message: str = Field(..., description="User message")
-    session_id: UUID | None = Field(None, description="Existing session ID to continue")
+    session_id: UUID | None = Field(None, description="Existing session ID")
 
 
 class ChatMessageResponse(BaseModel):
     response: str
     session_id: UUID
-    design_complete: bool = False
+    step: FlowStep
+    actions_ready: bool = False
     design: dict[str, Any] | None = None
 
 
-class MCPServerCreate(BaseModel):
-    name: str
-    description: str | None = None
+class DescribeSystemRequest(BaseModel):
+    description: str = Field(..., description="System description")
+    session_id: UUID | None = None
 
 
-class MCPServerResponse(BaseModel):
-    id: UUID
-    name: str
-    description: str | None
-    status: str
-
-    class Config:
-        from_attributes = True
-
-
-class MCPToolCreate(BaseModel):
+class ActionResponse(BaseModel):
     name: str
     description: str
-    parameters_schema: dict[str, Any]
-    implementation: str
+    parameters: list[dict[str, Any]]
+    auth_required: bool
 
 
-class MCPToolResponse(BaseModel):
-    id: UUID
-    name: str
-    description: str
-    parameters_schema: dict[str, Any]
-    code: str
-
-    class Config:
-        from_attributes = True
+class ActionsListResponse(BaseModel):
+    session_id: UUID
+    server_name: str
+    server_description: str
+    actions: list[ActionResponse]
 
 
-class MCPPromptCreate(BaseModel):
-    name: str
-    description: str
-    template: str
-    arguments: dict[str, Any] | None = None
+class RefineActionsRequest(BaseModel):
+    session_id: UUID
+    feedback: str
 
 
-class MCPPromptResponse(BaseModel):
-    id: UUID
-    name: str
-    description: str
-    template: str
-    arguments: dict[str, Any] | None
+class UpdateActionsRequest(BaseModel):
+    session_id: UUID
+    actions: list[ActionSpec]
 
-    class Config:
-        from_attributes = True
+
+class AuthConfigRequest(BaseModel):
+    session_id: UUID
+    auth_type: AuthType
+    oauth_provider_url: str | None = None
+    oauth_client_id: str | None = None
+    oauth_scopes: list[str] | None = None
+
+
+class AuthConfigResponse(BaseModel):
+    session_id: UUID
+    auth_type: AuthType
+    auth_config: dict[str, Any]
 
 
 class GenerateCodeRequest(BaseModel):
-    server_id: UUID
+    session_id: UUID
 
 
 class GenerateCodeResponse(BaseModel):
+    session_id: UUID
     code: str
-    server_id: UUID
 
 
 class DeployRequest(BaseModel):
-    server_id: UUID
-    target: str = Field(default="standalone", description="Deployment target")
+    session_id: UUID
+    target: str = Field(default="standalone")
 
 
 class DeployResponse(BaseModel):
-    server_id: UUID
+    session_id: UUID
     target: str
     files: dict[str, str]
     instructions: str
 
 
 class SessionState(BaseModel):
-    """In-memory session state for chat."""
+    """Session state for the wizard flow."""
 
     id: UUID
-    server_id: UUID | None = None
+    step: FlowStep = FlowStep.DESCRIBE_SYSTEM
     messages: list[dict[str, str]] = Field(default_factory=list)
-    design: dict[str, Any] | None = None
+    server_name: str = ""
+    server_description: str = ""
+    actions: list[ActionSpec] = Field(default_factory=list)
+    auth_type: AuthType = AuthType.NONE
+    auth_config: dict[str, Any] = Field(default_factory=dict)
+    generated_code: str | None = None

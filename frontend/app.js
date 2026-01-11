@@ -1,31 +1,35 @@
 /**
- * AutoMCP Frontend Application
+ * AutoMCP Frontend - Wizard Flow
  */
 
 // State
-let currentDesign = null;
-let generatedCode = null;
+let state = {
+    currentStep: 1,
+    serverName: '',
+    serverDescription: '',
+    actions: [],
+    authType: 'none',
+    authConfig: {},
+    generatedCode: null,
+};
 
 // DOM Elements
-const chatMessages = document.getElementById('chat-messages');
-const chatForm = document.getElementById('chat-form');
-const messageInput = document.getElementById('message-input');
-const sendBtn = document.getElementById('send-btn');
-const designPanel = document.getElementById('design-panel');
-const designContent = document.getElementById('design-content');
-const generateBtn = document.getElementById('generate-btn');
-const refineBtn = document.getElementById('refine-btn');
-const codePanel = document.getElementById('code-panel');
-const codeContent = document.getElementById('code-content');
-const deployTarget = document.getElementById('deploy-target');
-const deployBtn = document.getElementById('deploy-btn');
-const deployPanel = document.getElementById('deploy-panel');
-const deployInstructions = document.getElementById('deploy-instructions');
-const deployFiles = document.getElementById('deploy-files');
 const loadingOverlay = document.getElementById('loading');
+const loadingText = document.getElementById('loading-text');
+
+// Step elements
+const stepDescribe = document.getElementById('step-describe');
+const stepActions = document.getElementById('step-actions');
+const stepAuth = document.getElementById('step-auth');
+const stepDeploy = document.getElementById('step-deploy');
+const stepResult = document.getElementById('step-result');
+
+// Progress bar steps
+const progressSteps = document.querySelectorAll('.progress-bar .step');
 
 // Utility functions
-function showLoading() {
+function showLoading(text = 'Processing...') {
+    loadingText.textContent = text;
     loadingOverlay.classList.remove('hidden');
 }
 
@@ -33,85 +37,79 @@ function hideLoading() {
     loadingOverlay.classList.add('hidden');
 }
 
-function addMessage(content, role) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${role}`;
+function showStep(stepNum) {
+    state.currentStep = stepNum;
 
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-    contentDiv.innerHTML = formatMessage(content);
+    // Hide all steps
+    [stepDescribe, stepActions, stepAuth, stepDeploy, stepResult].forEach(el => {
+        el.classList.add('hidden');
+    });
 
-    messageDiv.appendChild(contentDiv);
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // Show current step
+    const steps = [stepDescribe, stepActions, stepAuth, stepDeploy, stepResult];
+    if (steps[stepNum - 1]) {
+        steps[stepNum - 1].classList.remove('hidden');
+    }
+
+    // Update progress bar
+    progressSteps.forEach((step, idx) => {
+        step.classList.remove('active', 'completed');
+        if (idx + 1 < stepNum) {
+            step.classList.add('completed');
+        } else if (idx + 1 === stepNum) {
+            step.classList.add('active');
+        }
+    });
 }
 
-function formatMessage(content) {
-    // Basic markdown-like formatting
-    return content
-        // Code blocks
-        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-        // Inline code
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        // Bold
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        // Italic
-        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-        // Line breaks
-        .replace(/\n/g, '<br>');
-}
+function renderActions(actions) {
+    const container = document.getElementById('actions-list');
+    container.innerHTML = '';
 
-function renderDesign(design) {
-    let html = '';
+    actions.forEach(action => {
+        const card = document.createElement('div');
+        card.className = 'action-card';
 
-    if (design.server_name) {
-        html += `<div class="design-section">
-            <h4>Server: ${design.server_name}</h4>
-            <p>${design.description || ''}</p>
-        </div>`;
-    }
+        const paramsHtml = action.parameters.length > 0
+            ? `<div class="action-params">
+                ${action.parameters.map(p => `<span class="param-tag">${p.name}: ${p.type || 'string'}</span>`).join('')}
+               </div>`
+            : '';
 
-    if (design.tools && design.tools.length > 0) {
-        html += '<div class="design-section"><h4>Tools</h4>';
-        for (const tool of design.tools) {
-            html += `<div class="design-item">
-                <div class="design-item-name">${tool.name}</div>
-                <div class="design-item-desc">${tool.description}</div>
-            </div>`;
-        }
-        html += '</div>';
-    }
+        const authBadge = action.auth_required
+            ? '<span class="action-badge">Auth Required</span>'
+            : '';
 
-    if (design.prompts && design.prompts.length > 0) {
-        html += '<div class="design-section"><h4>Prompts</h4>';
-        for (const prompt of design.prompts) {
-            html += `<div class="design-item">
-                <div class="design-item-name">${prompt.name}</div>
-                <div class="design-item-desc">${prompt.description}</div>
-            </div>`;
-        }
-        html += '</div>';
-    }
+        card.innerHTML = `
+            <div class="action-header">
+                <span class="action-name">${action.name}</span>
+                ${authBadge}
+            </div>
+            <div class="action-description">${action.description}</div>
+            ${paramsHtml}
+        `;
 
-    designContent.innerHTML = html;
+        container.appendChild(card);
+    });
 }
 
 function renderDeployFiles(files) {
-    deployFiles.innerHTML = '';
+    const container = document.getElementById('deploy-files');
+    container.innerHTML = '';
 
     for (const [filename, content] of Object.entries(files)) {
-        const fileDiv = document.createElement('div');
-        fileDiv.className = 'deploy-file';
+        const card = document.createElement('div');
+        card.className = 'file-card';
 
-        fileDiv.innerHTML = `
-            <div class="deploy-file-header">
-                <span class="deploy-file-name">${filename}</span>
-                <button class="copy-btn secondary" onclick="copyToClipboard('${filename}')">Copy</button>
+        card.innerHTML = `
+            <div class="file-header">
+                <span class="file-name">${filename}</span>
+                <button class="secondary" onclick="copyFile('${filename}')">Copy</button>
             </div>
-            <div class="deploy-file-content" id="file-${filename.replace(/[^a-zA-Z0-9]/g, '-')}">${escapeHtml(content)}</div>
+            <div class="file-content" id="file-${filename.replace(/[^a-zA-Z0-9]/g, '-')}">${escapeHtml(content)}</div>
         `;
 
-        deployFiles.appendChild(fileDiv);
+        container.appendChild(card);
     }
 }
 
@@ -121,115 +119,198 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-async function copyToClipboard(filename) {
-    const contentId = `file-${filename.replace(/[^a-zA-Z0-9]/g, '-')}`;
-    const content = document.getElementById(contentId)?.textContent;
+async function copyFile(filename) {
+    const id = `file-${filename.replace(/[^a-zA-Z0-9]/g, '-')}`;
+    const content = document.getElementById(id)?.textContent;
     if (content) {
         await navigator.clipboard.writeText(content);
         alert('Copied to clipboard!');
     }
 }
 
-// Event handlers
-async function handleSendMessage(e) {
-    e.preventDefault();
-
-    const message = messageInput.value.trim();
-    if (!message) return;
-
-    messageInput.value = '';
-    addMessage(message, 'user');
-    sendBtn.disabled = true;
-
-    try {
-        showLoading();
-        const response = await apiClient.sendMessage(message);
-        hideLoading();
-
-        addMessage(response.response, 'assistant');
-
-        if (response.design_complete && response.design) {
-            currentDesign = response.design;
-            renderDesign(currentDesign);
-            designPanel.classList.remove('hidden');
-        }
-    } catch (error) {
-        hideLoading();
-        addMessage(`Error: ${error.message}`, 'assistant');
-    } finally {
-        sendBtn.disabled = false;
-        messageInput.focus();
-    }
-}
-
-async function handleGenerateCode() {
-    if (!currentDesign) {
-        alert('No design available. Please complete the chat first.');
+// Step 1: Describe System
+async function handleDescribe() {
+    const description = document.getElementById('system-description').value.trim();
+    if (!description) {
+        alert('Please describe your system');
         return;
     }
 
     try {
-        showLoading();
-        const response = await apiClient.generateCode();
+        showLoading('Analyzing your requirements...');
+        const response = await apiClient.describeSystem(description);
         hideLoading();
 
-        generatedCode = response.code;
-        codeContent.textContent = generatedCode;
-        codePanel.classList.remove('hidden');
+        state.serverName = response.server_name;
+        state.serverDescription = response.server_description;
+        state.actions = response.actions;
 
-        // Scroll to code panel
-        codePanel.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('server-name').textContent = response.server_name;
+        document.getElementById('server-description').textContent = response.server_description;
+        renderActions(response.actions);
+
+        showStep(2);
     } catch (error) {
         hideLoading();
-        alert(`Error generating code: ${error.message}`);
+        alert(`Error: ${error.message}`);
     }
+}
+
+// Step 2: Refine Actions
+async function handleRefine() {
+    const feedback = document.getElementById('refine-input').value.trim();
+    if (!feedback) return;
+
+    try {
+        showLoading('Updating actions...');
+        const response = await apiClient.refineActions(feedback);
+        hideLoading();
+
+        state.actions = response.actions;
+        renderActions(response.actions);
+        document.getElementById('refine-input').value = '';
+    } catch (error) {
+        hideLoading();
+        alert(`Error: ${error.message}`);
+    }
+}
+
+async function handleConfirmActions() {
+    try {
+        showLoading('Confirming actions...');
+        await apiClient.confirmActions();
+        hideLoading();
+        showStep(3);
+    } catch (error) {
+        hideLoading();
+        alert(`Error: ${error.message}`);
+    }
+}
+
+// Step 3: Configure Auth
+function handleAuthTypeChange(e) {
+    const oauthConfig = document.getElementById('oauth-config');
+    if (e.target.value === 'oauth') {
+        oauthConfig.classList.remove('hidden');
+    } else {
+        oauthConfig.classList.add('hidden');
+    }
+    state.authType = e.target.value;
+}
+
+async function handleConfirmAuth() {
+    const authType = document.querySelector('input[name="auth-type"]:checked').value;
+
+    let oauthConfig = {};
+    if (authType === 'oauth') {
+        oauthConfig = {
+            providerUrl: document.getElementById('oauth-provider').value,
+            clientId: document.getElementById('oauth-client-id').value,
+            scopes: document.getElementById('oauth-scopes').value.split(',').map(s => s.trim()).filter(Boolean),
+        };
+    }
+
+    try {
+        showLoading('Configuring authentication...');
+        await apiClient.configureAuth(authType, oauthConfig);
+
+        // Generate code
+        showLoading('Generating server code...');
+        const codeResponse = await apiClient.generateCode();
+        hideLoading();
+
+        state.authType = authType;
+        state.authConfig = oauthConfig;
+        state.generatedCode = codeResponse.code;
+
+        // Update deploy step
+        document.getElementById('summary-name').textContent = state.serverName;
+        document.getElementById('summary-description').textContent = state.serverDescription;
+        document.getElementById('summary-actions-count').textContent = state.actions.length;
+        document.getElementById('summary-auth-type').textContent = authType.charAt(0).toUpperCase() + authType.slice(1);
+        document.getElementById('code-content').textContent = state.generatedCode;
+
+        showStep(4);
+    } catch (error) {
+        hideLoading();
+        alert(`Error: ${error.message}`);
+    }
+}
+
+// Step 4: Deploy
+function handleTargetChange() {
+    document.querySelectorAll('.deploy-target').forEach(t => {
+        t.classList.remove('selected');
+    });
+    event.target.closest('.deploy-target').classList.add('selected');
 }
 
 async function handleDeploy() {
-    if (!generatedCode) {
-        alert('No code generated. Please generate code first.');
-        return;
-    }
-
-    const target = deployTarget.value;
+    const target = document.querySelector('input[name="deploy-target"]:checked').value;
 
     try {
-        showLoading();
+        showLoading('Generating deployment package...');
         const response = await apiClient.deploy(target);
         hideLoading();
 
-        deployInstructions.innerHTML = `<strong>Instructions:</strong><br>${response.instructions}`;
+        document.getElementById('deploy-instructions').innerHTML = `<strong>Instructions:</strong> ${response.instructions}`;
         renderDeployFiles(response.files);
-        deployPanel.classList.remove('hidden');
 
-        // Scroll to deploy panel
-        deployPanel.scrollIntoView({ behavior: 'smooth' });
+        showStep(5);
     } catch (error) {
         hideLoading();
-        alert(`Error generating deployment: ${error.message}`);
+        alert(`Error: ${error.message}`);
     }
 }
 
-function handleRefine() {
-    designPanel.classList.add('hidden');
-    codePanel.classList.add('hidden');
-    deployPanel.classList.add('hidden');
-    messageInput.focus();
+function handleStartOver() {
+    apiClient.resetSession();
+    state = {
+        currentStep: 1,
+        serverName: '',
+        serverDescription: '',
+        actions: [],
+        authType: 'none',
+        authConfig: {},
+        generatedCode: null,
+    };
+    document.getElementById('system-description').value = '';
+    showStep(1);
 }
 
-// Handle Enter key in textarea
-messageInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        chatForm.dispatchEvent(new Event('submit'));
+// Event Listeners
+document.getElementById('describe-btn').addEventListener('click', handleDescribe);
+document.getElementById('refine-btn').addEventListener('click', handleRefine);
+document.getElementById('confirm-actions-btn').addEventListener('click', handleConfirmActions);
+document.getElementById('confirm-auth-btn').addEventListener('click', handleConfirmAuth);
+document.getElementById('deploy-btn').addEventListener('click', handleDeploy);
+document.getElementById('start-over-btn').addEventListener('click', handleStartOver);
+
+// Back buttons
+document.getElementById('back-to-describe').addEventListener('click', () => showStep(1));
+document.getElementById('back-to-actions').addEventListener('click', () => showStep(2));
+document.getElementById('back-to-auth').addEventListener('click', () => showStep(3));
+
+// Auth type radio change
+document.querySelectorAll('input[name="auth-type"]').forEach(radio => {
+    radio.addEventListener('change', handleAuthTypeChange);
+});
+
+// Deploy target selection
+document.querySelectorAll('.deploy-target input').forEach(radio => {
+    radio.addEventListener('change', handleTargetChange);
+});
+
+// Enter key in refine input
+document.getElementById('refine-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        handleRefine();
     }
 });
 
-// Initialize event listeners
-chatForm.addEventListener('submit', handleSendMessage);
-generateBtn.addEventListener('click', handleGenerateCode);
-refineBtn.addEventListener('click', handleRefine);
-deployBtn.addEventListener('click', handleDeploy);
-
-// Focus input on load
-messageInput.focus();
+// Enter key in description
+document.getElementById('system-description').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+        handleDescribe();
+    }
+});

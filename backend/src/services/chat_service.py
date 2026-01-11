@@ -1,71 +1,75 @@
 import json
+from enum import Enum
 from typing import Any
 
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from services.llm_client import ChatMessage, LLMClient, get_llm_client
 
-SYSTEM_PROMPT = """You are an expert MCP (Model Context Protocol) server designer. Your job is to help users create custom MCP servers with tools and prompts.
 
-When the user describes what they want their MCP server to do, you should:
-1. Ask clarifying questions if needed
-2. Propose tools and prompts that would fulfill their requirements
-3. For each tool, specify:
-   - name: A snake_case name for the tool
-   - description: What the tool does
-   - parameters: JSON schema for the tool's parameters
-   - implementation: A brief description of what the code should do
+class FlowStep(str, Enum):
+    DESCRIBE_SYSTEM = "describe_system"
+    REFINE_ACTIONS = "refine_actions"
+    CONFIGURE_AUTH = "configure_auth"
+    REVIEW_AND_DEPLOY = "review_and_deploy"
 
-4. For each prompt, specify:
-   - name: A snake_case name for the prompt
-   - description: What the prompt is for
-   - template: The prompt template with {placeholders} for arguments
-   - arguments: List of argument names and their descriptions
 
-When you have a complete design, output it in the following JSON format wrapped in ```json``` code blocks:
+class AuthType(str, Enum):
+    OAUTH = "oauth"
+    EPHEMERAL = "ephemeral"
+    NONE = "none"
+
+
+class ActionSpec(BaseModel):
+    """Specification for a single action/tool."""
+
+    name: str
+    description: str
+    parameters: list[dict[str, Any]] = Field(default_factory=list)
+    auth_required: bool = False
+
+
+class MCPDesign(BaseModel):
+    """Complete MCP server design."""
+
+    server_name: str = "my_mcp_server"
+    description: str = ""
+    actions: list[ActionSpec] = Field(default_factory=list)
+    auth_type: AuthType = AuthType.NONE
+    auth_config: dict[str, Any] = Field(default_factory=dict)
+
+
+SYSTEM_PROMPT = """You are an expert at designing MCP (Model Context Protocol) servers. Your job is to help users define ACTIONS (tools) their server should perform.
+
+Focus on ACTIONS - what the server can DO, not code implementation.
+
+When the user describes their system, extract and suggest concrete actions. For each action, specify:
+- name: A clear snake_case name
+- description: What this action does
+- parameters: List of inputs needed (name, type, description)
+- auth_required: Whether this action needs authentication
+
+After understanding the user's needs, output the actions in this JSON format:
 
 ```json
 {
-  "server_name": "my_server",
-  "description": "Description of what this server does",
-  "tools": [
+  "server_name": "descriptive_name",
+  "description": "What this server does",
+  "actions": [
     {
-      "name": "tool_name",
-      "description": "What this tool does",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "param1": {"type": "string", "description": "Parameter description"}
-        },
-        "required": ["param1"]
-      },
-      "implementation": "Description of the implementation logic"
-    }
-  ],
-  "prompts": [
-    {
-      "name": "prompt_name",
-      "description": "What this prompt is for",
-      "template": "Template with {arg1} placeholders",
-      "arguments": [
-        {"name": "arg1", "description": "Argument description", "required": true}
-      ]
+      "name": "action_name",
+      "description": "What this action does",
+      "parameters": [
+        {"name": "param1", "type": "string", "description": "Parameter description"}
+      ],
+      "auth_required": true
     }
   ]
 }
 ```
 
-Be creative and helpful. If the user's request is vague, suggest useful tools and prompts they might not have thought of."""
-
-
-class MCPDesign(BaseModel):
-    """Parsed MCP server design from LLM response."""
-
-    server_name: str
-    description: str
-    tools: list[dict[str, Any]]
-    prompts: list[dict[str, Any]]
+Be helpful and suggest useful actions the user might not have thought of. Keep descriptions concise and action-oriented."""
 
 
 class ChatService:
@@ -78,13 +82,9 @@ class ChatService:
         self,
         user_message: str,
         history: list[dict[str, str]] | None = None,
+        current_step: FlowStep = FlowStep.DESCRIBE_SYSTEM,
     ) -> tuple[str, MCPDesign | None]:
-        """
-        Process a user message and return the assistant's response.
-
-        Returns:
-            Tuple of (response_text, parsed_design_if_complete)
-        """
+        """Process a user message and return the assistant's response."""
         messages = [ChatMessage(role="system", content=SYSTEM_PROMPT)]
 
         if history:
@@ -94,56 +94,106 @@ class ChatService:
         messages.append(ChatMessage(role="user", content=user_message))
 
         response = await self.llm.chat(messages)
-
         design = self._extract_design(response.content)
 
         return response.content, design
 
+    async def suggest_actions(
+        self, system_description: str
+    ) -> tuple[str, MCPDesign | None]:
+        """Generate action suggestions from a system description."""
+        prompt = f"""Based on this system description, suggest a set of actions (tools) this MCP server should have:
+
+"{system_description}"
+
+Think about:
+1. What are the main operations users would want to perform?
+2. What data would they need to read or write?
+3. Are there any integrations or external services involved?
+4. Which actions would require authentication?
+
+Output the actions in JSON format."""
+
+        messages = [
+            ChatMessage(role="system", content=SYSTEM_PROMPT),
+            ChatMessage(role="user", content=prompt),
+        ]
+
+        response = await self.llm.chat(messages)
+        design = self._extract_design(response.content)
+
+        return response.content, design
+
+    async def refine_actions(
+        self,
+        current_actions: list[ActionSpec],
+        feedback: str,
+    ) -> tuple[str, list[ActionSpec] | None]:
+        """Refine actions based on user feedback."""
+        actions_json = json.dumps([a.model_dump() for a in current_actions], indent=2)
+
+        prompt = f"""Current actions:
+```json
+{actions_json}
+```
+
+User feedback: {feedback}
+
+Update the actions based on this feedback. Add, remove, or modify actions as needed.
+Output the complete updated list in JSON format."""
+
+        messages = [
+            ChatMessage(role="system", content=SYSTEM_PROMPT),
+            ChatMessage(role="user", content=prompt),
+        ]
+
+        response = await self.llm.chat(messages)
+        design = self._extract_design(response.content)
+
+        if design:
+            return response.content, design.actions
+        return response.content, None
+
     def _extract_design(self, content: str) -> MCPDesign | None:
-        """Try to extract a complete MCP design from the response."""
+        """Try to extract MCP design from the response."""
         try:
             start = content.find("```json")
             if start == -1:
-                return None
+                start = content.find("```")
+                if start == -1:
+                    return None
+                start += 3
+            else:
+                start += 7
 
-            end = content.find("```", start + 7)
+            end = content.find("```", start)
             if end == -1:
                 return None
 
-            json_str = content[start + 7 : end].strip()
+            json_str = content[start:end].strip()
             data = json.loads(json_str)
+
+            actions = []
+            for action_data in data.get("actions", []):
+                actions.append(
+                    ActionSpec(
+                        name=action_data.get("name", ""),
+                        description=action_data.get("description", ""),
+                        parameters=action_data.get("parameters", []),
+                        auth_required=action_data.get("auth_required", False),
+                    )
+                )
 
             return MCPDesign(
                 server_name=data.get("server_name", "my_mcp_server"),
                 description=data.get("description", ""),
-                tools=data.get("tools", []),
-                prompts=data.get("prompts", []),
+                actions=actions,
             )
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             logger.debug(f"Could not extract design from response: {e}")
             return None
 
-    async def refine_design(
-        self,
-        current_design: MCPDesign,
-        feedback: str,
-        history: list[dict[str, str]] | None = None,
-    ) -> tuple[str, MCPDesign | None]:
-        """Refine an existing design based on user feedback."""
-        context = f"""The current MCP server design is:
 
-```json
-{current_design.model_dump_json(indent=2)}
-```
-
-User feedback: {feedback}
-
-Please update the design based on this feedback and output the complete updated design."""
-
-        return await self.chat(context, history)
-
-
-# Singleton instance
 _chat_service: ChatService | None = None
 
 
