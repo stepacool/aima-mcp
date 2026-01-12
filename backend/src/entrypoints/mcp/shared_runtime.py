@@ -12,7 +12,24 @@ from fastmcp import FastMCP
 from loguru import logger
 
 
-def register_new_customer_app(app: FastAPI, server_id: UUID, tools: list) -> None:
+def build_mcp_server(server_id: UUID, tools: list) -> FastMCP:
+    """
+    Build a FastMCP server instance for given tools.
+
+    Args:
+        server_id: UUID of the MCP server
+        tools: List of compiled fastmcp Tool objects
+
+    Returns:
+        FastMCP instance ready to be mounted or tested
+    """
+    return FastMCP(
+        f"MCPServer({server_id})",
+        tools=tools,
+    )
+
+
+def register_new_customer_app(app: FastAPI, server_id: UUID, tools: list) -> FastMCP:
     """
     Register a new customer MCP app on the FastAPI server.
 
@@ -22,16 +39,19 @@ def register_new_customer_app(app: FastAPI, server_id: UUID, tools: list) -> Non
         app: FastAPI application instance
         server_id: UUID of the MCP server (used as mount path)
         tools: List of compiled fastmcp Tool objects
+
+    Returns:
+        FastMCP instance that was mounted
     """
-    mcp = FastMCP(
-        f"MCPServer({server_id})",
-        tools=tools,
-    )
+    mcp = build_mcp_server(server_id, tools)
     app.mount(f"/mcp/{server_id}", mcp.http_app())
     logger.info(f"Registered MCP app at /mcp/{server_id} with {len(tools)} tools")
+    return mcp
 
 
-async def load_and_register_all_mcp_servers(app: FastAPI) -> int:
+async def load_and_register_all_mcp_servers(
+    app: FastAPI,
+) -> dict[UUID, FastMCP]:
     """
     Load all active MCP servers from DB and register them.
 
@@ -41,7 +61,7 @@ async def load_and_register_all_mcp_servers(app: FastAPI) -> int:
         app: FastAPI application instance
 
     Returns:
-        Number of servers registered
+        Dictionary mapping server_id to registered FastMCP instances
     """
     from core.services.tier_service import Tier
     from core.services.tool_loader import get_tool_loader
@@ -52,7 +72,7 @@ async def load_and_register_all_mcp_servers(app: FastAPI) -> int:
 
     # Get all active servers from DB
     servers = await server_repo.get_all_active()
-    registered_count = 0
+    registered_servers: dict[UUID, FastMCP] = {}
 
     for server in servers:
         try:
@@ -84,13 +104,13 @@ async def load_and_register_all_mcp_servers(app: FastAPI) -> int:
                     continue
 
             if compiled_tools:
-                register_new_customer_app(app, server.id, compiled_tools)
-                registered_count += 1
+                mcp = register_new_customer_app(app, server.id, compiled_tools)
+                registered_servers[server.id] = mcp
             else:
                 logger.warning(f"Server {server.id} has no valid tools, skipping")
 
         except Exception as e:
             logger.error(f"Failed to register server {server.id}: {e}")
 
-    logger.info(f"Startup complete: registered {registered_count} MCP servers")
-    return registered_count
+    logger.info(f"Startup complete: registered {len(registered_servers)} MCP servers")
+    return registered_servers

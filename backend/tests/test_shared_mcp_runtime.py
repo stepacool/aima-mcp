@@ -4,6 +4,7 @@ from typing import Type
 
 import pytest
 from fastapi import FastAPI
+from fastmcp import Client
 
 from core.services.tier_service import Tier
 from core.services.tool_loader import get_tool_loader
@@ -91,46 +92,46 @@ class TestLifespanMCPLoading:
         """Test that load_and_register_all_mcp_servers loads ACTIVE servers."""
         server, tool = active_server_with_tool
 
-        # Create a fresh FastAPI app (without lifespan to control loading manually)
         app = FastAPI()
-
-        # Manually call the loading function
-        count = await load_and_register_all_mcp_servers(app)
+        registered_servers = await load_and_register_all_mcp_servers(app)
 
         # Should have loaded 1 server
-        assert count == 1
+        assert len(registered_servers) == 1
+        assert server.id in registered_servers
 
-        # Verify the MCP endpoint is mounted by checking app routes
-        # FastMCP mounts at /mcp/{server_id}
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
-        expected_path = f"/mcp/{server.id}"
-        assert expected_path in route_paths, (
-            f"Expected {expected_path} in {route_paths}"
-        )
+        # Verify the server has tools via FastMCP Client
+        mcp_server = registered_servers[server.id]
+        async with Client(mcp_server) as client:
+            tools = await client.list_tools()
+            assert len(tools) == 1
 
     async def test_lifespan_loads_tools_correctly(
         self,
         provider: Type[Provider],
         active_server_with_tool: tuple[MCPServer, MCPTool],
     ):
-        """Test that loaded tools are correctly compiled and accessible."""
+        """Test that loaded tools are correctly compiled and callable."""
         server, tool = active_server_with_tool
 
         app = FastAPI()
-        count = await load_and_register_all_mcp_servers(app)
+        registered_servers = await load_and_register_all_mcp_servers(app)
 
-        # Verify the server was loaded
-        assert count == 1
+        assert len(registered_servers) == 1
 
-        # Check the tool was compiled by verifying the tool_loader cache
-        tool_loader = get_tool_loader()
-        cache_key = f"{server.customer_id}:{tool.id}"
-        assert cache_key in tool_loader._compiled_tools
+        # Verify tools via FastMCP Client
+        mcp_server = registered_servers[server.id]
+        async with Client(mcp_server) as client:
+            tools = await client.list_tools()
+            assert len(tools) == 1
 
-        # Verify the compiled tool has correct name
-        compiled_tool = tool_loader._compiled_tools[cache_key]
-        expected_name = f"{server.customer_id.hex[:8]}_lifespan_tool"
-        assert compiled_tool.name == expected_name
+            # Verify tool name contains the expected suffix
+            tool_info = tools[0]
+            assert "lifespan_tool" in tool_info.name
+
+            # Verify tool is callable and returns expected result
+            result = await client.call_tool(tool_info.name, {})
+            assert len(result.content) == 1
+            assert result.content[0].text == "lifespan_response"
 
     async def test_lifespan_skips_draft_servers(
         self,
@@ -141,49 +142,25 @@ class TestLifespanMCPLoading:
         server, tool = draft_server_with_tool
 
         app = FastAPI()
-        count = await load_and_register_all_mcp_servers(app)
+        registered_servers = await load_and_register_all_mcp_servers(app)
 
         # Should not have loaded any servers (DRAFT status)
-        assert count == 0
-
-        # Verify the endpoint is not mounted
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
-        expected_path = f"/mcp/{server.id}"
-        assert expected_path not in route_paths
+        assert len(registered_servers) == 0
+        assert server.id not in registered_servers
 
 
 class TestDynamicMCPRegistration:
     """Test dynamic MCP server registration after app startup."""
 
-    async def test_endpoint_not_mounted_before_registration(
+    async def test_dynamic_registration_creates_working_server(
         self,
         provider: Type[Provider],
         draft_server_with_tool: tuple[MCPServer, MCPTool],
     ):
-        """Test that MCP endpoint is not mounted before registration."""
+        """Test that dynamically registered server is accessible via Client."""
         server, tool = draft_server_with_tool
 
         app = FastAPI()
-
-        # Verify route not present before registration
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
-        expected_path = f"/mcp/{server.id}"
-        assert expected_path not in route_paths
-
-    async def test_endpoint_mounted_after_dynamic_registration(
-        self,
-        provider: Type[Provider],
-        draft_server_with_tool: tuple[MCPServer, MCPTool],
-    ):
-        """Test that MCP endpoint is mounted after dynamic registration."""
-        server, tool = draft_server_with_tool
-
-        app = FastAPI()
-
-        # Verify not mounted before
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
-        expected_path = f"/mcp/{server.id}"
-        assert expected_path not in route_paths
 
         # Compile the tool and register dynamically
         tool_loader = get_tool_loader()
@@ -197,20 +174,20 @@ class TestDynamicMCPRegistration:
             tier=Tier.FREE,
         )
 
-        register_new_customer_app(app, server.id, [compiled_tool])
+        mcp_server = register_new_customer_app(app, server.id, [compiled_tool])
 
-        # Verify route is now mounted
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
-        assert expected_path in route_paths, (
-            f"Expected {expected_path} in {route_paths}"
-        )
+        # Verify the server has tools via FastMCP Client
+        async with Client(mcp_server) as client:
+            tools = await client.list_tools()
+            assert len(tools) == 1
+            assert "dynamic_tool" in tools[0].name
 
-    async def test_dynamic_registration_tool_cached_and_callable(
+    async def test_dynamic_registration_tool_callable(
         self,
         provider: Type[Provider],
         draft_server_with_tool: tuple[MCPServer, MCPTool],
     ):
-        """Test that dynamically registered tools are cached and callable."""
+        """Test that dynamically registered tools are callable via Client."""
         server, tool = draft_server_with_tool
 
         app = FastAPI()
@@ -227,20 +204,20 @@ class TestDynamicMCPRegistration:
             tier=Tier.FREE,
         )
 
-        register_new_customer_app(app, server.id, [compiled_tool])
+        mcp_server = register_new_customer_app(app, server.id, [compiled_tool])
 
-        # Verify tool is in cache
-        cache_key = f"{server.customer_id}:{tool.id}"
-        assert cache_key in tool_loader._compiled_tools
+        # Verify the tool is callable via FastMCP Client
+        async with Client(mcp_server) as client:
+            tools = await client.list_tools()
+            assert len(tools) == 1
 
-        # Verify the compiled tool has correct properties
-        expected_name = f"{server.customer_id.hex[:8]}_dynamic_tool"
-        assert compiled_tool.name == expected_name
-        assert compiled_tool.description == tool.description
+            tool_info = tools[0]
+            assert tool_info.description == tool.description
 
-        # Verify the tool function can be called directly
-        result = await compiled_tool.fn()
-        assert result == "dynamic_response"
+            # Call the tool and verify result
+            result = await client.call_tool(tool_info.name, {})
+            assert len(result.content) == 1
+            assert result.content[0].text == "dynamic_response"
 
 
 class TestMultipleServers:
@@ -249,7 +226,7 @@ class TestMultipleServers:
     async def test_multiple_active_servers_loaded(
         self, provider: Type[Provider], customer: Customer
     ):
-        """Test that multiple ACTIVE servers are all loaded."""
+        """Test that multiple ACTIVE servers are all loaded and accessible."""
         # Create 3 active servers with tools
         servers = []
         for i in range(3):
@@ -278,15 +255,24 @@ class TestMultipleServers:
             servers.append(server)
 
         app = FastAPI()
-        count = await load_and_register_all_mcp_servers(app)
+        registered_servers = await load_and_register_all_mcp_servers(app)
 
-        assert count == 3
+        assert len(registered_servers) == 3
 
-        # Verify all endpoints are mounted by checking routes
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
-        for server in servers:
-            expected_path = f"/mcp/{server.id}"
-            assert expected_path in route_paths, f"Server {server.id} not mounted"
+        # Verify all servers are accessible via FastMCP Client
+        for i, server in enumerate(servers):
+            assert server.id in registered_servers
+            mcp_server = registered_servers[server.id]
+
+            async with Client(mcp_server) as client:
+                tools = await client.list_tools()
+                assert len(tools) == 1
+                assert f"multi_tool_{i}" in tools[0].name
+
+                # Call the tool and verify result
+                result = await client.call_tool(tools[0].name, {})
+                assert len(result.content) == 1
+                assert result.content[0].text == f"response_{i}"
 
     async def test_mixed_status_servers(
         self, provider: Type[Provider], customer: Customer
@@ -355,17 +341,23 @@ class TestMultipleServers:
         )
 
         app = FastAPI()
-        count = await load_and_register_all_mcp_servers(app)
+        registered_servers = await load_and_register_all_mcp_servers(app)
 
         # Only 1 server should be loaded (the ACTIVE one)
-        assert count == 1
+        assert len(registered_servers) == 1
 
-        # Verify only active server is mounted
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        # Verify only active server is accessible
+        assert active_server.id in registered_servers
+        assert draft_server.id not in registered_servers
+        assert ready_server.id not in registered_servers
 
-        # Active server should be mounted
-        assert f"/mcp/{active_server.id}" in route_paths
+        # Verify active server works via FastMCP Client
+        mcp_server = registered_servers[active_server.id]
+        async with Client(mcp_server) as client:
+            tools = await client.list_tools()
+            assert len(tools) == 1
+            assert "active_tool" in tools[0].name
 
-        # Draft and Ready servers should not be mounted
-        assert f"/mcp/{draft_server.id}" not in route_paths
-        assert f"/mcp/{ready_server.id}" not in route_paths
+            result = await client.call_tool(tools[0].name, {})
+            assert len(result.content) == 1
+            assert result.content[0].text == "active"
