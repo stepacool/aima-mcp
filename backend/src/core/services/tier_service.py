@@ -1,11 +1,10 @@
 """Tier management and curated library validation for freemium model."""
 
 import ast
-import re
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class Tier(str, Enum):

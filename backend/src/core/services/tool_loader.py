@@ -234,7 +234,7 @@ class DynamicToolLoader:
         params = []
         for p in parameters:
             param_name = p.get("name", "arg")
-            param_type = p.get("type", "str")
+            # param_type is available but we use untyped params for simplicity
             default = p.get("default")
             if default is not None:
                 params.append(f"{param_name}={repr(default)}")

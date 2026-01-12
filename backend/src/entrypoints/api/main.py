@@ -23,7 +23,18 @@ FRONTEND_DIR = Path(__file__).parent.parent.parent.parent.parent / "frontend"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # On startup: load all active MCP servers from DB
+    from entrypoints.mcp.shared_runtime import load_and_register_all_mcp_servers
+
+    try:
+        count = await load_and_register_all_mcp_servers(app)
+        logger.info(f"Loaded {count} MCP servers on startup")
+    except Exception as e:
+        logger.error(f"Failed to load MCP servers on startup: {e}")
+
     yield
+
+    # On shutdown: disconnect from DB
     await Provider.disconnect()
 
 

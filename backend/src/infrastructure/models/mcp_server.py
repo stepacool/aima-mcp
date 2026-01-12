@@ -37,6 +37,12 @@ class MCPServer(CustomBase):
     tier: Mapped[str] = mapped_column(
         String(20), default=MCPServerTier.FREE.value, nullable=False
     )
+    auth_type: Mapped[str] = mapped_column(
+        String(50), default="none", nullable=False
+    )
+    auth_config: Mapped[Optional[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True
+    )
     customer_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("customers.id", ondelete="CASCADE"),
