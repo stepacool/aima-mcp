@@ -5,9 +5,9 @@ from typing import AsyncGenerator, Type
 
 import pytest
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from loguru import logger
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy_utils import create_database, database_exists
 
 test_env_path = Path(__file__).parent / ".env.test"
 load_dotenv(test_env_path, override=True)
@@ -15,9 +15,21 @@ load_dotenv(test_env_path, override=True)
 if "settings" in sys.modules:
     del sys.modules["settings"]
 # WARNING: imports from code strictly below
-from settings import settings, Settings
-from infrastructure.db import Database, CustomBase, create_database as create_db_object
+from infrastructure.db import CustomBase, Database
+from infrastructure.db import create_database as create_db_object
 from infrastructure.repositories.repo_provider import Provider
+from settings import Settings, settings
+
+# Import fixtures from fixtures.py to make them available
+from fixtures import (  # noqa: F401
+    api_client,
+    app,
+    customer,
+    mcp_server,
+    mcp_tool,
+    active_mcp_server,
+    active_mcp_tool,
+)
 
 
 def _validate_test_database():
@@ -28,7 +40,9 @@ def _validate_test_database():
             f"This is a safety check to prevent running tests against production/dev databases."
         )
     if "prod" in settings.POSTGRES_HOST.lower():
-        raise RuntimeError(f"FATAL: Tests appear to be configured against production: {settings.POSTGRES_HOST}")
+        raise RuntimeError(
+            f"FATAL: Tests appear to be configured against production: {settings.POSTGRES_HOST}"
+        )
 
 
 _validate_test_database()
@@ -90,7 +104,9 @@ async def async_db_engine(test_settings: Settings) -> AsyncGenerator[AsyncEngine
 
 
 @pytest.fixture
-async def test_db(async_db_engine: AsyncEngine, test_settings: Settings) -> AsyncGenerator[Database, None]:
+async def test_db(
+    async_db_engine: AsyncEngine, test_settings: Settings
+) -> AsyncGenerator[Database, None]:
     """Provide a Database instance connected to the test database."""
     db = create_db_object(
         db_connect_url=str(test_settings.ASYNC_DB_DSN),
@@ -101,7 +117,9 @@ async def test_db(async_db_engine: AsyncEngine, test_settings: Settings) -> Asyn
 
 
 @pytest.fixture
-async def provider(async_db_engine: AsyncEngine) -> AsyncGenerator[Type[Provider], None]:
+async def provider(
+    async_db_engine: AsyncEngine,
+) -> AsyncGenerator[Type[Provider], None]:
     Provider.get_db()
     yield Provider
     await Provider.disconnect()

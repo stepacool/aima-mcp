@@ -4,9 +4,8 @@ import textwrap
 from typing import Any, Callable
 from uuid import UUID
 
-from fastmcp.tools import Tool
+from fastmcp.tools.tool import FunctionTool
 from loguru import logger
-from pydantic import Field
 
 from core.services.tier_service import CodeValidator, Tier
 
@@ -21,7 +20,7 @@ class DynamicToolLoader:
     """Loads and compiles customer tools for the shared runtime."""
 
     def __init__(self):
-        self._compiled_tools: dict[str, Tool] = {}
+        self._compiled_tools: dict[str, FunctionTool] = {}
         self._customer_namespaces: dict[UUID, dict[str, Any]] = {}
 
     def compile_tool(
@@ -33,9 +32,9 @@ class DynamicToolLoader:
         code: str,
         customer_id: UUID,
         tier: Tier = Tier.FREE,
-    ) -> Tool:
+    ) -> FunctionTool:
         """
-        Compile a tool from code and return a fastmcp Tool.
+        Compile a tool from code and return a fastmcp FunctionTool.
 
         Args:
             tool_id: Unique identifier for the tool
@@ -47,7 +46,7 @@ class DynamicToolLoader:
             tier: Customer tier for validation
 
         Returns:
-            Compiled fastmcp Tool ready for injection
+            Compiled fastmcp FunctionTool ready for injection
         """
         # Validate code for free tier
         if tier == Tier.FREE:
@@ -64,35 +63,22 @@ class DynamicToolLoader:
 
         # Compile the function
         try:
-            func = self._compile_function(name, description, parameters, code, namespace)
+            func = self._compile_function(
+                name, description, parameters, code, namespace
+            )
         except Exception as e:
             logger.error(f"Failed to compile tool {name}: {e}")
             raise ToolCompilationError(f"Compilation failed: {e}")
 
-        # Create pydantic model for parameters
-        param_fields = {}
-        for p in parameters:
-            param_name = p.get("name", "arg")
-            param_type = self._get_python_type(p.get("type", "string"))
-            param_desc = p.get("description", "")
-            param_required = p.get("required", True)
+        # Convert parameters list to JSON Schema format for FunctionTool
+        json_schema_params = self._parameters_to_json_schema(parameters)
 
-            if param_required:
-                param_fields[param_name] = (
-                    param_type,
-                    Field(description=param_desc),
-                )
-            else:
-                param_fields[param_name] = (
-                    param_type | None,
-                    Field(default=None, description=param_desc),
-                )
-
-        # Create the Tool
-        tool = Tool(
+        # Create the FunctionTool
+        tool = FunctionTool(
             fn=func,
             name=f"{customer_id.hex[:8]}_{name}",  # Namespaced name
             description=description,
+            parameters=json_schema_params,
         )
 
         cache_key = f"{customer_id}:{tool_id}"
@@ -100,7 +86,9 @@ class DynamicToolLoader:
 
         return tool
 
-    def get_customer_tools(self, customer_id: UUID, tool_specs: list[dict]) -> list[Tool]:
+    def get_customer_tools(
+        self, customer_id: UUID, tool_specs: list[dict]
+    ) -> list[FunctionTool]:
         """
         Get all tools for a customer, compiling them if needed.
 
@@ -136,7 +124,9 @@ class DynamicToolLoader:
 
     def invalidate_customer_tools(self, customer_id: UUID) -> None:
         """Remove all cached tools for a customer."""
-        keys_to_remove = [k for k in self._compiled_tools if k.startswith(f"{customer_id}:")]
+        keys_to_remove = [
+            k for k in self._compiled_tools if k.startswith(f"{customer_id}:")
+        ]
         for key in keys_to_remove:
             del self._compiled_tools[key]
 
@@ -190,30 +180,35 @@ class DynamicToolLoader:
         # Pre-import curated libraries
         try:
             import httpx
+
             namespace["httpx"] = httpx
         except ImportError:
             pass
 
         try:
             import json
+
             namespace["json"] = json
         except ImportError:
             pass
 
         try:
             import datetime
+
             namespace["datetime"] = datetime
         except ImportError:
             pass
 
         try:
             import re
+
             namespace["re"] = re
         except ImportError:
             pass
 
         try:
             from pydantic import BaseModel, Field
+
             namespace["BaseModel"] = BaseModel
             namespace["Field"] = Field
         except ImportError:
@@ -277,6 +272,50 @@ async def {name}({params_str}):
             "dict": dict,
         }
         return type_map.get(type_str.lower(), str)
+
+    def _get_json_schema_type(self, type_str: str) -> str:
+        """Convert type string to JSON Schema type."""
+        type_map = {
+            "string": "string",
+            "str": "string",
+            "integer": "integer",
+            "int": "integer",
+            "number": "number",
+            "float": "number",
+            "boolean": "boolean",
+            "bool": "boolean",
+            "array": "array",
+            "list": "array",
+            "object": "object",
+            "dict": "object",
+        }
+        return type_map.get(type_str.lower(), "string")
+
+    def _parameters_to_json_schema(
+        self, parameters: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Convert parameters list to JSON Schema format for FunctionTool."""
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+
+        for p in parameters:
+            param_name = p.get("name", "arg")
+            param_type = self._get_json_schema_type(p.get("type", "string"))
+            param_desc = p.get("description", "")
+            param_required = p.get("required", True)
+
+            properties[param_name] = {"type": param_type}
+            if param_desc:
+                properties[param_name]["description"] = param_desc
+
+            if param_required:
+                required.append(param_name)
+
+        return {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        }
 
 
 # Singleton
