@@ -16,6 +16,12 @@ class MCPServerStatus(str, Enum):
     DRAFT = "draft"
     READY = "ready"
     DEPLOYED = "deployed"
+    ACTIVE = "active"  # For free tier - running on shared runtime
+
+
+class MCPServerTier(str, Enum):
+    FREE = "free"
+    PAID = "paid"
 
 
 class MCPServer(CustomBase):
@@ -27,6 +33,9 @@ class MCPServer(CustomBase):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(50), default=MCPServerStatus.DRAFT.value, nullable=False
+    )
+    tier: Mapped[str] = mapped_column(
+        String(20), default=MCPServerTier.FREE.value, nullable=False
     )
     customer_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -62,6 +71,8 @@ class MCPTool(CustomBase):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     parameters_schema: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     code: Mapped[str] = mapped_column(Text, nullable=False)
+    is_validated: Mapped[bool] = mapped_column(default=False, nullable=False)
+    validation_errors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
 
     server: Mapped["MCPServer"] = relationship(back_populates="tools")
 

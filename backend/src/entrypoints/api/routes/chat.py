@@ -15,7 +15,7 @@ from entrypoints.api.schemas import (
     SessionState,
     UpdateActionsRequest,
 )
-from services.chat_service import (
+from core.services import (
     AuthType,
     FlowStep,
     get_chat_service,

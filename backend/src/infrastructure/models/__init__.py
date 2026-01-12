@@ -5,4 +5,5 @@ from infrastructure.models.mcp_server import DeploymentArtifact as DeploymentArt
 from infrastructure.models.mcp_server import MCPPrompt as MCPPrompt
 from infrastructure.models.mcp_server import MCPServer as MCPServer
 from infrastructure.models.mcp_server import MCPServerStatus as MCPServerStatus
+from infrastructure.models.mcp_server import MCPServerTier as MCPServerTier
 from infrastructure.models.mcp_server import MCPTool as MCPTool

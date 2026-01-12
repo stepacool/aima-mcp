@@ -5,7 +5,7 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from services.llm_client import ChatMessage, LLMClient, get_llm_client
+from core.services.llm_client import ChatMessage, LLMClient, get_llm_client
 
 
 class FlowStep(str, Enum):

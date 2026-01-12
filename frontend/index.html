@@ -120,7 +120,7 @@
 
             <!-- Step 4: Review & Deploy -->
             <section id="step-deploy" class="wizard-step hidden">
-                <h2>Ready to Deploy</h2>
+                <h2>Ready to Launch</h2>
 
                 <div class="summary-card">
                     <h3 id="summary-name">Server Name</h3>
@@ -137,28 +137,83 @@
                     </div>
                 </div>
 
-                <div class="deploy-options">
+                <!-- Tier Selection -->
+                <div class="tier-selection">
+                    <h3>Choose Your Plan</h3>
+
+                    <div class="tier-options">
+                        <label class="tier-option selected" data-tier="free">
+                            <input type="radio" name="tier" value="free" checked>
+                            <div class="tier-content">
+                                <div class="tier-header">
+                                    <strong>Free</strong>
+                                    <span class="tier-price">$0/mo</span>
+                                </div>
+                                <ul class="tier-features">
+                                    <li>Up to 3 tools</li>
+                                    <li>Curated libraries only</li>
+                                    <li>Shared runtime</li>
+                                    <li>Instant activation</li>
+                                </ul>
+                            </div>
+                        </label>
+
+                        <label class="tier-option" data-tier="paid">
+                            <input type="radio" name="tier" value="paid">
+                            <div class="tier-content">
+                                <div class="tier-header">
+                                    <strong>Pro</strong>
+                                    <span class="tier-price">$29/mo</span>
+                                </div>
+                                <ul class="tier-features">
+                                    <li>Unlimited tools</li>
+                                    <li>Any libraries</li>
+                                    <li>Own deployment</li>
+                                    <li>Modal, Vercel, etc.</li>
+                                </ul>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Free Tier: Curated Libraries Info -->
+                <div id="free-tier-info" class="tier-info">
+                    <h4>Allowed Libraries</h4>
+                    <div class="library-tags" id="library-tags">
+                        <span class="lib-tag">httpx</span>
+                        <span class="lib-tag">asyncpg</span>
+                        <span class="lib-tag">aiomysql</span>
+                        <span class="lib-tag">gspread</span>
+                        <span class="lib-tag">google-calendar</span>
+                        <span class="lib-tag">json</span>
+                        <span class="lib-tag">datetime</span>
+                        <span class="lib-tag">pydantic</span>
+                    </div>
+                </div>
+
+                <!-- Paid Tier: Deploy Options -->
+                <div id="paid-tier-options" class="deploy-options hidden">
                     <h3>Select Deployment Target</h3>
                     <div class="deploy-targets">
                         <label class="deploy-target selected">
                             <input type="radio" name="deploy-target" value="standalone" checked>
                             <div class="target-content">
                                 <strong>Standalone</strong>
-                                <span>Run locally with Python</span>
+                                <span>Run locally</span>
                             </div>
                         </label>
                         <label class="deploy-target">
                             <input type="radio" name="deploy-target" value="modal">
                             <div class="target-content">
                                 <strong>Modal</strong>
-                                <span>Serverless deployment</span>
+                                <span>Serverless</span>
                             </div>
                         </label>
                         <label class="deploy-target">
                             <input type="radio" name="deploy-target" value="vercel">
                             <div class="target-content">
                                 <strong>Vercel</strong>
-                                <span>Edge functions</span>
+                                <span>Edge</span>
                             </div>
                         </label>
                     </div>
@@ -166,7 +221,8 @@
 
                 <div class="step-actions">
                     <button id="back-to-auth" class="secondary">Back</button>
-                    <button id="deploy-btn" class="primary large">Deploy</button>
+                    <button id="activate-btn" class="primary large">Activate (Free)</button>
+                    <button id="deploy-btn" class="primary large hidden">Deploy (Pro)</button>
                 </div>
 
                 <!-- Code Preview (collapsed by default) -->

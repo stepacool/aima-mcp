@@ -2,8 +2,8 @@ import re
 
 from pydantic import BaseModel
 
-from services.chat_service import ActionSpec, AuthType, MCPDesign
-from services.llm_client import ChatMessage, LLMClient, get_llm_client
+from core.services.chat_service import ActionSpec, AuthType, MCPDesign
+from core.services.llm_client import ChatMessage, LLMClient, get_llm_client
 
 CODE_GEN_SYSTEM_PROMPT = """You are an expert Python developer specializing in MCP (Model Context Protocol) servers using the fastmcp library.
 

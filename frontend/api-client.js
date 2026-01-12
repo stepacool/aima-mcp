@@ -95,7 +95,7 @@ class APIClient {
         });
     }
 
-    // Deploy
+    // Deploy (paid tier)
     async deploy(target = 'standalone') {
         if (!this.sessionId) {
             throw new Error('No active session');
@@ -107,6 +107,31 @@ class APIClient {
                 target,
             },
         });
+    }
+
+    // Validate code for free tier
+    async validateCode() {
+        if (!this.sessionId) {
+            throw new Error('No active session');
+        }
+        return this.request(`/api/servers/validate/${this.sessionId}`, {
+            method: 'POST',
+        });
+    }
+
+    // Activate on shared runtime (free tier)
+    async activate() {
+        if (!this.sessionId) {
+            throw new Error('No active session');
+        }
+        return this.request(`/api/servers/activate/${this.sessionId}`, {
+            method: 'POST',
+        });
+    }
+
+    // Get tier info
+    async getTierInfo(tier = 'free') {
+        return this.request(`/api/servers/tier-info/${tier}`);
     }
 
     // Get session state

@@ -3,7 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from services.chat_service import ActionSpec, AuthType, FlowStep
+from core.services import ActionSpec, AuthType, FlowStep
+from core.services import Tier
 
 
 class ChatMessageRequest(BaseModel):
@@ -88,6 +89,7 @@ class SessionState(BaseModel):
 
     id: UUID
     step: FlowStep = FlowStep.DESCRIBE_SYSTEM
+    tier: Tier = Tier.FREE
     messages: list[dict[str, str]] = Field(default_factory=list)
     server_name: str = ""
     server_description: str = ""
@@ -95,3 +97,37 @@ class SessionState(BaseModel):
     auth_type: AuthType = AuthType.NONE
     auth_config: dict[str, Any] = Field(default_factory=dict)
     generated_code: str | None = None
+
+
+class TierInfoResponse(BaseModel):
+    """Information about tier limits."""
+
+    tier: Tier
+    max_tools: int
+    can_deploy: bool
+    curated_only: bool
+    curated_libraries: list[str]
+
+
+class ActivateRequest(BaseModel):
+    """Request to activate tools on shared runtime (free tier)."""
+
+    session_id: UUID
+
+
+class ActivateResponse(BaseModel):
+    """Response after activating tools on shared runtime."""
+
+    session_id: UUID
+    status: str
+    mcp_endpoint: str
+    tools_count: int
+    customer_id: str
+
+
+class ValidationErrorsResponse(BaseModel):
+    """Response when code validation fails."""
+
+    session_id: UUID
+    errors: list[str]
+    tool_name: str | None = None

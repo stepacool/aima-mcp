@@ -11,6 +11,7 @@ let state = {
     authType: 'none',
     authConfig: {},
     generatedCode: null,
+    selectedTier: 'free',
 };
 
 // DOM Elements
@@ -237,12 +238,78 @@ async function handleConfirmAuth() {
     }
 }
 
-// Step 4: Deploy
+// Step 4: Tier and Deploy
+function handleTierChange(e) {
+    const tier = e.target.value;
+    state.selectedTier = tier;
+
+    // Update UI to show selected tier
+    document.querySelectorAll('.tier-option').forEach(t => {
+        t.classList.remove('selected');
+    });
+    e.target.closest('.tier-option').classList.add('selected');
+
+    // Toggle tier-specific sections
+    const freeTierInfo = document.getElementById('free-tier-info');
+    const paidTierOptions = document.getElementById('paid-tier-options');
+    const activateBtn = document.getElementById('activate-btn');
+    const deployBtn = document.getElementById('deploy-btn');
+
+    if (tier === 'free') {
+        freeTierInfo.classList.remove('hidden');
+        paidTierOptions.classList.add('hidden');
+        activateBtn.classList.remove('hidden');
+        deployBtn.classList.add('hidden');
+    } else {
+        freeTierInfo.classList.add('hidden');
+        paidTierOptions.classList.remove('hidden');
+        activateBtn.classList.add('hidden');
+        deployBtn.classList.remove('hidden');
+    }
+}
+
 function handleTargetChange() {
     document.querySelectorAll('.deploy-target').forEach(t => {
         t.classList.remove('selected');
     });
     event.target.closest('.deploy-target').classList.add('selected');
+}
+
+async function handleActivate() {
+    // Check if we're within free tier limits
+    if (state.actions.length > 3) {
+        alert('Free tier allows maximum 3 tools. Please upgrade to Pro or reduce your tools.');
+        return;
+    }
+
+    try {
+        showLoading('Validating code...');
+        const validation = await apiClient.validateCode();
+
+        if (!validation.valid) {
+            hideLoading();
+            alert(`Validation failed:\n${validation.errors.join('\n')}`);
+            return;
+        }
+
+        showLoading('Activating on shared runtime...');
+        const response = await apiClient.activate();
+        hideLoading();
+
+        document.getElementById('deploy-instructions').innerHTML = `
+            <strong>Your MCP Server is Active!</strong><br><br>
+            <strong>MCP Endpoint:</strong> <code>${response.mcp_endpoint}</code><br>
+            <strong>Customer ID:</strong> <code>${response.customer_id}</code><br>
+            <strong>Tools Active:</strong> ${response.tools_count}<br><br>
+            Use the X-Customer-ID header with your customer ID when connecting to the MCP endpoint.
+        `;
+        document.getElementById('deploy-files').innerHTML = '';
+
+        showStep(5);
+    } catch (error) {
+        hideLoading();
+        alert(`Error: ${error.message}`);
+    }
 }
 
 async function handleDeploy() {
@@ -273,8 +340,19 @@ function handleStartOver() {
         authType: 'none',
         authConfig: {},
         generatedCode: null,
+        selectedTier: 'free',
     };
     document.getElementById('system-description').value = '';
+
+    // Reset tier selection UI
+    document.querySelectorAll('.tier-option').forEach(t => t.classList.remove('selected'));
+    document.querySelector('.tier-option[data-tier="free"]').classList.add('selected');
+    document.querySelector('input[name="tier"][value="free"]').checked = true;
+    document.getElementById('free-tier-info').classList.remove('hidden');
+    document.getElementById('paid-tier-options').classList.add('hidden');
+    document.getElementById('activate-btn').classList.remove('hidden');
+    document.getElementById('deploy-btn').classList.add('hidden');
+
     showStep(1);
 }
 
@@ -283,6 +361,7 @@ document.getElementById('describe-btn').addEventListener('click', handleDescribe
 document.getElementById('refine-btn').addEventListener('click', handleRefine);
 document.getElementById('confirm-actions-btn').addEventListener('click', handleConfirmActions);
 document.getElementById('confirm-auth-btn').addEventListener('click', handleConfirmAuth);
+document.getElementById('activate-btn').addEventListener('click', handleActivate);
 document.getElementById('deploy-btn').addEventListener('click', handleDeploy);
 document.getElementById('start-over-btn').addEventListener('click', handleStartOver);
 
@@ -299,6 +378,11 @@ document.querySelectorAll('input[name="auth-type"]').forEach(radio => {
 // Deploy target selection
 document.querySelectorAll('.deploy-target input').forEach(radio => {
     radio.addEventListener('change', handleTargetChange);
+});
+
+// Tier selection
+document.querySelectorAll('input[name="tier"]').forEach(radio => {
+    radio.addEventListener('change', handleTierChange);
 });
 
 // Enter key in refine input
