@@ -243,6 +243,42 @@ Update the actions based on this feedback. Return the complete updated list.""",
 
         return actions
 
+    async def confirm_actions(
+        self,
+        server_id: UUID,
+        selected_actions: list[str],
+    ) -> None:
+        """
+        Step 2b: Confirm selected actions (delete unselected ones).
+
+        Args:
+            server_id: Server UUID
+            selected_actions: List of action names to keep
+        """
+        server = await self.server_repo.get_with_tools(server_id)
+        if not server:
+            raise ValueError(f"Server {server_id} not found")
+
+        # Get current tool names
+        current_tool_names = {t.name for t in server.tools}
+        
+        # Verify selected actions exist
+        for name in selected_actions:
+            if name not in current_tool_names:
+                # Warning or ignore? We'll ignore and just keep valid ones.
+                logger.warning(f"Selected action {name} not found in server {server_id}")
+
+        # Delete unselected tools
+        for tool in server.tools:
+            if tool.name not in selected_actions:
+                # We assume tool_repo has delete method. 
+                # If not, we might need delete_by_id or similar.
+                # Assuming standard repo pattern.
+                if hasattr(self.tool_repo, 'delete'):
+                    await self.tool_repo.delete(tool.id)
+                else:
+                    logger.error("Tool repo missing delete method")
+
     async def generate_tool_codes(self, server_id: UUID) -> list[MCPTool]:
         """
         Generate code for all tools in a server.

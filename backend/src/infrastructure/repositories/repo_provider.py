@@ -1,4 +1,5 @@
 from infrastructure.db import create_database, Database
+from infrastructure.repositories.customer import CustomerRepo
 from infrastructure.repositories.mcp_server import MCPServerRepo, MCPToolRepo
 
 
@@ -6,6 +7,7 @@ class Provider:
     _db: None | Database = None
     _mcp_server_repo: None | MCPServerRepo = None
     _mcp_tool_repo: None | MCPToolRepo = None
+    _customer_repo: None | CustomerRepo = None
 
     @classmethod
     def get_db(cls, **overrides):
@@ -30,3 +32,9 @@ class Provider:
         if cls._mcp_tool_repo is None:
             cls._mcp_tool_repo = MCPToolRepo(cls.get_db())
         return cls._mcp_tool_repo
+
+    @classmethod
+    def customer_repo(cls) -> CustomerRepo:
+        if cls._customer_repo is None:
+            cls._customer_repo = CustomerRepo(cls.get_db())
+        return cls._customer_repo
