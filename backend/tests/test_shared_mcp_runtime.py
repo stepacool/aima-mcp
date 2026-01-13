@@ -1,10 +1,16 @@
 """Tests for shared MCP runtime - lifespan loading and dynamic registration."""
 
+import asyncio
+import socket
+import threading
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Type
 
 import pytest
+import uvicorn
 from fastapi import FastAPI
 from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
 
 from core.services.tier_service import Tier
 from core.services.tool_loader import get_tool_loader
@@ -21,6 +27,48 @@ from infrastructure.repositories.mcp_server import MCPServerCreate, MCPToolCreat
 from infrastructure.repositories.repo_provider import Provider
 
 pytestmark = pytest.mark.anyio
+
+
+def get_free_port() -> int:
+    """Get a free port for the test server."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+class UvicornTestServer:
+    """Context manager that runs uvicorn in a background thread."""
+
+    def __init__(self, app: FastAPI, port: int):
+        self.app = app
+        self.port = port
+        self.server: uvicorn.Server | None = None
+        self.thread: threading.Thread | None = None
+
+    async def __aenter__(self):
+        config = uvicorn.Config(
+            self.app,
+            host="127.0.0.1",
+            port=self.port,
+            log_level="error",
+        )
+        self.server = uvicorn.Server(config)
+        self.thread = threading.Thread(target=self.server.run)
+        self.thread.daemon = True
+        self.thread.start()
+
+        # Wait for server to be ready
+        for _ in range(50):  # 5 seconds max
+            await asyncio.sleep(0.1)
+            if self.server.started:
+                break
+        return self
+
+    async def __aexit__(self, *args):
+        if self.server:
+            self.server.should_exit = True
+        if self.thread:
+            self.thread.join(timeout=2)
 
 
 @pytest.fixture
@@ -183,7 +231,7 @@ class TestDynamicMCPRegistration:
             tier=Tier.FREE,
         )
 
-        mcp_server = register_new_customer_app(app, server.id, [compiled_tool])
+        mcp_server = await register_new_customer_app(app, server.id, [compiled_tool])
 
         # Verify the server has tools via FastMCP Client
         async with Client(mcp_server) as client:
@@ -213,7 +261,7 @@ class TestDynamicMCPRegistration:
             tier=Tier.FREE,
         )
 
-        mcp_server = register_new_customer_app(app, server.id, [compiled_tool])
+        mcp_server = await register_new_customer_app(app, server.id, [compiled_tool])
 
         # Verify the tool is callable via FastMCP Client
         async with Client(mcp_server) as client:
@@ -227,6 +275,127 @@ class TestDynamicMCPRegistration:
             result = await client.call_tool(tool_info.name, {})
             assert len(result.content) == 1
             assert result.content[0].text == "dynamic_response"
+
+    async def test_dynamic_registration_via_http_with_lifespan(
+        self,
+        provider: Type[Provider],
+        draft_server_with_tool: tuple[MCPServer, MCPTool],
+    ):
+        """Test dynamically registered server works over HTTP with proper lifespan.
+
+        This test verifies that the AsyncExitStack approach properly initializes
+        the FastMCP lifespan for dynamically mounted apps.
+        """
+        server, tool = draft_server_with_tool
+
+        # Create app with lifespan that includes AsyncExitStack
+        @asynccontextmanager
+        async def test_lifespan(app: FastAPI):
+            async with AsyncExitStack() as stack:
+                app.state.mcp_lifespan_stack = stack
+                yield
+
+        app = FastAPI(lifespan=test_lifespan)
+
+        # Compile the tool
+        tool_loader = get_tool_loader()
+        compiled_tool = tool_loader.compile_tool(
+            tool_id=str(tool.id),
+            name=tool.name,
+            description=tool.description,
+            parameters=tool.parameters_schema.get("parameters", []),
+            code=tool.code,
+            customer_id=server.customer_id,
+            tier=Tier.FREE,
+        )
+
+        # Start the server and register the MCP app dynamically inside the lifespan
+        port = get_free_port()
+
+        async with UvicornTestServer(app, port):
+            # Register the app AFTER server startup (dynamic registration)
+            await register_new_customer_app(app, server.id, [compiled_tool])
+
+            # Connect via HTTP transport and verify it works
+            mcp_url = f"http://127.0.0.1:{port}/mcp/{server.id}/mcp"
+            transport = StreamableHttpTransport(url=mcp_url)
+
+            async with Client(transport) as client:
+                tools = await client.list_tools()
+                assert len(tools) == 1
+                assert "dynamic_tool" in tools[0].name
+
+                # Call the tool and verify result
+                result = await client.call_tool(tools[0].name, {})
+                assert len(result.content) == 1
+                assert result.content[0].text == "dynamic_response"
+
+    async def test_multiple_dynamic_registrations_via_http(
+        self,
+        provider: Type[Provider],
+        customer: Customer,
+    ):
+        """Test multiple dynamically registered servers work over HTTP."""
+        # Create two servers
+        servers_and_tools = []
+        for i in range(2):
+            server = await Provider.mcp_server_repo().create(
+                MCPServerCreate(
+                    name=f"dynamic_http_server_{i}",
+                    description=f"Dynamic HTTP server {i}",
+                    customer_id=str(customer.id),
+                    auth_type="none",
+                )
+            )
+            tool = await Provider.mcp_tool_repo().create(
+                MCPToolCreate(
+                    server_id=server.id,
+                    name=f"http_tool_{i}",
+                    description=f"HTTP tool {i}",
+                    parameters_schema={"parameters": []},
+                    code=make_simple_tool_code(f"http_response_{i}"),
+                    is_validated=True,
+                )
+            )
+            servers_and_tools.append((server, tool))
+
+        # Create app with lifespan that includes AsyncExitStack
+        @asynccontextmanager
+        async def test_lifespan(app: FastAPI):
+            async with AsyncExitStack() as stack:
+                app.state.mcp_lifespan_stack = stack
+                yield
+
+        app = FastAPI(lifespan=test_lifespan)
+        port = get_free_port()
+
+        async with UvicornTestServer(app, port):
+            # Register both apps dynamically
+            tool_loader = get_tool_loader()
+            for server, tool in servers_and_tools:
+                compiled_tool = tool_loader.compile_tool(
+                    tool_id=str(tool.id),
+                    name=tool.name,
+                    description=tool.description,
+                    parameters=tool.parameters_schema.get("parameters", []),
+                    code=tool.code,
+                    customer_id=server.customer_id,
+                    tier=Tier.FREE,
+                )
+                await register_new_customer_app(app, server.id, [compiled_tool])
+
+            # Verify both servers work over HTTP
+            for i, (server, tool) in enumerate(servers_and_tools):
+                mcp_url = f"http://127.0.0.1:{port}/mcp/{server.id}/mcp"
+                transport = StreamableHttpTransport(url=mcp_url)
+
+                async with Client(transport) as client:
+                    tools = await client.list_tools()
+                    assert len(tools) == 1
+                    assert f"http_tool_{i}" in tools[0].name
+
+                    result = await client.call_tool(tools[0].name, {})
+                    assert result.content[0].text == f"http_response_{i}"
 
 
 class TestMultipleServers:
