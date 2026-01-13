@@ -100,9 +100,9 @@ export async function wizardRefine(serverId: string, feedback: string): Promise<
 }
 
 export async function wizardConfirmActions(serverId: string, selectedActions: string[]): Promise<void> {
-  return request(`/api/wizard/${serverId}/actions/confirm`, {
+  return request(`/api/wizard/${serverId}/tools/select`, {
     method: 'POST',
-    body: { selected_actions: selectedActions },
+    body: { selected_tool_names: selectedActions },
   })
 }
 
