@@ -373,3 +373,18 @@ Files prefixed with `demo` can be safely deleted. They are there to provide a st
 # Learn More
 
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+
+
+# RUN DATABASE:
+```bash
+docker run -d \
+  --name aima-mcp-frontend-db \
+  -e POSTGRES_DB=aima_mcp_frontend_db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5434:5432 \
+  postgres:16
+```
+```
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/aima_mcp_frontend_db
+```
