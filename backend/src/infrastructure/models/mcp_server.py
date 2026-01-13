@@ -37,23 +37,18 @@ class MCPServer(CustomBase):
     tier: Mapped[str] = mapped_column(
         String(20), default=MCPServerTier.FREE.value, nullable=False
     )
-    auth_type: Mapped[str] = mapped_column(
-        String(50), default="none", nullable=False
-    )
-    auth_config: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True
-    )
-    customer_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("customers.id", ondelete="CASCADE"),
+    auth_type: Mapped[str] = mapped_column(String(50), default="none", nullable=False)
+    auth_config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    customer_id: Mapped[str] = mapped_column(
+        String(255),
         nullable=False,
         index=True,
     )
 
-    customer: Mapped["Customer"] = relationship(back_populates="mcp_servers")
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
+
     prompts: Mapped[list["MCPPrompt"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )

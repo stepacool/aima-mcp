@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 class StartWizardRequest(BaseModel):
-    customer_id: UUID
+    customer_id: str
     description: str
 
 
@@ -113,6 +113,7 @@ async def refine_actions(server_id: UUID, request: RefineActionsRequest) -> dict
         logger.error(f"Error refining actions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/{server_id}/actions/confirm")
 async def confirm_actions(server_id: UUID, request: ConfirmActionsRequest) -> dict:
     """
@@ -136,7 +137,7 @@ async def confirm_actions(server_id: UUID, request: ConfirmActionsRequest) -> di
         # For now I will just add the endpoint signature and logic placeholder.
         # Actually I should do it properly. I'll read `wizard_service.py` next.
         # For this tool call, I'll insert the endpoint.
-        
+
         # NOTE: I am writing this assuming `update_actions` exists or I'll add it.
         # Let's blindly add the call and I'll fix the service next.
         await service.confirm_actions(server_id, request.selected_actions)
@@ -144,7 +145,7 @@ async def confirm_actions(server_id: UUID, request: ConfirmActionsRequest) -> di
         return {
             "server_id": str(server_id),
             "status": "confirmed",
-            "action_count": len(request.selected_actions)
+            "action_count": len(request.selected_actions),
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

@@ -97,6 +97,38 @@ class Application:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+        # Request logging middleware
+        from starlette.middleware.base import BaseHTTPMiddleware
+        from starlette.requests import Request
+        import json
+
+        class RequestLoggingMiddleware(BaseHTTPMiddleware):
+            async def dispatch(self, request: Request, call_next):
+                # Log request details
+                body = b""
+                if request.method in ["POST", "PUT", "PATCH"]:
+                    body = await request.body()
+                    logger.info(f"Request: {request.method} {request.url.path}")
+                    try:
+                        logger.info(f"Body: {json.loads(body)}")
+                    except:
+                        logger.info(f"Body: {body}")
+
+                    # Reset body for downstream handlers
+                    async def receive():
+                        return {"type": "http.request", "body": body}
+
+                    request._receive = receive
+                else:
+                    logger.info(f"Request: {request.method} {request.url.path}")
+
+                response = await call_next(request)
+                logger.info(f"Response: {response.status_code}")
+                return response
+
+        self.app.add_middleware(RequestLoggingMiddleware)
+
         self.app.include_router(api_router)
 
         # Serve frontend static files

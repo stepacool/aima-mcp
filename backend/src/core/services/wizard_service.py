@@ -103,14 +103,14 @@ class WizardService:
 
     async def start_wizard(
         self,
-        customer_id: UUID,
+        customer_id: str,
         description: str,
     ) -> WizardResult:
         """
         Step 1: Create server, suggest actions, save to DB.
 
         Args:
-            customer_id: Customer UUID
+            customer_id: Customer ID (Auth user ID)
             description: User's description of what they want
 
         Returns:
@@ -261,20 +261,22 @@ Update the actions based on this feedback. Return the complete updated list.""",
 
         # Get current tool names
         current_tool_names = {t.name for t in server.tools}
-        
+
         # Verify selected actions exist
         for name in selected_actions:
             if name not in current_tool_names:
                 # Warning or ignore? We'll ignore and just keep valid ones.
-                logger.warning(f"Selected action {name} not found in server {server_id}")
+                logger.warning(
+                    f"Selected action {name} not found in server {server_id}"
+                )
 
         # Delete unselected tools
         for tool in server.tools:
             if tool.name not in selected_actions:
-                # We assume tool_repo has delete method. 
+                # We assume tool_repo has delete method.
                 # If not, we might need delete_by_id or similar.
                 # Assuming standard repo pattern.
-                if hasattr(self.tool_repo, 'delete'):
+                if hasattr(self.tool_repo, "delete"):
                     await self.tool_repo.delete(tool.id)
                 else:
                     logger.error("Tool repo missing delete method")

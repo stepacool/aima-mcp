@@ -17,7 +17,7 @@ from infrastructure.repositories.base import BaseCRUDRepo
 class MCPServerCreate(BaseModel):
     name: str
     description: str | None = None
-    customer_id: UUID
+    customer_id: str
     tier: str = "free"
     auth_type: str = "none"
     auth_config: dict[str, Any] | None = None
@@ -83,7 +83,7 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
             )
             return list(result.scalars().all())
 
-    async def get_by_customer(self, customer_id: UUID) -> list[MCPServer]:
+    async def get_by_customer(self, customer_id: str) -> list[MCPServer]:
         """Get all servers for a customer."""
         async with self.db.session() as session:
             result = await session.execute(
