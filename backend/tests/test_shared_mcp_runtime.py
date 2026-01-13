@@ -32,7 +32,7 @@ async def active_server_with_tool(
         MCPServerCreate(
             name="lifespan_test_server",
             description="Server for lifespan loading test",
-            customer_id=customer.id,
+            customer_id=str(customer.id),
             auth_type="none",
         )
     )
@@ -71,7 +71,7 @@ async def draft_server_with_tool(
         MCPServerCreate(
             name="dynamic_test_server",
             description="Server for dynamic registration test",
-            customer_id=customer.id,
+            customer_id=str(customer.id),
             auth_type="none",
         )
     )
@@ -243,7 +243,7 @@ class TestMultipleServers:
                 MCPServerCreate(
                     name=f"multi_server_{i}",
                     description=f"Multi test server {i}",
-                    customer_id=customer.id,
+                    customer_id=str(customer.id),
                     auth_type="none",
                 )
             )
@@ -300,7 +300,7 @@ class TestMultipleServers:
             MCPServerCreate(
                 name="deployed_server",
                 description="Deployed server",
-                customer_id=customer.id,
+                customer_id=str(customer.id),
             )
         )
         await Provider.mcp_tool_repo().create(
@@ -329,7 +329,7 @@ class TestMultipleServers:
             MCPServerCreate(
                 name="draft_server",
                 description="Draft server",
-                customer_id=customer.id,
+                customer_id=str(customer.id),
             )
         )
         await Provider.mcp_tool_repo().create(
@@ -348,7 +348,7 @@ class TestMultipleServers:
             MCPServerCreate(
                 name="ready_server",
                 description="Ready server",
-                customer_id=customer.id,
+                customer_id=str(customer.id),
             )
         )
         await Provider.mcp_tool_repo().create(

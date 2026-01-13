@@ -112,7 +112,7 @@ class Application:
                     logger.info(f"Request: {request.method} {request.url.path}")
                     try:
                         logger.info(f"Body: {json.loads(body)}")
-                    except:
+                    except Exception:
                         logger.info(f"Body: {body}")
 
                     # Reset body for downstream handlers

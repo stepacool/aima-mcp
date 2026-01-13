@@ -87,8 +87,7 @@ async def http_server_with_tool(
         MCPServerCreate(
             name="http_test_server",
             description="Server for HTTP tool testing",
-            customer_id=customer.id,
-            tier="free",
+            customer_id=str(customer.id),
             auth_type="none",
         )
     )
@@ -176,8 +175,7 @@ class TestHTTPToolsViaHTTP:
             MCPServerCreate(
                 name="http_param_server",
                 description="Server with parameterized HTTP tool",
-                customer_id=customer.id,
-                tier="free",
+                customer_id=str(customer.id),
                 auth_type="none",
             )
         )
@@ -263,8 +261,7 @@ async with httpx.AsyncClient() as client:
             MCPServerCreate(
                 name="multi_tool_server",
                 description="Server with multiple HTTP tools",
-                customer_id=customer.id,
-                tier="free",
+                customer_id=str(customer.id),
                 auth_type="none",
             )
         )
@@ -361,8 +358,7 @@ async with httpx.AsyncClient() as client:
             MCPServerCreate(
                 name="server_one",
                 description="First server",
-                customer_id=customer.id,
-                tier="free",
+                customer_id=str(customer.id),
                 auth_type="none",
             )
         )
@@ -381,8 +377,7 @@ async with httpx.AsyncClient() as client:
             MCPServerCreate(
                 name="server_two",
                 description="Second server",
-                customer_id=customer.id,
-                tier="free",
+                customer_id=str(customer.id),
                 auth_type="none",
             )
         )

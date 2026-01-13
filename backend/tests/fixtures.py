@@ -49,7 +49,7 @@ async def mcp_server(provider: Type[Provider], customer: Customer) -> MCPServer:
         MCPServerCreate(
             name="test_server",
             description="Test MCP Server",
-            customer_id=customer.id,
+            customer_id=str(customer.id),
             auth_type="none",
         )
     )
@@ -63,7 +63,7 @@ async def active_mcp_server(provider: Type[Provider], customer: Customer) -> MCP
         MCPServerCreate(
             name="active_test_server",
             description="Active Test MCP Server",
-            customer_id=customer.id,
+            customer_id=str(customer.id),
             auth_type="none",
         )
     )
