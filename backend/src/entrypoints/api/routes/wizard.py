@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
+from core.services.tier_service import FREE_TIER_MAX_TOOLS
 from core.services.wizard_service import WizardService
 from infrastructure.repositories.repo_provider import Provider
 
@@ -29,8 +30,8 @@ class RefineActionsRequest(BaseModel):
     feedback: str
 
 
-class ConfirmActionsRequest(BaseModel):
-    selected_actions: list[str]
+class SelectToolsRequest(BaseModel):
+    selected_tool_names: list[str]
 
 
 class ConfigureAuthRequest(BaseModel):
@@ -113,44 +114,36 @@ async def refine_actions(server_id: UUID, request: RefineActionsRequest) -> dict
         logger.error(f"Error refining actions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.post("/{server_id}/actions/confirm")
-async def confirm_actions(server_id: UUID, request: ConfirmActionsRequest) -> dict:
+@router.post("/{server_id}/tools/select")
+async def select_tools(server_id: UUID, request: SelectToolsRequest) -> dict:
     """
-    Step 2b: Confirm selected actions.
+    Step 2b: Select which tools to keep.
 
-    Updates the server to keep only the selected actions.
+    Validates free tier limit (max 3 tools) and removes unselected tools.
     """
+    # Validate free tier limit
+    if len(request.selected_tool_names) > FREE_TIER_MAX_TOOLS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Free tier allows max {FREE_TIER_MAX_TOOLS} tools. "
+            f"You selected {len(request.selected_tool_names)}. "
+            "Upgrade to paid tier for more.",
+        )
+
     service = get_wizard_service()
 
     try:
-        # In a real impl, we would call service.update_actions(server_id, request.selected_actions)
-        # For now, we'll assume the service has a method or we'll just implement a simple filter if service supports it
-        # Since I cannot see WizardService method, I will assume I need to implement it or use what's available.
-        # Let's check WizardService if possible. But assuming I can't check it easily right now,
-        # I will mock the behavior or implement a basic repo update here if service doesn't have it.
-        # Better: use repo directly if service is missing method.
-        # But `get_wizard_service` returns a service.
-        # I'll just return success for now if I can't update, OR better, I'll update the `wizard_service` signature in my thought process.
-        # Wait, I don't have access to modify `wizard_service.py` yet (I listed `core` but didn't view it).
-        # I should view `wizard_service.py` to see if I can add a method there.
-        # For now I will just add the endpoint signature and logic placeholder.
-        # Actually I should do it properly. I'll read `wizard_service.py` next.
-        # For this tool call, I'll insert the endpoint.
-
-        # NOTE: I am writing this assuming `update_actions` exists or I'll add it.
-        # Let's blindly add the call and I'll fix the service next.
-        await service.confirm_actions(server_id, request.selected_actions)
+        await service.confirm_actions(server_id, request.selected_tool_names)
 
         return {
             "server_id": str(server_id),
             "status": "confirmed",
-            "action_count": len(request.selected_actions),
+            "tools_count": len(request.selected_tool_names),
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.error(f"Error confirming actions: {e}")
+        logger.error(f"Error selecting tools: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

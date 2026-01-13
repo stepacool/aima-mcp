@@ -16,14 +16,20 @@ if TYPE_CHECKING:
 class DeploymentTarget(str, Enum):
     """Target platform for MCP server deployment."""
 
-    # Shared runtime (free tier) - multi-tenant at /mcp/{server_id}
-    SHARED = "shared"
+    # Public targets (shown in API)
+    SHARED = "shared"  # Multi-tenant runtime at /mcp/{server_id}
+    DEDICATED = "dedicated"  # VPC/dedicated hosting by us
 
-    # VPC/dedicated hosting (paid tier)
+    # Internal targets (not exposed in API, for future use)
     MODAL = "modal"
     CLOUDFLARE = "cloudflare"
     VERCEL = "vercel"
     STANDALONE = "standalone"
+
+    @classmethod
+    def public_targets(cls) -> list["DeploymentTarget"]:
+        """Get targets that should be shown in the API."""
+        return [cls.SHARED, cls.DEDICATED]
 
 
 class DeploymentStatus(str, Enum):
