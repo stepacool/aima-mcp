@@ -8,14 +8,14 @@ import { ActionCard } from '@/components/wizard/ActionCard'
 import {
   startWizard,
   refineActions,
-  confirmActions,
+  selectTools,
   configureAuth,
   generateCode,
   activateServer,
-  createVPS,
+  deployServer,
 } from '@/lib/wizard-functions'
 import { getSession } from '@/lib/auth-functions'
-import type { Action } from '@/lib/backend-client'
+import type { Action, ToolWithCode } from '@/lib/backend-client'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
@@ -40,10 +40,10 @@ interface WizardState {
     clientId: string
     scopes: string
   }
+  generatedTools: ToolWithCode[]
   selectedTier: 'free' | 'paid'
   result: {
     mcpEndpoint?: string
-    ipAddress?: string
     toolsCount?: number
     message?: string
   } | null
@@ -59,6 +59,7 @@ function WizardPage() {
     selectedActions: [],
     authType: 'none',
     oauthConfig: { providerUrl: '', clientId: '', scopes: '' },
+    generatedTools: [],
     selectedTier: 'free',
     result: null,
   })
@@ -126,9 +127,9 @@ function WizardPage() {
   async function handleConfirmActions() {
     if (!state.serverId || state.selectedActions.length === 0) return
     setLoading(true)
-    setLoadingText('Confirming actions...')
+    setLoadingText('Confirming tool selection...')
     try {
-      await confirmActions({ data: { serverId: state.serverId, selectedActions: state.selectedActions } })
+      await selectTools({ data: { serverId: state.serverId, selectedToolNames: state.selectedActions } })
       setState((s) => ({ ...s, currentStep: 3 }))
     } catch (e) {
       alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
@@ -155,9 +156,9 @@ function WizardPage() {
       await configureAuth({ data: { serverId: state.serverId, authType: state.authType, authConfig } })
 
       setLoadingText('Generating tool code...')
-      await generateCode({ data: { serverId: state.serverId } })
+      const codeResult = await generateCode({ data: { serverId: state.serverId } })
 
-      setState((s) => ({ ...s, currentStep: 4 }))
+      setState((s) => ({ ...s, currentStep: 4, generatedTools: codeResult.tools }))
     } catch (e) {
       alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     } finally {
@@ -187,17 +188,16 @@ function WizardPage() {
     }
   }
 
-  async function handleCreateVPS() {
+  async function handleDeploy() {
     if (!state.serverId) return
     setLoading(true)
-    setLoadingText('Provisioning VPS...')
+    setLoadingText('Deploying to dedicated VPC...')
     try {
-      const result = await createVPS({ data: { serverId: state.serverId } })
+      const result = await deployServer({ data: { serverId: state.serverId, target: 'dedicated' } })
       setState((s) => ({
         ...s,
         currentStep: 5,
         result: {
-          ipAddress: result.ip_address,
           message: result.message,
         },
       }))
@@ -218,6 +218,7 @@ function WizardPage() {
       selectedActions: [],
       authType: 'none',
       oauthConfig: { providerUrl: '', clientId: '', scopes: '' },
+      generatedTools: [],
       selectedTier: 'free',
       result: null,
     })
@@ -417,14 +418,32 @@ function WizardPage() {
                 <p className="text-slate-400 text-sm">{state.serverDescription}</p>
                 <div className="flex gap-8 mt-3">
                   <div>
-                    <span className="text-2xl font-bold text-green-400">{state.selectedActions.length}</span>
-                    <span className="text-slate-500 text-sm ml-2">Actions</span>
+                    <span className="text-2xl font-bold text-green-400">{state.generatedTools.length}</span>
+                    <span className="text-slate-500 text-sm ml-2">Tools</span>
                   </div>
                   <div>
                     <span className="text-lg font-semibold text-green-400 capitalize">{state.authType}</span>
                     <span className="text-slate-500 text-sm ml-2">Auth Type</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Generated Code Preview */}
+              <h3 className="text-slate-400 text-sm font-semibold mb-2">Generated Tool Code</h3>
+              <div className="space-y-3 mb-4 max-h-80 overflow-y-auto">
+                {state.generatedTools.map((tool) => (
+                  <details key={tool.id} className="bg-slate-900 rounded-lg border border-slate-700">
+                    <summary className="px-4 py-3 cursor-pointer hover:bg-slate-800 rounded-lg">
+                      <span className="font-medium text-indigo-400">{tool.name}</span>
+                      <span className="text-slate-500 text-sm ml-2">— {tool.description}</span>
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <pre className="bg-slate-950 rounded-lg p-3 text-sm text-slate-300 overflow-x-auto whitespace-pre-wrap">
+                        <code>{tool.code}</code>
+                      </pre>
+                    </div>
+                  </details>
+                ))}
               </div>
 
               <h3 className="text-slate-400 text-sm font-semibold mb-2">Choose Your Plan</h3>
@@ -491,10 +510,10 @@ function WizardPage() {
                   </button>
                 ) : (
                   <button
-                    onClick={handleCreateVPS}
+                    onClick={handleDeploy}
                     className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg"
                   >
-                    Create VPS (Paid)
+                    Deploy (Dedicated VPC)
                   </button>
                 )}
               </div>
@@ -519,14 +538,8 @@ function WizardPage() {
                     </p>
                   </>
                 )}
-                {state.result.ipAddress && (
-                  <>
-                    <p className="mb-2">
-                      <strong className="text-slate-300">IP Address:</strong>{' '}
-                      <code className="text-indigo-400">{state.result.ipAddress}</code>
-                    </p>
-                    <p className="text-slate-400">{state.result.message}</p>
-                  </>
+                {state.result.message && !state.result.mcpEndpoint && (
+                  <p className="text-slate-400">{state.result.message}</p>
                 )}
               </div>
 

@@ -36,6 +36,16 @@ CURATED_LIBRARIES = {
     "re": None,
     "os": ["getenv", "environ"],  # Limited os access
     "pathlib": ["Path"],
+    "urllib": None,  # URL parsing utilities
+    "base64": None,  # Base64 encoding/decoding
+    "hashlib": None,  # Hashing functions
+    "uuid": None,  # UUID generation
+    "math": None,  # Math functions
+    "random": None,  # Random number generation
+    "string": None,  # String constants and utilities
+    "collections": None,  # Collection types
+    "itertools": None,  # Iterator utilities
+    "functools": None,  # Function utilities
 }
 
 # Dangerous modules that should never be allowed

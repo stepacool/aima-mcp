@@ -131,25 +131,6 @@ class Application:
 
         self.app.include_router(api_router)
 
-        # Serve frontend static files
-        if FRONTEND_DIR.exists():
-            self.app.mount(
-                "/static",
-                StaticFiles(directory=FRONTEND_DIR),
-                name="static",
-            )
-
-            @self.app.get("/")
-            async def serve_index():
-                return FileResponse(FRONTEND_DIR / "index.html")
-
-            @self.app.get("/{path:path}")
-            async def serve_frontend(path: str):
-                file_path = FRONTEND_DIR / path
-                if file_path.exists() and file_path.is_file():
-                    return FileResponse(file_path)
-                return FileResponse(FRONTEND_DIR / "index.html")
-
     def create_database_pool(self) -> None:
         Provider.get_db(
             connect_args={

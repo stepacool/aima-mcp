@@ -165,7 +165,8 @@ async def generate_tool_codes(server_id: UUID) -> dict:
                 {
                     "id": str(t.id),
                     "name": t.name,
-                    "has_code": bool(t.code),
+                    "description": t.description,
+                    "code": t.code or "",
                 }
                 for t in tools
             ],

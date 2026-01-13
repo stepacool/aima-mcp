@@ -4,7 +4,7 @@ Shared MCP Runtime for Free Tier Users.
 Uses the simple register_new_customer_app pattern to mount
 customer MCP servers dynamically.
 """
-
+from contextlib import asynccontextmanager
 from uuid import UUID
 
 from fastapi import FastAPI
@@ -44,7 +44,10 @@ def register_new_customer_app(app: FastAPI, server_id: UUID, tools: list) -> Fas
         FastMCP instance that was mounted
     """
     mcp = build_mcp_server(server_id, tools)
-    app.mount(f"/mcp/{server_id}", mcp.http_app())
+    app.mount(
+        f"/mcp/{server_id}",
+        mcp.http_app(),
+    )
     logger.info(f"Registered MCP app at /mcp/{server_id} with {len(tools)} tools")
     return mcp
 
