@@ -18,7 +18,6 @@ class MCPServerCreate(BaseModel):
     name: str
     description: str | None = None
     customer_id: str
-    tier: str = "free"
     auth_type: str = "none"
     auth_config: dict[str, Any] | None = None
 
@@ -27,7 +26,6 @@ class MCPServerUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     status: str | None = None
-    tier: str | None = None
     auth_type: str | None = None
     auth_config: dict[str, Any] | None = None
 
@@ -73,15 +71,17 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
             )
             return result.scalars().first()
 
-    async def get_all_active(self) -> list[MCPServer]:
-        """Get all servers with status=ACTIVE (free tier deployed)."""
+    async def get_with_deployment(self, server_id: UUID) -> MCPServer | None:
+        """Get server with eager-loaded deployment."""
+        from infrastructure.models.mcp_server import MCPServer
+
         async with self.db.session() as session:
             result = await session.execute(
                 select(self.model)
-                .where(self.model.status == MCPServerStatus.ACTIVE.value)
-                .options(selectinload(self.model.tools))
+                .where(self.model.id == server_id)
+                .options(selectinload(MCPServer.deployment))
             )
-            return list(result.scalars().all())
+            return result.scalars().first()
 
     async def get_by_customer(self, customer_id: str) -> list[MCPServer]:
         """Get all servers for a customer."""

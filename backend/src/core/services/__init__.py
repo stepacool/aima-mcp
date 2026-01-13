@@ -1,9 +1,5 @@
 # Core services exports
 
-# Artifact generator
-from core.services.artifact_generator import ArtifactGenerator as ArtifactGenerator
-from core.services.artifact_generator import get_artifact_generator as get_artifact_generator
-
 # LLM client
 from core.services.llm_client import LLMClient as LLMClient
 from core.services.llm_client import get_llm_client as get_llm_client

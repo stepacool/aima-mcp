@@ -1,5 +1,9 @@
 from infrastructure.db import create_database, Database
 from infrastructure.repositories.customer import CustomerRepo
+from infrastructure.repositories.deployment import (
+    DeploymentArtifactRepo,
+    DeploymentRepo,
+)
 from infrastructure.repositories.mcp_server import MCPServerRepo, MCPToolRepo
 
 
@@ -8,6 +12,8 @@ class Provider:
     _mcp_server_repo: None | MCPServerRepo = None
     _mcp_tool_repo: None | MCPToolRepo = None
     _customer_repo: None | CustomerRepo = None
+    _deployment_repo: None | DeploymentRepo = None
+    _deployment_artifact_repo: None | DeploymentArtifactRepo = None
 
     @classmethod
     def get_db(cls, **overrides):
@@ -38,3 +44,15 @@ class Provider:
         if cls._customer_repo is None:
             cls._customer_repo = CustomerRepo(cls.get_db())
         return cls._customer_repo
+
+    @classmethod
+    def deployment_repo(cls) -> DeploymentRepo:
+        if cls._deployment_repo is None:
+            cls._deployment_repo = DeploymentRepo(cls.get_db())
+        return cls._deployment_repo
+
+    @classmethod
+    def deployment_artifact_repo(cls) -> DeploymentArtifactRepo:
+        if cls._deployment_artifact_repo is None:
+            cls._deployment_artifact_repo = DeploymentArtifactRepo(cls.get_db())
+        return cls._deployment_artifact_repo

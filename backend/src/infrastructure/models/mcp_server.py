@@ -9,19 +9,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from infrastructure.db import CustomBase
 
 if TYPE_CHECKING:
-    from infrastructure.models.customer import Customer
+    from infrastructure.models.deployment import Deployment
 
 
 class MCPServerStatus(str, Enum):
-    DRAFT = "draft"
-    READY = "ready"
-    DEPLOYED = "deployed"
-    ACTIVE = "active"  # For free tier - running on shared runtime
+    """Status of MCP server configuration."""
 
-
-class MCPServerTier(str, Enum):
-    FREE = "free"
-    PAID = "paid"
+    DRAFT = "draft"  # Server being configured
+    READY = "ready"  # Ready for deployment (all tools validated)
 
 
 class MCPServer(CustomBase):
@@ -33,9 +28,6 @@ class MCPServer(CustomBase):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(50), default=MCPServerStatus.DRAFT.value, nullable=False
-    )
-    tier: Mapped[str] = mapped_column(
-        String(20), default=MCPServerTier.FREE.value, nullable=False
     )
     auth_type: Mapped[str] = mapped_column(String(50), default="none", nullable=False)
     auth_config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
@@ -55,6 +47,28 @@ class MCPServer(CustomBase):
     chat_sessions: Mapped[list["ChatSession"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
+    deployment: Mapped[Optional["Deployment"]] = relationship(
+        back_populates="server", uselist=False, cascade="all, delete-orphan"
+    )
+
+    @property
+    def tier(self) -> str:
+        """Derive tier from deployment target."""
+        from infrastructure.models.deployment import DeploymentTarget
+
+        if self.deployment and self.deployment.target != DeploymentTarget.SHARED.value:
+            return "paid"
+        return "free"
+
+    @property
+    def is_deployed(self) -> bool:
+        """Check if server is actively deployed."""
+        from infrastructure.models.deployment import DeploymentStatus
+
+        return (
+            self.deployment is not None
+            and self.deployment.status == DeploymentStatus.ACTIVE.value
+        )
 
 
 class MCPTool(CustomBase):
@@ -113,21 +127,3 @@ class ChatSession(CustomBase):
     )
 
     server: Mapped["MCPServer"] = relationship(back_populates="chat_sessions")
-
-
-class DeploymentArtifact(CustomBase):
-    """Stores generated deployment artifacts for MCP servers."""
-
-    __tablename__ = "deployment_artifacts"
-
-    server_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("mcp_servers.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    artifact_type: Mapped[str] = mapped_column(
-        String(50), nullable=False
-    )  # e.g., "modal", "cloudflare", "vercel"
-    code: Mapped[str] = mapped_column(Text, nullable=False)
-    config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)

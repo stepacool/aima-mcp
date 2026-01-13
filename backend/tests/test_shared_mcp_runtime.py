@@ -14,7 +14,9 @@ from entrypoints.mcp.shared_runtime import (
 )
 from fixtures import make_simple_tool_code
 from infrastructure.models import Customer
+from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
 from infrastructure.models.mcp_server import MCPServer, MCPServerStatus, MCPTool
+from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.mcp_server import MCPServerCreate, MCPToolCreate
 from infrastructure.repositories.repo_provider import Provider
 
@@ -25,13 +27,12 @@ pytestmark = pytest.mark.anyio
 async def active_server_with_tool(
     provider: Type[Provider], customer: Customer
 ) -> tuple[MCPServer, MCPTool]:
-    """Create an ACTIVE MCP server with a tool for lifespan tests."""
+    """Create an MCP server with active shared deployment for lifespan tests."""
     server = await Provider.mcp_server_repo().create(
         MCPServerCreate(
             name="lifespan_test_server",
             description="Server for lifespan loading test",
             customer_id=customer.id,
-            tier="free",
             auth_type="none",
         )
     )
@@ -47,7 +48,16 @@ async def active_server_with_tool(
         )
     )
 
-    await Provider.mcp_server_repo().update_status(server.id, MCPServerStatus.ACTIVE)
+    # Create deployment record
+    await Provider.deployment_repo().create(
+        DeploymentCreate(
+            server_id=server.id,
+            target=DeploymentTarget.SHARED.value,
+            status=DeploymentStatus.ACTIVE.value,
+            endpoint_url=f"/mcp/{server.id}",
+        )
+    )
+    await Provider.mcp_server_repo().update_status(server.id, MCPServerStatus.READY)
     server = await Provider.mcp_server_repo().get_by_uuid(server.id)
     return server, tool
 
@@ -62,7 +72,6 @@ async def draft_server_with_tool(
             name="dynamic_test_server",
             description="Server for dynamic registration test",
             customer_id=customer.id,
-            tier="free",
             auth_type="none",
         )
     )
@@ -226,8 +235,8 @@ class TestMultipleServers:
     async def test_multiple_active_servers_loaded(
         self, provider: Type[Provider], customer: Customer
     ):
-        """Test that multiple ACTIVE servers are all loaded and accessible."""
-        # Create 3 active servers with tools
+        """Test that multiple deployed servers are all loaded and accessible."""
+        # Create 3 servers with active shared deployments
         servers = []
         for i in range(3):
             server = await Provider.mcp_server_repo().create(
@@ -235,7 +244,6 @@ class TestMultipleServers:
                     name=f"multi_server_{i}",
                     description=f"Multi test server {i}",
                     customer_id=customer.id,
-                    tier="free",
                     auth_type="none",
                 )
             )
@@ -249,8 +257,17 @@ class TestMultipleServers:
                     is_validated=True,
                 )
             )
+            # Create deployment record
+            await Provider.deployment_repo().create(
+                DeploymentCreate(
+                    server_id=server.id,
+                    target=DeploymentTarget.SHARED.value,
+                    status=DeploymentStatus.ACTIVE.value,
+                    endpoint_url=f"/mcp/{server.id}",
+                )
+            )
             await Provider.mcp_server_repo().update_status(
-                server.id, MCPServerStatus.ACTIVE
+                server.id, MCPServerStatus.READY
             )
             servers.append(server)
 
@@ -277,27 +294,35 @@ class TestMultipleServers:
     async def test_mixed_status_servers(
         self, provider: Type[Provider], customer: Customer
     ):
-        """Test that only ACTIVE servers are loaded, not DRAFT/READY."""
-        # Create servers with different statuses
-        active_server = await Provider.mcp_server_repo().create(
+        """Test that only servers with active deployments are loaded."""
+        # Create server with active shared deployment
+        deployed_server = await Provider.mcp_server_repo().create(
             MCPServerCreate(
-                name="active_server",
-                description="Active server",
+                name="deployed_server",
+                description="Deployed server",
                 customer_id=customer.id,
             )
         )
         await Provider.mcp_tool_repo().create(
             MCPToolCreate(
-                server_id=active_server.id,
-                name="active_tool",
-                description="Active tool",
+                server_id=deployed_server.id,
+                name="deployed_tool",
+                description="Deployed tool",
                 parameters_schema={"parameters": []},
-                code=make_simple_tool_code("active"),
+                code=make_simple_tool_code("deployed"),
                 is_validated=True,
             )
         )
+        await Provider.deployment_repo().create(
+            DeploymentCreate(
+                server_id=deployed_server.id,
+                target=DeploymentTarget.SHARED.value,
+                status=DeploymentStatus.ACTIVE.value,
+                endpoint_url=f"/mcp/{deployed_server.id}",
+            )
+        )
         await Provider.mcp_server_repo().update_status(
-            active_server.id, MCPServerStatus.ACTIVE
+            deployed_server.id, MCPServerStatus.READY
         )
 
         draft_server = await Provider.mcp_server_repo().create(
@@ -317,7 +342,7 @@ class TestMultipleServers:
                 is_validated=True,
             )
         )
-        # draft_server stays DRAFT (default)
+        # draft_server stays DRAFT (no deployment)
 
         ready_server = await Provider.mcp_server_repo().create(
             MCPServerCreate(
@@ -339,25 +364,26 @@ class TestMultipleServers:
         await Provider.mcp_server_repo().update_status(
             ready_server.id, MCPServerStatus.READY
         )
+        # ready_server is READY but has no deployment
 
         app = FastAPI()
         registered_servers = await load_and_register_all_mcp_servers(app)
 
-        # Only 1 server should be loaded (the ACTIVE one)
+        # Only 1 server should be loaded (the one with active deployment)
         assert len(registered_servers) == 1
 
-        # Verify only active server is accessible
-        assert active_server.id in registered_servers
+        # Verify only deployed server is accessible
+        assert deployed_server.id in registered_servers
         assert draft_server.id not in registered_servers
         assert ready_server.id not in registered_servers
 
-        # Verify active server works via FastMCP Client
-        mcp_server = registered_servers[active_server.id]
+        # Verify deployed server works via FastMCP Client
+        mcp_server = registered_servers[deployed_server.id]
         async with Client(mcp_server) as client:
             tools = await client.list_tools()
             assert len(tools) == 1
-            assert "active_tool" in tools[0].name
+            assert "deployed_tool" in tools[0].name
 
             result = await client.call_tool(tools[0].name, {})
             assert len(result.content) == 1
-            assert result.content[0].text == "active"
+            assert result.content[0].text == "deployed"

@@ -1,9 +1,11 @@
 from infrastructure.models.customer import APIKey as APIKey
 from infrastructure.models.customer import Customer as Customer
+from infrastructure.models.deployment import Deployment as Deployment
+from infrastructure.models.deployment import DeploymentArtifact as DeploymentArtifact
+from infrastructure.models.deployment import DeploymentStatus as DeploymentStatus
+from infrastructure.models.deployment import DeploymentTarget as DeploymentTarget
 from infrastructure.models.mcp_server import ChatSession as ChatSession
-from infrastructure.models.mcp_server import DeploymentArtifact as DeploymentArtifact
 from infrastructure.models.mcp_server import MCPPrompt as MCPPrompt
 from infrastructure.models.mcp_server import MCPServer as MCPServer
 from infrastructure.models.mcp_server import MCPServerStatus as MCPServerStatus
-from infrastructure.models.mcp_server import MCPServerTier as MCPServerTier
 from infrastructure.models.mcp_server import MCPTool as MCPTool

@@ -2,7 +2,6 @@
 
 import textwrap
 from typing import Any, Callable
-from uuid import UUID
 
 from fastmcp.tools.tool import FunctionTool
 from loguru import logger
@@ -21,7 +20,7 @@ class DynamicToolLoader:
 
     def __init__(self):
         self._compiled_tools: dict[str, FunctionTool] = {}
-        self._customer_namespaces: dict[UUID, dict[str, Any]] = {}
+        self._customer_namespaces: dict[str, dict[str, Any]] = {}
 
     def compile_tool(
         self,
@@ -30,7 +29,7 @@ class DynamicToolLoader:
         description: str,
         parameters: list[dict[str, Any]],
         code: str,
-        customer_id: UUID,
+        customer_id: str,
         tier: Tier = Tier.FREE,
     ) -> FunctionTool:
         """
@@ -76,7 +75,7 @@ class DynamicToolLoader:
         # Create the FunctionTool
         tool = FunctionTool(
             fn=func,
-            name=f"{customer_id.hex[:8]}_{name}",  # Namespaced name
+            name=f"{customer_id[:8]}_{name}",  # Namespaced name
             description=description,
             parameters=json_schema_params,
         )
@@ -87,7 +86,7 @@ class DynamicToolLoader:
         return tool
 
     def get_customer_tools(
-        self, customer_id: UUID, tool_specs: list[dict]
+        self, customer_id: str, tool_specs: list[dict]
     ) -> list[FunctionTool]:
         """
         Get all tools for a customer, compiling them if needed.
@@ -122,7 +121,7 @@ class DynamicToolLoader:
 
         return tools
 
-    def invalidate_customer_tools(self, customer_id: UUID) -> None:
+    def invalidate_customer_tools(self, customer_id: str) -> None:
         """Remove all cached tools for a customer."""
         keys_to_remove = [
             k for k in self._compiled_tools if k.startswith(f"{customer_id}:")

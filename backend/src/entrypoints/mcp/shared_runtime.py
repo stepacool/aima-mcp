@@ -53,7 +53,7 @@ async def load_and_register_all_mcp_servers(
     app: FastAPI,
 ) -> dict[UUID, FastMCP]:
     """
-    Load all active MCP servers from DB and register them.
+    Load all active shared deployments from DB and register them.
 
     Called during FastAPI startup to restore all previously activated servers.
 
@@ -67,19 +67,24 @@ async def load_and_register_all_mcp_servers(
     from core.services.tool_loader import get_tool_loader
     from infrastructure.repositories.repo_provider import Provider
 
-    server_repo = Provider.mcp_server_repo()
+    deployment_repo = Provider.deployment_repo()
+    tool_repo = Provider.mcp_tool_repo()
     tool_loader = get_tool_loader()
 
-    # Get all active servers from DB
-    servers = await server_repo.get_all_active()
+    # Get all active shared deployments from DB
+    deployments = await deployment_repo.get_active_shared_deployments()
     registered_servers: dict[UUID, FastMCP] = {}
 
-    for server in servers:
+    for deployment in deployments:
+        server = deployment.server
         try:
+            # Get tools for this server
+            tools = await tool_repo.get_tools_for_server(server.id)
+
             # Compile tools for this server
             compiled_tools = []
 
-            for tool in server.tools:
+            for tool in tools:
                 if not tool.code:
                     logger.warning(
                         f"Skipping tool {tool.name} for server {server.id}: no code"
