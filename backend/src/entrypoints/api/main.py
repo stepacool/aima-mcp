@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 
 import logfire
@@ -23,16 +23,22 @@ FRONTEND_DIR = Path(__file__).parent.parent.parent.parent.parent / "frontend"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # On startup: load all active MCP servers from DB
-    from entrypoints.mcp.shared_runtime import load_and_register_all_mcp_servers
+    # Create AsyncExitStack to manage dynamically mounted MCP app lifespans
+    # This is necessary because FastMCP apps require their lifespan to be entered
+    # before they can handle HTTP requests (StreamableHTTPSessionManager needs it)
+    async with AsyncExitStack() as stack:
+        app.state.mcp_lifespan_stack = stack
 
-    try:
-        count = await load_and_register_all_mcp_servers(app)
-        logger.info(f"Loaded {count} MCP servers on startup")
-    except Exception as e:
-        logger.error(f"Failed to load MCP servers on startup: {e}")
+        # On startup: load all active MCP servers from DB
+        from entrypoints.mcp.shared_runtime import load_and_register_all_mcp_servers
 
-    yield
+        try:
+            count = await load_and_register_all_mcp_servers(app)
+            logger.info(f"Loaded {count} MCP servers on startup")
+        except Exception as e:
+            logger.error(f"Failed to load MCP servers on startup: {e}")
+
+        yield
 
     # On shutdown: disconnect from DB
     await Provider.disconnect()

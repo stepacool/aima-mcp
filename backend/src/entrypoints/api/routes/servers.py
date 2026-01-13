@@ -155,7 +155,7 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
 
     # Register the MCP app using the simple pattern
     app = request.app
-    register_new_customer_app(app, server_id, compiled_tools)
+    await register_new_customer_app(app, server_id, compiled_tools)
 
     # Create or update deployment record
     endpoint_url = f"/mcp/{server_id}"

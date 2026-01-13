@@ -5,6 +5,7 @@ Uses the simple register_new_customer_app pattern to mount
 customer MCP servers dynamically.
 """
 
+from contextlib import AsyncExitStack
 from uuid import UUID
 
 from fastapi import FastAPI
@@ -29,14 +30,18 @@ def build_mcp_server(server_id: UUID, tools: list) -> FastMCP:
     )
 
 
-def register_new_customer_app(app: FastAPI, server_id: UUID, tools: list) -> FastMCP:
+async def register_new_customer_app(
+    app: FastAPI, server_id: UUID, tools: list
+) -> FastMCP:
     """
     Register a new customer MCP app on the FastAPI server.
 
     This is the core pattern for dynamic MCP server registration.
+    It properly handles FastMCP's lifespan by entering it via the
+    AsyncExitStack stored in app.state.mcp_lifespan_stack.
 
     Args:
-        app: FastAPI application instance
+        app: FastAPI application instance (must have mcp_lifespan_stack in state)
         server_id: UUID of the MCP server (used as mount path)
         tools: List of compiled fastmcp Tool objects
 
@@ -44,8 +49,26 @@ def register_new_customer_app(app: FastAPI, server_id: UUID, tools: list) -> Fas
         FastMCP instance that was mounted
     """
     mcp = build_mcp_server(server_id, tools)
-    app.mount(f"/mcp/{server_id}", mcp.http_app())
-    logger.info(f"Registered MCP app at /mcp/{server_id} with {len(tools)} tools")
+    mcp_app = mcp.http_app()
+    mount_path = f"/mcp/{server_id}"
+
+    # Mount the app to the FastAPI router
+    app.mount(mount_path, mcp_app)
+
+    # Enter the MCP app's lifespan via the AsyncExitStack
+    # This is required for FastMCP's StreamableHTTPSessionManager to work
+    stack: AsyncExitStack | None = getattr(app.state, "mcp_lifespan_stack", None)
+    if stack is not None:
+        await stack.enter_async_context(mcp_app.lifespan(mcp_app))
+        logger.info(
+            f"Registered MCP app at {mount_path} with {len(tools)} tools (lifespan entered)"
+        )
+    else:
+        logger.warning(
+            f"Registered MCP app at {mount_path} with {len(tools)} tools "
+            "(no lifespan stack - HTTP requests may fail)"
+        )
+
     return mcp
 
 
@@ -109,7 +132,7 @@ async def load_and_register_all_mcp_servers(
                     continue
 
             if compiled_tools:
-                mcp = register_new_customer_app(app, server.id, compiled_tools)
+                mcp = await register_new_customer_app(app, server.id, compiled_tools)
                 registered_servers[server.id] = mcp
             else:
                 logger.warning(f"Server {server.id} has no valid tools, skipping")
