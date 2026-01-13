@@ -17,25 +17,36 @@ from opentelemetry.sdk.trace.sampling import (
 from entrypoints.api.routes import api_router
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
-
-FRONTEND_DIR = Path(__file__).parent.parent.parent.parent.parent / "frontend"
+from contextlib import asynccontextmanager, AsyncExitStack
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # On startup: load all active MCP servers from DB
-    from entrypoints.mcp.shared_runtime import load_and_register_all_mcp_servers
+    # Initialize the ExitStack to manage dynamic sub-app lifespans
+    async with AsyncExitStack() as stack:
 
-    try:
-        count = await load_and_register_all_mcp_servers(app)
-        logger.info(f"Loaded {count} MCP servers on startup")
-    except Exception as e:
-        logger.error(f"Failed to load MCP servers on startup: {e}")
+        # On startup: load all active MCP servers from DB
+        from entrypoints.mcp.shared_runtime import load_and_register_all_mcp_servers
 
-    yield
+        try:
+            # Pass the stack to the loader
+            count = await load_and_register_all_mcp_servers(app, stack)
+            logger.info(f"Loaded MCP servers on startup")
+        except Exception as e:
+            logger.error(f"Failed to load MCP servers on startup: {e}")
+            # Optional: Decide if you want to crash startup or continue
+            # raise e
 
-    # On shutdown: disconnect from DB
-    await Provider.disconnect()
+        # Yield control back to FastAPI.
+        # The 'stack' keeps all MCP lifespans active while the app runs.
+        yield
+
+        # On shutdown:
+        # 1. The 'async with stack' block ends automatically here,
+        #    gracefully shutting down all MCP servers in reverse order.
+
+        # 2. Then disconnect DB
+        await Provider.disconnect()
 
 
 TRACE_URIS = [

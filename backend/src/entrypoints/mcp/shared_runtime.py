@@ -4,7 +4,7 @@ Shared MCP Runtime for Free Tier Users.
 Uses the simple register_new_customer_app pattern to mount
 customer MCP servers dynamically.
 """
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, AsyncExitStack
 from uuid import UUID
 
 from fastapi import FastAPI
@@ -13,47 +13,42 @@ from loguru import logger
 
 
 def build_mcp_server(server_id: UUID, tools: list) -> FastMCP:
-    """
-    Build a FastMCP server instance for given tools.
-
-    Args:
-        server_id: UUID of the MCP server
-        tools: List of compiled fastmcp Tool objects
-
-    Returns:
-        FastMCP instance ready to be mounted or tested
-    """
     return FastMCP(
         f"MCPServer({server_id})",
         tools=tools,
     )
 
 
-def register_new_customer_app(app: FastAPI, server_id: UUID, tools: list) -> FastMCP:
+async def register_new_customer_app(
+    app: FastAPI,
+    server_id: UUID,
+    tools: list,
+    stack: AsyncExitStack,
+) -> FastMCP:
     """
-    Register a new customer MCP app on the FastAPI server.
-
-    This is the core pattern for dynamic MCP server registration.
-
-    Args:
-        app: FastAPI application instance
-        server_id: UUID of the MCP server (used as mount path)
-        tools: List of compiled fastmcp Tool objects
-
-    Returns:
-        FastMCP instance that was mounted
+    Register a new customer MCP app and activate its lifespan immediately.
     """
     mcp = build_mcp_server(server_id, tools)
+
+    # 1. Create the sub-app instance ONCE
+    mcp_sub_app = mcp.http_app()
+
+    # 2. Mount it
     app.mount(
         f"/mcp/{server_id}",
-        mcp.http_app(),
+        mcp_sub_app,
     )
-    logger.info(f"Registered MCP app at /mcp/{server_id} with {len(tools)} tools")
-    return mcp
 
+    # 3. Manually trigger its lifespan using the stack
+    # This initializes the FastMCP TaskGroup/SessionManager
+    await stack.enter_async_context(mcp_sub_app.lifespan(app))
+
+    logger.info(f"Registered and started MCP app at /mcp/{server_id}")
+    return mcp
 
 async def load_and_register_all_mcp_servers(
     app: FastAPI,
+    stack: AsyncExitStack,
 ) -> dict[UUID, FastMCP]:
     """
     Load all active shared deployments from DB and register them.
@@ -112,7 +107,12 @@ async def load_and_register_all_mcp_servers(
                     continue
 
             if compiled_tools:
-                mcp = register_new_customer_app(app, server.id, compiled_tools)
+                mcp = await register_new_customer_app(
+                    app,
+                    server.id,
+                    compiled_tools,
+                    stack,
+                )
                 registered_servers[server.id] = mcp
             else:
                 logger.warning(f"Server {server.id} has no valid tools, skipping")
