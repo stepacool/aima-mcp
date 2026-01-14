@@ -98,7 +98,7 @@ function ServerDetailPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (serverId: string) => deleteServerById({ data: { serverId } }),
+    mutationFn: (id: string) => deleteServerById({ data: { serverId: id } }),
     onSuccess: () => {
       navigate({ to: '/servers' })
     },
@@ -108,7 +108,7 @@ function ServerDetailPage() {
     },
   })
 
-  async function handleDelete() {
+  function handleDelete() {
     deleteMutation.mutate(serverId)
   }
 
@@ -139,6 +139,100 @@ function ServerDetailPage() {
   const fullEndpoint = server.mcp_endpoint
     ? `${env.VITE_BACKEND_URL}${server.mcp_endpoint}`
     : null
+
+  // Generate Cursor MCP install link
+  function generateCursorInstallLink() {
+    if (!fullEndpoint || !server) return null
+
+    // Create MCP config for HTTP/SSE transport
+    const config = {
+        url: fullEndpoint,
+    }
+
+    // Base64 encode the config
+    const configJson = JSON.stringify(config)
+    const base64Config = btoa(configJson)
+
+    // Generate the install link
+    const serverName = server.name
+    const installLink = `cursor://anysphere.cursor-deeplink/mcp/install?name=${encodeURIComponent(serverName)}&config=${base64Config}`
+    return installLink
+  }
+
+  function handleAddToCursor() {
+    const installLink = generateCursorInstallLink()
+    if (!installLink) {
+      toast.error('MCP endpoint not available')
+      return
+    }
+
+    // Try to open the deeplink
+    window.location.href = installLink
+
+    // Fallback: copy link to clipboard if deeplink doesn't work
+    navigator.clipboard.writeText(installLink).then(() => {
+      toast.success('Install link copied to clipboard!', {
+        description: 'Paste it into Cursor or click it to install',
+      })
+    })
+  }
+
+  // Generate Claude Code MCP install command
+  function generateClaudeCodeCommand() {
+    if (!fullEndpoint || !server) return null
+
+    // Generate CLI command
+    const serverName = server.name.replace(/\s+/g, '-').toLowerCase()
+    const command = `claude mcp add --transport http ${serverName} ${fullEndpoint}`
+    return command
+  }
+
+  function handleAddToClaudeCode() {
+    const command = generateClaudeCodeCommand()
+    if (!command) {
+      toast.error('MCP endpoint not available')
+      return
+    }
+
+    // Copy command to clipboard
+    navigator.clipboard.writeText(command).then(() => {
+      toast.success('Command copied to clipboard!', {
+        description: 'Run this command in your terminal to add the MCP server to Claude Code',
+      })
+    })
+  }
+
+  // Generate MCP JSON configuration
+  function generateMCPJson() {
+    if (!fullEndpoint || !server) return null
+
+    const serverName = server.name.replace(/\s+/g, '-').toLowerCase()
+    const config = {
+      mcpServers: {
+        [serverName]: {
+          type: 'http',
+          url: fullEndpoint,
+        },
+      },
+    }
+
+    return JSON.stringify(config, null, 2)
+  }
+
+  function handleCopyJson() {
+    const json = generateMCPJson()
+    if (!json) {
+      toast.error('MCP endpoint not available')
+      return
+    }
+
+    // Copy JSON to clipboard
+    navigator.clipboard.writeText(json).then(() => {
+      toast.success('JSON configuration copied to clipboard!', {
+        description: 'Add this to your mcp.json file',
+      })
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
@@ -225,10 +319,27 @@ function ServerDetailPage() {
               </Link>
             )}
 
-            {server.is_deployed && (
-              <button className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 font-semibold rounded-lg border border-purple-500/30 transition-colors">
-                Add to Tools
-              </button>
+            {server.is_deployed && fullEndpoint && (
+              <>
+                <button
+                  onClick={handleAddToCursor}
+                  className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 font-semibold rounded-lg border border-purple-500/30 transition-colors"
+                >
+                  Add to Cursor
+                </button>
+                <button
+                  onClick={handleAddToClaudeCode}
+                  className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 font-semibold rounded-lg border border-purple-500/30 transition-colors"
+                >
+                  Add to Claude Code
+                </button>
+                <button
+                  onClick={handleCopyJson}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-colors"
+                >
+                  Copy JSON
+                </button>
+              </>
             )}
 
             <button

@@ -50,6 +50,101 @@ function ServerCard({
 }) {
   const isDraft = server.status === 'draft'
   const isActive = server.is_deployed
+  const fullEndpoint = server.mcp_endpoint
+    ? `${env.VITE_BACKEND_URL}${server.mcp_endpoint}`
+    : null
+
+  // Generate Cursor MCP install link
+  function generateCursorInstallLink() {
+    if (!fullEndpoint) return null
+
+    // Create MCP config for HTTP/SSE transport
+    const config = {
+      url: fullEndpoint,
+    }
+
+    // Base64 encode the config
+    const configJson = JSON.stringify(config)
+    const base64Config = btoa(configJson)
+
+    // Generate the install link
+    const installLink = `cursor://anysphere.cursor-deeplink/mcp/install?name=${encodeURIComponent(server.name)}&config=${base64Config}`
+    return installLink
+  }
+
+  function handleAddToCursor() {
+    const installLink = generateCursorInstallLink()
+    if (!installLink) {
+      toast.error('MCP endpoint not available')
+      return
+    }
+
+    // Try to open the deeplink
+    window.location.href = installLink
+
+    // Fallback: copy link to clipboard if deeplink doesn't work
+    navigator.clipboard.writeText(installLink).then(() => {
+      toast.success('Install link copied to clipboard!', {
+        description: 'Paste it into Cursor or click it to install',
+      })
+    })
+  }
+
+  // Generate Claude Code MCP install command
+  function generateClaudeCodeCommand() {
+    if (!fullEndpoint) return null
+
+    // Generate CLI command
+    const command = `claude mcp add --transport http ${server.name.replace(/\s+/g, '-').toLowerCase()} ${fullEndpoint}`
+    return command
+  }
+
+  function handleAddToClaudeCode() {
+    const command = generateClaudeCodeCommand()
+    if (!command) {
+      toast.error('MCP endpoint not available')
+      return
+    }
+
+    // Copy command to clipboard
+    navigator.clipboard.writeText(command).then(() => {
+      toast.success('Command copied to clipboard!', {
+        description: 'Run this command in your terminal to add the MCP server to Claude Code',
+      })
+    })
+  }
+
+  // Generate MCP JSON configuration
+  function generateMCPJson() {
+    if (!fullEndpoint) return null
+
+    const serverName = server.name.replace(/\s+/g, '-').toLowerCase()
+    const config = {
+      mcpServers: {
+        [serverName]: {
+          type: 'http',
+          url: fullEndpoint,
+        },
+      },
+    }
+
+    return JSON.stringify(config, null, 2)
+  }
+
+  function handleCopyJson() {
+    const json = generateMCPJson()
+    if (!json) {
+      toast.error('MCP endpoint not available')
+      return
+    }
+
+    // Copy JSON to clipboard
+    navigator.clipboard.writeText(json).then(() => {
+      toast.success('JSON configuration copied to clipboard!', {
+        description: 'Add this to your mcp.json file',
+      })
+    })
+  }
 
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 p-5 hover:border-slate-600 transition-all">
@@ -93,9 +188,25 @@ function ServerCard({
             >
               Copy URL
             </button>
-            <button className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-sm rounded-lg border border-purple-500/30 transition-colors">
-              Add to Tools
+            <button
+              onClick={handleCopyJson}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
+            >
+              Copy JSON
             </button>
+            <button
+              onClick={handleAddToCursor}
+              className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-sm rounded-lg border border-purple-500/30 transition-colors"
+            >
+              Add to Cursor
+            </button>
+            <button
+              onClick={handleAddToClaudeCode}
+              className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-sm rounded-lg border border-purple-500/30 transition-colors"
+            >
+              Add to Claude Code
+            </button>
+
           </>
         )}
 
