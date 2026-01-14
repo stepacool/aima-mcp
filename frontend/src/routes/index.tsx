@@ -192,8 +192,9 @@ function WizardPage() {
     onSuccess: (result) => {
       setState((s) => ({
         ...s,
+        currentStep: s.currentStep === 1 ? 2 : s.currentStep, // Move to step 2 if coming from step 1
         actions: result.actions,
-        selectedActions: [],
+        selectedActions: result.actions.slice(0, 3).map((a) => a.name), // Auto-select first 3 actions
       }))
       setRefineInput('')
     },
@@ -282,7 +283,17 @@ function WizardPage() {
   // Handlers
   function handleDescribe() {
     if (!description.trim()) return
-    startWizardMutation.mutate(description)
+    
+    // If we already have a serverId, refine the existing draft instead of creating a new one
+    if (state.serverId) {
+      refineActionsMutation.mutate({
+        serverId: state.serverId,
+        feedback: `Update the server based on this new description: ${description}`,
+      })
+    } else {
+      // Create new draft
+      startWizardMutation.mutate(description)
+    }
   }
 
   function handleRefine() {
