@@ -30,6 +30,7 @@ class MCPServerUpdate(BaseModel):
     status: str | None = None
     auth_type: str | None = None
     auth_config: dict[str, Any] | None = None
+    meta: dict[str, Any] | None = None
 
 
 class MCPToolCreate(BaseModel):

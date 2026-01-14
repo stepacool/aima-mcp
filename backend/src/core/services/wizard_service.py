@@ -175,6 +175,7 @@ class WizardService:
         self,
         server_id: UUID,
         feedback: str,
+        description: str | None = None,
     ) -> list[ActionSpec]:
         """
         Step 2: Refine actions based on feedback, generate code, save to DB.
@@ -182,13 +183,23 @@ class WizardService:
         Args:
             server_id: Server UUID
             feedback: User's feedback for refining actions
-
-        Returns:
-            Updated list of actions
+            description: Optional updated user prompt/description
         """
         server = await self.server_repo.get_with_tools(server_id)
         if not server:
             raise ValueError(f"Server {server_id} not found")
+
+        # Update user_prompt in meta if provided (this is the user's step 1 input)
+        if description:
+            from infrastructure.repositories.mcp_server import MCPServerUpdate
+
+            new_meta = {**(server.meta or {}), "user_prompt": description}
+            await self.server_repo.update(
+                server_id,
+                MCPServerUpdate(meta=new_meta),
+            )
+            # Update local server object for context
+            server.meta = new_meta
 
         # Build context from existing tools
         existing_actions = [

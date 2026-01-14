@@ -29,6 +29,7 @@ class StartWizardResponse(BaseModel):
 
 class RefineActionsRequest(BaseModel):
     feedback: str
+    description: str | None = None
 
 
 class SelectToolsRequest(BaseModel):
@@ -99,6 +100,7 @@ async def refine_actions(server_id: UUID, request: RefineActionsRequest) -> dict
         actions = await service.refine_actions(
             server_id=server_id,
             feedback=request.feedback,
+            description=request.description,
         )
 
         return {
