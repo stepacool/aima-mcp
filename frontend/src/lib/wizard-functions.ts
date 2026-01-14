@@ -66,7 +66,7 @@ export const getWizardState = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ serverId: z.string() }))
   .handler(async ({ data }) => {
     await getSession()
-    return backend.wizardGetState(data.serverId)
+    return (await backend.wizardGetState(data.serverId)) as Record<string, any>
   })
 
 // Activate on shared runtime (free tier)

@@ -1,21 +1,23 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import type { Action, TierInfo } from '@/lib/backend-client'
 import { WizardProgress } from '@/components/wizard/WizardProgress'
 import { LoadingOverlay } from '@/components/wizard/LoadingOverlay'
 import { ActionCard } from '@/components/wizard/ActionCard'
 
+
 import {
-  startWizard,
+  activateServer,
+  configureAuth,
+  createVPS,
+  generateCode,
+  getTierInfo,
   refineActions,
   selectTools,
-  configureAuth,
-  generateCode,
-  activateServer,
-  deployServer,
+  startWizard,
 } from '@/lib/wizard-functions'
 import { getSession } from '@/lib/auth-functions'
-import type { Action, ToolWithCode } from '@/lib/backend-client'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
@@ -27,21 +29,28 @@ export const Route = createFileRoute('/')({
   component: WizardPage,
 })
 
+interface GeneratedTool {
+  id: string
+  name: string
+  description: string
+}
+
 interface WizardState {
   currentStep: number
   serverId: string | null
   serverName: string
   serverDescription: string
-  actions: Action[]
-  selectedActions: string[]
+  actions: Array<Action>
+  selectedActions: Array<string>
   authType: 'none' | 'ephemeral' | 'oauth'
   oauthConfig: {
     providerUrl: string
     clientId: string
     scopes: string
   }
-  generatedTools: ToolWithCode[]
+  generatedTools: Array<ToolWithCode>
   selectedTier: 'free' | 'paid'
+  generatedTools: Array<GeneratedTool>
   result: {
     mcpEndpoint?: string
     toolsCount?: number
@@ -61,12 +70,23 @@ function WizardPage() {
     oauthConfig: { providerUrl: '', clientId: '', scopes: '' },
     generatedTools: [],
     selectedTier: 'free',
+    generatedTools: [],
     result: null,
   })
   const [loading, setLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('Processing...')
   const [description, setDescription] = useState('')
   const [refineInput, setRefineInput] = useState('')
+  const [tierInfo, setTierInfo] = useState<TierInfo | null>(null)
+
+  // Fetch tier info when entering step 4
+  useEffect(() => {
+    if (state.currentStep === 4 && !tierInfo) {
+      getTierInfo({ data: { tier: 'free' } })
+        .then(setTierInfo)
+        .catch(console.error)
+    }
+  }, [state.currentStep, tierInfo])
 
   // Step 1: Describe System
   async function handleDescribe() {
@@ -158,7 +178,15 @@ function WizardPage() {
       setLoadingText('Generating tool code...')
       const codeResult = await generateCode({ data: { serverId: state.serverId } })
 
-      setState((s) => ({ ...s, currentStep: 4, generatedTools: codeResult.tools }))
+      setState((s) => ({
+        ...s,
+        currentStep: 4,
+        generatedTools: codeResult.tools.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+        })),
+      }))
     } catch (e) {
       alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     } finally {
@@ -220,9 +248,11 @@ function WizardPage() {
       oauthConfig: { providerUrl: '', clientId: '', scopes: '' },
       generatedTools: [],
       selectedTier: 'free',
+      generatedTools: [],
       result: null,
     })
     setDescription('')
+    setTierInfo(null)
   }
 
   return (
@@ -469,6 +499,18 @@ function WizardPage() {
                     <li>✓ Shared runtime</li>
                     <li>✓ Instant activation</li>
                   </ul>
+                  {tierInfo?.curated_libraries && tierInfo.curated_libraries.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-700">
+                      <p className="text-xs text-slate-500 mb-1">Allowed Libraries:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {tierInfo.curated_libraries.map((lib) => (
+                          <span key={lib} className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
+                            {lib}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </label>
                 <label
                   className={`p-4 bg-slate-900 rounded-lg border cursor-pointer
@@ -493,6 +535,23 @@ function WizardPage() {
                   </ul>
                 </label>
               </div>
+
+              {/* Code Preview removed */}
+              {state.generatedTools.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-slate-400 text-sm font-semibold mb-2">Generated Tools</h3>
+                  <div className="space-y-3">
+                    {state.generatedTools.map((tool) => (
+                      <div key={tool.id} className="p-3 bg-slate-900 rounded-lg border border-slate-700">
+                        <div>
+                          <span className="font-medium text-white">{tool.name}</span>
+                          <span className="text-slate-500 text-sm ml-2">— {tool.description}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-between">
                 <button

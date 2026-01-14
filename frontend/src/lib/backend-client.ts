@@ -5,7 +5,7 @@
 
 import { env } from '@/env'
 
-const BACKEND_URL = env.BACKEND_URL
+const BACKEND_URL = env.VITE_BACKEND_URL
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -49,17 +49,17 @@ export interface StartWizardResponse {
   server_id: string
   server_name: string
   description: string
-  actions: Action[]
+  actions: Array<Action>
 }
 
 export interface RefineResponse {
   server_id: string
-  actions: Action[]
+  actions: Array<Action>
 }
 
 export interface GenerateCodeResponse {
   server_id: string
-  tools: Array<{ id: string; name: string; has_code: boolean }>
+  tools: Array<{ id: string; name: string; description: string; has_code: boolean }>
 }
 
 export interface ActivateResponse {
@@ -81,7 +81,7 @@ export interface TierInfo {
   max_tools: number
   can_deploy: boolean
   curated_only: boolean
-  curated_libraries: string[]
+  curated_libraries: Array<string>
 }
 
 // Wizard API
@@ -99,7 +99,7 @@ export async function wizardRefine(serverId: string, feedback: string): Promise<
   })
 }
 
-export async function wizardConfirmActions(serverId: string, selectedActions: string[]): Promise<void> {
+export async function wizardConfirmActions(serverId: string, selectedActions: Array<string>): Promise<void> {
   return request(`/api/wizard/${serverId}/tools/select`, {
     method: 'POST',
     body: { selected_tool_names: selectedActions },

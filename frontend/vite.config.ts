@@ -7,7 +7,7 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { fileURLToPath, URL } from 'url'
 
 import tailwindcss from '@tailwindcss/vite'
-import { nitro } from 'nitro/vite'
+
 
 const config = defineConfig({
   resolve: {
@@ -22,7 +22,7 @@ const config = defineConfig({
       outdir: './src/paraglide',
       strategy: ['url'],
     }),
-    nitro(),
+
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
