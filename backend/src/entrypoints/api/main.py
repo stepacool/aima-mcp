@@ -127,8 +127,19 @@ class Application:
                         logger.info(f"Body: {body}")
 
                     # Reset body for downstream handlers
+                    # We need to handle both the initial body request and subsequent
+                    # disconnect detection (needed for SSE responses)
+                    original_receive = request._receive
+                    body_sent = False
+
                     async def receive():
-                        return {"type": "http.request", "body": body}
+                        nonlocal body_sent
+                        if not body_sent:
+                            body_sent = True
+                            return {"type": "http.request", "body": body}
+                        # After body is sent, delegate to original receive
+                        # to properly handle http.disconnect events for SSE
+                        return await original_receive()
 
                     request._receive = receive
                 else:
