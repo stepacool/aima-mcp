@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import type { Action } from '@/lib/backend-client'
 import { WizardProgress } from '@/components/wizard/WizardProgress'
-import { LoadingOverlay } from '@/components/wizard/LoadingOverlay'
+import { WizardProgressIndicator } from '@/components/wizard/WizardProgressIndicator'
 import { ActionCard } from '@/components/wizard/ActionCard'
 
 import {
@@ -185,12 +185,12 @@ function WizardPage() {
     mutationFn: ({
       serverId,
       feedback,
-      description,
+      description: descriptionParam,
     }: {
       serverId: string
       feedback: string
       description?: string
-    }) => refineActions({ data: { serverId, feedback, description } }),
+    }) => refineActions({ data: { serverId, feedback, description: descriptionParam } }),
     onSuccess: (result) => {
       setState((s) => ({
         ...s,
@@ -377,39 +377,39 @@ function WizardPage() {
     // tierInfo cache is managed by Query, no need to clear manually unless desired
   }
 
-  // Derive global loading state
-  const isGlobalLoading =
-    isLoadingState ||
-    startWizardMutation.isPending ||
-    refineActionsMutation.isPending ||
-    confirmActionsMutation.isPending ||
-    configureAuthMutation.isPending ||
-    generateCodeMutation.isPending ||
-    activateServerMutation.isPending ||
-    createVPSMutation.isPending
+  // Derive loading states for each step
+  const isLoadingStep1 = isLoadingState || startWizardMutation.isPending || refineActionsMutation.isPending
+  const isLoadingStep2 = refineActionsMutation.isPending || confirmActionsMutation.isPending
+  const isLoadingStep3 = configureAuthMutation.isPending || generateCodeMutation.isPending
+  const isLoadingStep4 = activateServerMutation.isPending || createVPSMutation.isPending
 
-  const loadingText = startWizardMutation.isPending
-    ? 'Analyzing your requirements...'
-    : refineActionsMutation.isPending
-      ? 'Updating actions...'
-      : confirmActionsMutation.isPending
-        ? 'Confirming tool selection...'
-        : configureAuthMutation.isPending
-          ? 'Configuring authentication...'
-          : generateCodeMutation.isPending
-            ? 'Generating tool code...'
-            : activateServerMutation.isPending
-              ? 'Activating on shared runtime...'
-              : createVPSMutation.isPending
-                ? 'Deploying to dedicated VPC...'
-                : isLoadingState
-                  ? 'Resuming setup...'
-                  : 'Processing...'
+  // Determine which step is currently loading for progress indicator
+  const loadingStep = isLoadingStep1 ? 1 : isLoadingStep2 ? 2 : isLoadingStep3 ? 3 : isLoadingStep4 ? 4 : null
+
+  // Loading text for each step
+  const getLoadingText = (step: number) => {
+    if (step === 1) {
+      if (startWizardMutation.isPending) return 'Analyzing your requirements...'
+      if (refineActionsMutation.isPending) return 'Updating actions...'
+      if (isLoadingState) return 'Resuming setup...'
+    }
+    if (step === 2) {
+      if (refineActionsMutation.isPending) return 'Updating actions...'
+      if (confirmActionsMutation.isPending) return 'Confirming tool selection...'
+    }
+    if (step === 3) {
+      if (configureAuthMutation.isPending) return 'Configuring authentication...'
+      if (generateCodeMutation.isPending) return 'Generating tool code...'
+    }
+    if (step === 4) {
+      if (activateServerMutation.isPending) return 'Activating on shared runtime...'
+      if (createVPSMutation.isPending) return 'Deploying to dedicated VPC...'
+    }
+    return 'Processing...'
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
-      {isGlobalLoading && <LoadingOverlay text={loadingText} />}
-
       <div className="max-w-3xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
@@ -420,15 +420,23 @@ function WizardPage() {
           </p>
         </header>
 
-        <WizardProgress currentStep={state.currentStep} />
+        <WizardProgress currentStep={state.currentStep} loadingStep={loadingStep} />
 
         <main className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
           {/* Step 1: Describe */}
           {state.currentStep === 1 && (
             <section>
-              <h2 className="text-xl font-semibold text-white mb-2">
-                What should your MCP server do?
-              </h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-semibold text-white">
+                  What should your MCP server do?
+                </h2>
+                {isLoadingStep1 && (
+                  <WizardProgressIndicator
+                    text={getLoadingText(1)}
+                    variant="badge"
+                  />
+                )}
+              </div>
               <p className="text-slate-400 mb-4">
                 Describe the system or service you want to create.
               </p>
@@ -436,13 +444,22 @@ function WizardPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Example: A server that manages my GitHub repositories..."
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg p-4 text-white placeholder:text-slate-500 resize-y min-h-[120px]"
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg p-4 text-white placeholder:text-slate-500 resize-y min-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={startWizardMutation.isPending}
               />
               <button
                 onClick={handleDescribe}
-                className="mt-4 w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors"
+                disabled={!description.trim() || startWizardMutation.isPending}
+                className="mt-4 w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                Generate Actions
+                {startWizardMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  'Generate Actions'
+                )}
               </button>
             </section>
           )}
@@ -450,9 +467,17 @@ function WizardPage() {
           {/* Step 2: Actions */}
           {state.currentStep === 2 && (
             <section>
-              <h2 className="text-xl font-semibold text-indigo-400 mb-1">
-                {state.serverName}
-              </h2>
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-xl font-semibold text-indigo-400">
+                  {state.serverName}
+                </h2>
+                {isLoadingStep2 && (
+                  <WizardProgressIndicator
+                    text={getLoadingText(2)}
+                    variant="badge"
+                  />
+                )}
+              </div>
               <p className="text-slate-400 mb-4">{state.serverDescription}</p>
 
               <div className="space-y-3 mb-4">
@@ -461,7 +486,7 @@ function WizardPage() {
                     key={action.name}
                     action={action}
                     selected={state.selectedActions.includes(action.name)}
-                    disabled={false}
+                    disabled={confirmActionsMutation.isPending}
                     onToggle={() => toggleAction(action.name)}
                   />
                 ))}
@@ -472,31 +497,48 @@ function WizardPage() {
                   type="text"
                   value={refineInput}
                   onChange={(e) => setRefineInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
+                  onKeyDown={(e) => e.key === 'Enter' && !refineActionsMutation.isPending && handleRefine()}
                   placeholder="Add more actions or modify..."
-                  className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white"
+                  className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={refineActionsMutation.isPending}
                 />
                 <button
                   onClick={handleRefine}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+                  disabled={!refineInput.trim() || refineActionsMutation.isPending}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2"
                 >
-                  Refine
+                  {refineActionsMutation.isPending ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Refine'
+                  )}
                 </button>
               </div>
 
               <div className="flex justify-between">
                 <button
                   onClick={() => setState((s) => ({ ...s, currentStep: 1 }))}
-                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+                  disabled={confirmActionsMutation.isPending}
+                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleConfirmActions}
-                  disabled={state.selectedActions.length === 0}
-                  className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-semibold rounded-lg"
+                  disabled={state.selectedActions.length === 0 || confirmActionsMutation.isPending}
+                  className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg flex items-center gap-2"
                 >
-                  Configure Auth ({state.selectedActions.length}/3 Selected)
+                  {confirmActionsMutation.isPending ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Confirming...
+                    </>
+                  ) : (
+                    `Configure Auth (${state.selectedActions.length}/3 Selected)`
+                  )}
                 </button>
               </div>
             </section>
@@ -505,9 +547,17 @@ function WizardPage() {
           {/* Step 3: Auth */}
           {state.currentStep === 3 && (
             <section>
-              <h2 className="text-xl font-semibold text-white mb-2">
-                Authentication Setup
-              </h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-semibold text-white">
+                  Authentication Setup
+                </h2>
+                {isLoadingStep3 && (
+                  <WizardProgressIndicator
+                    text={getLoadingText(3)}
+                    variant="badge"
+                  />
+                )}
+              </div>
               <p className="text-slate-400 mb-4">
                 How should actions requiring auth be handled?
               </p>
@@ -598,15 +648,24 @@ function WizardPage() {
               <div className="flex justify-between">
                 <button
                   onClick={() => setState((s) => ({ ...s, currentStep: 2 }))}
-                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+                  disabled={configureAuthMutation.isPending || generateCodeMutation.isPending}
+                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleConfirmAuth}
-                  className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg"
+                  disabled={configureAuthMutation.isPending || generateCodeMutation.isPending}
+                  className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg flex items-center gap-2"
                 >
-                  Review & Deploy
+                  {(configureAuthMutation.isPending || generateCodeMutation.isPending) ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      {generateCodeMutation.isPending ? 'Generating...' : 'Configuring...'}
+                    </>
+                  ) : (
+                    'Review & Deploy'
+                  )}
                 </button>
               </div>
             </section>
@@ -615,9 +674,17 @@ function WizardPage() {
           {/* Step 4: Deploy */}
           {state.currentStep === 4 && (
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">
-                Ready to Launch
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white">
+                  Ready to Launch
+                </h2>
+                {isLoadingStep4 && (
+                  <WizardProgressIndicator
+                    text={getLoadingText(4)}
+                    variant="badge"
+                  />
+                )}
+              </div>
 
               <div className="bg-slate-900 rounded-lg p-4 mb-4 border border-slate-700">
                 <h3 className="text-indigo-400 font-semibold">
@@ -745,23 +812,40 @@ function WizardPage() {
               <div className="flex justify-between">
                 <button
                   onClick={() => setState((s) => ({ ...s, currentStep: 3 }))}
-                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+                  disabled={activateServerMutation.isPending || createVPSMutation.isPending}
+                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg"
                 >
                   Back
                 </button>
                 {state.selectedTier === 'free' ? (
                   <button
                     onClick={handleActivate}
-                    className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg"
+                    disabled={activateServerMutation.isPending}
+                    className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg flex items-center gap-2"
                   >
-                    Activate (Free)
+                    {activateServerMutation.isPending ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Activating...
+                      </>
+                    ) : (
+                      'Activate (Free)'
+                    )}
                   </button>
                 ) : (
                   <button
                     onClick={handleDeploy}
-                    className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg"
+                    disabled={createVPSMutation.isPending}
+                    className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg flex items-center gap-2"
                   >
-                    Deploy (Dedicated VPC)
+                    {createVPSMutation.isPending ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Deploying...
+                      </>
+                    ) : (
+                      'Deploy (Dedicated VPC)'
+                    )}
                   </button>
                 )}
               </div>

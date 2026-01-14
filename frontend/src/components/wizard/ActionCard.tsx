@@ -16,8 +16,15 @@ export function ActionCard({
   return (
     <div
       onClick={() => !disabled && onToggle()}
-      className={`bg-slate-900 rounded-xl p-4 border cursor-pointer transition-all
-        ${selected ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 hover:border-indigo-400'}`}
+      className={`bg-slate-900 rounded-xl p-4 border transition-all
+        ${
+          disabled
+            ? 'opacity-50 cursor-not-allowed border-slate-700'
+            : selected
+              ? 'border-indigo-500 bg-indigo-500/10 cursor-pointer'
+              : 'border-slate-700 hover:border-indigo-400 cursor-pointer'
+        }`}
+      aria-disabled={disabled}
     >
       <div className="flex items-center gap-3 mb-2">
         <input
