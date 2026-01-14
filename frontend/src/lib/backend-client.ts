@@ -109,10 +109,11 @@ export async function wizardStart(
 export async function wizardRefine(
   serverId: string,
   feedback: string,
-): Promise<RefineResponse> {
+  description?: string,
+): Promise<{ server_id: string; actions: Array<Action> }> {
   return request(`/api/wizard/${serverId}/refine`, {
     method: 'POST',
-    body: { feedback },
+    body: { feedback, description },
   })
 }
 

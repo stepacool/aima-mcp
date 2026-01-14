@@ -27,10 +27,10 @@ export const startWizard = createServerFn({ method: 'POST' })
 
 // Refine actions
 export const refineActions = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ serverId: z.string(), feedback: z.string() }))
+  .inputValidator(z.object({ serverId: z.string(), feedback: z.string(), description: z.string().optional() }))
   .handler(async ({ data }) => {
     await getSession()
-    return backend.wizardRefine(data.serverId, data.feedback)
+    return backend.wizardRefine(data.serverId, data.feedback, data.description)
   })
 
 // Select which tools to keep

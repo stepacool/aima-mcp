@@ -135,7 +135,7 @@ function WizardPage() {
         currentStep: step,
         serverId: initialServerId || null,
         serverName: serverState.name as string,
-        serverDescription: (serverState.description as string) || (serverState.meta?.user_prompt as string) || (serverState.user_prompt as string),
+        serverDescription: (serverState.description as string) || '',
         authType: (serverState.auth_type) || 'none',
         oauthConfig: (serverState.auth_config) || {
           providerUrl: '',
@@ -185,10 +185,12 @@ function WizardPage() {
     mutationFn: ({
       serverId,
       feedback,
+      description,
     }: {
       serverId: string
       feedback: string
-    }) => refineActions({ data: { serverId, feedback } }),
+      description?: string
+    }) => refineActions({ data: { serverId, feedback, description } }),
     onSuccess: (result) => {
       setState((s) => ({
         ...s,
@@ -289,6 +291,7 @@ function WizardPage() {
       refineActionsMutation.mutate({
         serverId: state.serverId,
         feedback: `Update the server based on this new description: ${description}`,
+        description: description,
       })
     } else {
       // Create new draft
