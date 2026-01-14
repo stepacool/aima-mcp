@@ -386,6 +386,29 @@ function WizardPage() {
   // Determine which step is currently loading for progress indicator
   const loadingStep = isLoadingStep1 ? 1 : isLoadingStep2 ? 2 : isLoadingStep3 ? 3 : isLoadingStep4 ? 4 : null
 
+  // Determine which steps are unlocked based on available data
+  const unlockedSteps: Array<number> = []
+  // Step 1 is always unlocked (can always go back to describe)
+  unlockedSteps.push(1)
+  // Step 2 is unlocked if we have actions/tools (serverName indicates we've started)
+  if (state.actions.length > 0 || state.serverName) {
+    unlockedSteps.push(2)
+  }
+  // Step 3 is unlocked if actions have been confirmed (selectedActions exist)
+  if (state.selectedActions.length > 0) {
+    unlockedSteps.push(3)
+  }
+  // Step 4 is unlocked if code has been generated (generatedTools exist)
+  if (state.generatedTools.length > 0) {
+    unlockedSteps.push(4)
+  }
+
+  // Handler for clicking on wizard steps
+  function handleStepClick(step: number) {
+    if (!unlockedSteps.includes(step)) return
+    setState((s) => ({ ...s, currentStep: step }))
+  }
+
   // Loading text for each step
   const getLoadingText = (step: number) => {
     if (step === 1) {
@@ -420,7 +443,12 @@ function WizardPage() {
           </p>
         </header>
 
-        <WizardProgress currentStep={state.currentStep} loadingStep={loadingStep} />
+        <WizardProgress 
+          currentStep={state.currentStep} 
+          loadingStep={loadingStep}
+          unlockedSteps={unlockedSteps}
+          onStepClick={handleStepClick}
+        />
 
         <main className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
           {/* Step 1: Describe */}

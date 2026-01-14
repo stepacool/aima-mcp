@@ -1,6 +1,8 @@
 interface WizardProgressProps {
   currentStep: number
   loadingStep?: number | null
+  unlockedSteps?: Array<number>
+  onStepClick?: (step: number) => void
 }
 
 const steps = [
@@ -10,27 +12,38 @@ const steps = [
   { num: 4, label: 'Deploy' },
 ]
 
-export function WizardProgress({ currentStep, loadingStep }: WizardProgressProps) {
+export function WizardProgress({ 
+  currentStep, 
+  loadingStep,
+  unlockedSteps = [],
+  onStepClick 
+}: WizardProgressProps) {
   return (
     <div className="flex items-center justify-center mb-8 gap-0" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={4} aria-label={`Wizard progress: step ${currentStep} of 4`}>
       {steps.map((step, idx) => {
         const isCompleted = step.num < currentStep
         const isCurrent = step.num === currentStep
         const isLoading = loadingStep === step.num
+        const isUnlocked = unlockedSteps.includes(step.num)
+        const isClickable = isUnlocked && onStepClick && !isLoading
         
         return (
           <div key={step.num} className="flex items-center">
             <div className="flex flex-col items-center gap-2">
               <div
+                onClick={() => isClickable && onStepClick(step.num)}
                 className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm transition-all relative
                   ${
                     isCompleted
                       ? 'bg-green-500 border-green-500 text-white'
                       : isCurrent
                         ? 'bg-indigo-500 border-indigo-500 text-white'
-                        : 'bg-slate-800 border-slate-600 text-slate-400 border-2'
-                  }`}
-                aria-label={isLoading ? `Loading ${step.label}` : isCompleted ? `Completed ${step.label}` : isCurrent ? `Current step: ${step.label}` : step.label}
+                        : isUnlocked
+                          ? 'bg-slate-800 border-slate-600 text-slate-400 border-2 hover:border-indigo-500 hover:text-indigo-400'
+                          : 'bg-slate-800 border-slate-600 text-slate-400 border-2 opacity-50'
+                  }
+                  ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                aria-label={isLoading ? `Loading ${step.label}` : isCompleted ? `Completed ${step.label}` : isCurrent ? `Current step: ${step.label}` : isUnlocked ? `Click to go to ${step.label}` : `${step.label} (locked)`}
               >
                 {isLoading ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
@@ -41,7 +54,7 @@ export function WizardProgress({ currentStep, loadingStep }: WizardProgressProps
                 )}
               </div>
               <span
-                className={`text-xs transition-colors ${isCurrent ? 'text-white font-medium' : 'text-slate-500'}`}
+                className={`text-xs transition-colors ${isCurrent ? 'text-white font-medium' : isUnlocked ? 'text-slate-400 hover:text-indigo-400' : 'text-slate-500'}`}
               >
                 {step.label}
               </span>
