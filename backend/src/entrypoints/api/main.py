@@ -24,7 +24,7 @@ from contextlib import asynccontextmanager, AsyncExitStack
 async def lifespan(app: FastAPI):
     # Initialize the ExitStack to manage dynamic sub-app lifespans
     async with AsyncExitStack() as stack:
-
+        app.state.mcp_stack = stack
         # On startup: load all active MCP servers from DB
         from entrypoints.mcp.shared_runtime import load_and_register_all_mcp_servers
 

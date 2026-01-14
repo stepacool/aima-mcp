@@ -155,7 +155,12 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
 
     # Register the MCP app using the simple pattern
     app = request.app
-    register_new_customer_app(app, server_id, compiled_tools)
+    stack = getattr(app.state, "mcp_stack", None)
+    if not stack:
+        logger.error("MCP stack not initialized in app state")
+        raise HTTPException(status_code=500, detail="MCP runtime not initialized")
+
+    await register_new_customer_app(app, server_id, compiled_tools, stack=stack)
 
     # Create or update deployment record
     endpoint_url = f"/mcp/{server_id}"
