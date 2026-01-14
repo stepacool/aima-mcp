@@ -1,25 +1,41 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
 
-import type { Action, TierInfo } from '@/lib/backend-client'
+import type { Action } from '@/lib/backend-client'
 import { WizardProgress } from '@/components/wizard/WizardProgress'
 import { LoadingOverlay } from '@/components/wizard/LoadingOverlay'
 import { ActionCard } from '@/components/wizard/ActionCard'
 
-
 import {
   activateServer,
   configureAuth,
+  confirmActions,
   createVPS,
   generateCode,
   getTierInfo,
+  getWizardState,
   refineActions,
-  confirmActions,
   startWizard,
 } from '@/lib/wizard-functions'
 import { getSession } from '@/lib/auth-functions'
 
+// Wizard step to frontend step mapping
+const WIZARD_STEP_MAP: Record<string, number> = {
+  describe: 1,
+  actions: 2,
+  auth: 3,
+  deploy: 4,
+  complete: 5,
+}
+
+const searchSchema = z.object({
+  serverId: z.string().optional(),
+})
+
 export const Route = createFileRoute('/')({
+  validateSearch: searchSchema,
   beforeLoad: async () => {
     const session = await getSession()
     if (!session) {
@@ -58,9 +74,11 @@ interface WizardState {
 }
 
 function WizardPage() {
+  const { serverId: initialServerId } = Route.useSearch()
+
   const [state, setState] = useState<WizardState>({
     currentStep: 1,
-    serverId: null,
+    serverId: initialServerId || null,
     serverName: '',
     serverDescription: '',
     actions: [],
@@ -71,28 +89,84 @@ function WizardPage() {
     generatedTools: [],
     result: null,
   })
-  const [loading, setLoading] = useState(false)
-  const [loadingText, setLoadingText] = useState('Processing...')
+
   const [description, setDescription] = useState('')
   const [refineInput, setRefineInput] = useState('')
-  const [tierInfo, setTierInfo] = useState<TierInfo | null>(null)
 
-  // Fetch tier info when entering step 4
+  // Query: Get Wizard State (Resuming)
+  const { data: serverState, isLoading: isLoadingState } = useQuery({
+    queryKey: ['wizardState', initialServerId],
+    queryFn: () => getWizardState({ data: { serverId: initialServerId! } }),
+    enabled: !!initialServerId && state.currentStep === 1 && !state.serverName,
+  })
+
+  // Sync server state to local state when loaded
   useEffect(() => {
-    if (state.currentStep === 4 && !tierInfo) {
-      getTierInfo({ data: { tier: 'free' } })
-        .then(setTierInfo)
-        .catch(console.error)
-    }
-  }, [state.currentStep, tierInfo])
+    if (serverState) {
+      console.log('Restoring wizard state:', serverState)
+      const step = WIZARD_STEP_MAP[serverState.wizard_step as string] || 1
+      const tools = (serverState.tools || []) as Array<any>
 
-  // Step 1: Describe System
-  async function handleDescribe() {
-    if (!description.trim()) return
-    setLoading(true)
-    setLoadingText('Analyzing your requirements...')
-    try {
-      const result = await startWizard({ data: { description } })
+      let actions: Array<Action> = []
+      let generatedTools: Array<GeneratedTool> = []
+      let selectedActions: Array<string> = []
+
+      if (step >= 2) {
+        actions = tools.map((t: any) => ({
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters || [],
+          auth_required: false,
+        }))
+        // Default selection logic if resuming step 2
+        selectedActions = actions.slice(0, 3).map((a) => a.name)
+      }
+
+      if (step >= 4) {
+        generatedTools = tools.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+        }))
+      }
+
+      setState((s) => ({
+        ...s,
+        currentStep: step,
+        serverId: initialServerId || null,
+        serverName: serverState.name as string,
+        serverDescription: (serverState.description as string) || (serverState.meta?.user_prompt as string) || (serverState.user_prompt as string),
+        authType: (serverState.auth_type) || 'none',
+        oauthConfig: (serverState.auth_config) || {
+          providerUrl: '',
+          clientId: '',
+          scopes: '',
+        },
+        actions,
+        selectedActions,
+        generatedTools,
+      }))
+
+      const userPrompt = (serverState.meta?.user_prompt as string) || (serverState.user_prompt as string)
+      if (userPrompt) {
+        setDescription(userPrompt)
+      } else if (step === 1 && serverState.description) {
+        setDescription(serverState.description as string)
+      }
+    }
+  }, [serverState, initialServerId])
+
+  // Query: Get Tier Info
+  const { data: tierInfo } = useQuery({
+    queryKey: ['tierInfo', 'free'],
+    queryFn: () => getTierInfo({ data: { tier: 'free' } }),
+    enabled: state.currentStep === 4,
+  })
+
+  // Mutation: Start Wizard
+  const startWizardMutation = useMutation({
+    mutationFn: (desc: string) => startWizard({ data: { description: desc } }),
+    onSuccess: (result) => {
       setState((s) => ({
         ...s,
         currentStep: 2,
@@ -102,80 +176,65 @@ function WizardPage() {
         actions: result.actions,
         selectedActions: result.actions.slice(0, 3).map((a) => a.name),
       }))
-    } catch (e) {
-      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    onError: (error) => alert(`Error: ${error.message}`),
+  })
 
-  // Step 2: Refine actions
-  async function handleRefine() {
-    if (!refineInput.trim() || !state.serverId) return
-    setLoading(true)
-    setLoadingText('Updating actions...')
-    try {
-      const result = await refineActions({ data: { serverId: state.serverId, feedback: refineInput } })
+  // Mutation: Refine Actions
+  const refineActionsMutation = useMutation({
+    mutationFn: ({
+      serverId,
+      feedback,
+    }: {
+      serverId: string
+      feedback: string
+    }) => refineActions({ data: { serverId, feedback } }),
+    onSuccess: (result) => {
       setState((s) => ({
         ...s,
         actions: result.actions,
         selectedActions: [],
       }))
       setRefineInput('')
-    } catch (e) {
-      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    onError: (error) => alert(`Error: ${error.message}`),
+  })
 
-  function toggleAction(name: string) {
-    setState((s) => {
-      if (s.selectedActions.includes(name)) {
-        return { ...s, selectedActions: s.selectedActions.filter((n) => n !== name) }
-      }
-      if (s.selectedTier === 'free' && s.selectedActions.length >= 3) {
-        alert('Free tier limited to 3 actions')
-        return s
-      }
-      return { ...s, selectedActions: [...s.selectedActions, name] }
-    })
-  }
-
-  async function handleConfirmActions() {
-    if (!state.serverId || state.selectedActions.length === 0) return
-    setLoading(true)
-    setLoadingText('Confirming tool selection...')
-    try {
-      await confirmActions({ data: { serverId: state.serverId, selectedActions: state.selectedActions } })
+  // Mutation: Confirm Actions
+  const confirmActionsMutation = useMutation({
+    mutationFn: ({
+      serverId,
+      selectedActions,
+    }: {
+      serverId: string
+      selectedActions: Array<string>
+    }) => confirmActions({ data: { serverId, selectedActions } }),
+    onSuccess: () => {
       setState((s) => ({ ...s, currentStep: 3 }))
-    } catch (e) {
-      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    onError: (error) => alert(`Error: ${error.message}`),
+  })
 
-  // Step 3: Configure auth
-  async function handleConfirmAuth() {
-    if (!state.serverId) return
-    setLoading(true)
-    setLoadingText('Configuring authentication...')
-    try {
-      const authConfig =
-        state.authType === 'oauth'
-          ? {
-              providerUrl: state.oauthConfig.providerUrl,
-              clientId: state.oauthConfig.clientId,
-              scopes: state.oauthConfig.scopes.split(',').map((s) => s.trim()),
-            }
-          : undefined
+  // Mutation: Configure Auth & Generate Code
+  // Combined for simplicity in UI flow, but better to chain properly
+  const generateCodeMutation = useMutation({
+    mutationFn: (serverId: string) => generateCode({ data: { serverId } }),
+  })
 
-      await configureAuth({ data: { serverId: state.serverId, authType: state.authType, authConfig } })
-
-      setLoadingText('Generating tool code...')
-      const codeResult = await generateCode({ data: { serverId: state.serverId } })
-
+  const configureAuthMutation = useMutation({
+    mutationFn: async ({
+      serverId,
+      authType,
+      authConfig,
+    }: {
+      serverId: string
+      authType: string
+      authConfig?: any
+    }) => {
+      await configureAuth({ data: { serverId, authType, authConfig } })
+      return generateCodeMutation.mutateAsync(serverId)
+    },
+    onSuccess: (codeResult) => {
       setState((s) => ({
         ...s,
         currentStep: 4,
@@ -185,20 +244,14 @@ function WizardPage() {
           description: t.description,
         })),
       }))
-    } catch (e) {
-      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    onError: (error) => alert(`Error: ${error.message}`),
+  })
 
-  // Step 4: Deploy/Activate
-  async function handleActivate() {
-    if (!state.serverId) return
-    setLoading(true)
-    setLoadingText('Activating on shared runtime...')
-    try {
-      const result = await activateServer({ data: { serverId: state.serverId } })
+  // Mutation: Activate Server
+  const activateServerMutation = useMutation({
+    mutationFn: (serverId: string) => activateServer({ data: { serverId } }),
+    onSuccess: (result) => {
       setState((s) => ({
         ...s,
         currentStep: 5,
@@ -207,19 +260,14 @@ function WizardPage() {
           toolsCount: result.tools_count,
         },
       }))
-    } catch (e) {
-      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    onError: (error) => alert(`Error: ${error.message}`),
+  })
 
-  async function handleDeploy() {
-    if (!state.serverId) return
-    setLoading(true)
-    setLoadingText('Deploying to dedicated VPC...')
-    try {
-      const result = await createVPS({ data: { serverId: state.serverId } })
+  // Mutation: Create VPS
+  const createVPSMutation = useMutation({
+    mutationFn: (serverId: string) => createVPS({ data: { serverId } }),
+    onSuccess: (result) => {
       setState((s) => ({
         ...s,
         currentStep: 5,
@@ -227,11 +275,74 @@ function WizardPage() {
           message: result.message,
         },
       }))
-    } catch (e) {
-      alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
-    } finally {
-      setLoading(false)
-    }
+    },
+    onError: (error) => alert(`Error: ${error.message}`),
+  })
+
+  // Handlers
+  function handleDescribe() {
+    if (!description.trim()) return
+    startWizardMutation.mutate(description)
+  }
+
+  function handleRefine() {
+    if (!refineInput.trim() || !state.serverId) return
+    refineActionsMutation.mutate({
+      serverId: state.serverId,
+      feedback: refineInput,
+    })
+  }
+
+  function toggleAction(name: string) {
+    setState((s) => {
+      if (s.selectedActions.includes(name)) {
+        return {
+          ...s,
+          selectedActions: s.selectedActions.filter((n) => n !== name),
+        }
+      }
+      if (s.selectedTier === 'free' && s.selectedActions.length >= 3) {
+        alert('Free tier limited to 3 actions')
+        return s
+      }
+      return { ...s, selectedActions: [...s.selectedActions, name] }
+    })
+  }
+
+  function handleConfirmActions() {
+    if (!state.serverId || state.selectedActions.length === 0) return
+    confirmActionsMutation.mutate({
+      serverId: state.serverId,
+      selectedActions: state.selectedActions,
+    })
+  }
+
+  function handleConfirmAuth() {
+    if (!state.serverId) return
+    const authConfig =
+      state.authType === 'oauth'
+        ? {
+            providerUrl: state.oauthConfig.providerUrl,
+            clientId: state.oauthConfig.clientId,
+            scopes: state.oauthConfig.scopes.split(',').map((s) => s.trim()),
+          }
+        : undefined
+
+    configureAuthMutation.mutate({
+      serverId: state.serverId,
+      authType: state.authType,
+      authConfig,
+    })
+  }
+
+  function handleActivate() {
+    if (!state.serverId) return
+    activateServerMutation.mutate(state.serverId)
+  }
+
+  function handleDeploy() {
+    if (!state.serverId) return
+    createVPSMutation.mutate(state.serverId)
   }
 
   function handleStartOver() {
@@ -249,19 +360,50 @@ function WizardPage() {
       result: null,
     })
     setDescription('')
-    setTierInfo(null)
+    // tierInfo cache is managed by Query, no need to clear manually unless desired
   }
+
+  // Derive global loading state
+  const isGlobalLoading =
+    isLoadingState ||
+    startWizardMutation.isPending ||
+    refineActionsMutation.isPending ||
+    confirmActionsMutation.isPending ||
+    configureAuthMutation.isPending ||
+    generateCodeMutation.isPending ||
+    activateServerMutation.isPending ||
+    createVPSMutation.isPending
+
+  const loadingText = startWizardMutation.isPending
+    ? 'Analyzing your requirements...'
+    : refineActionsMutation.isPending
+      ? 'Updating actions...'
+      : confirmActionsMutation.isPending
+        ? 'Confirming tool selection...'
+        : configureAuthMutation.isPending
+          ? 'Configuring authentication...'
+          : generateCodeMutation.isPending
+            ? 'Generating tool code...'
+            : activateServerMutation.isPending
+              ? 'Activating on shared runtime...'
+              : createVPSMutation.isPending
+                ? 'Deploying to dedicated VPC...'
+                : isLoadingState
+                  ? 'Resuming setup...'
+                  : 'Processing...'
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
-      {loading && <LoadingOverlay text={loadingText} />}
+      {isGlobalLoading && <LoadingOverlay text={loadingText} />}
 
       <div className="max-w-3xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
             AutoMCP
           </h1>
-          <p className="text-slate-400 mt-2">Build MCP servers through conversation</p>
+          <p className="text-slate-400 mt-2">
+            Build MCP servers through conversation
+          </p>
         </header>
 
         <WizardProgress currentStep={state.currentStep} />
@@ -270,7 +412,9 @@ function WizardPage() {
           {/* Step 1: Describe */}
           {state.currentStep === 1 && (
             <section>
-              <h2 className="text-xl font-semibold text-white mb-2">What should your MCP server do?</h2>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                What should your MCP server do?
+              </h2>
               <p className="text-slate-400 mb-4">
                 Describe the system or service you want to create.
               </p>
@@ -292,7 +436,9 @@ function WizardPage() {
           {/* Step 2: Actions */}
           {state.currentStep === 2 && (
             <section>
-              <h2 className="text-xl font-semibold text-indigo-400 mb-1">{state.serverName}</h2>
+              <h2 className="text-xl font-semibold text-indigo-400 mb-1">
+                {state.serverName}
+              </h2>
               <p className="text-slate-400 mb-4">{state.serverDescription}</p>
 
               <div className="space-y-3 mb-4">
@@ -345,8 +491,12 @@ function WizardPage() {
           {/* Step 3: Auth */}
           {state.currentStep === 3 && (
             <section>
-              <h2 className="text-xl font-semibold text-white mb-2">Authentication Setup</h2>
-              <p className="text-slate-400 mb-4">How should actions requiring auth be handled?</p>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                Authentication Setup
+              </h2>
+              <p className="text-slate-400 mb-4">
+                How should actions requiring auth be handled?
+              </p>
 
               <div className="space-y-3 mb-4">
                 {(['none', 'ephemeral', 'oauth'] as const).map((type) => (
@@ -360,7 +510,9 @@ function WizardPage() {
                       name="auth-type"
                       value={type}
                       checked={state.authType === type}
-                      onChange={() => setState((s) => ({ ...s, authType: type }))}
+                      onChange={() =>
+                        setState((s) => ({ ...s, authType: type }))
+                      }
                       className="mr-3"
                     />
                     <span className="font-medium text-white">
@@ -369,8 +521,10 @@ function WizardPage() {
                       {type === 'oauth' && 'OAuth Integration'}
                     </span>
                     <p className="text-slate-400 text-sm mt-1 ml-6">
-                      {type === 'none' && "Actions don't require auth or handle it internally"}
-                      {type === 'ephemeral' && 'Credentials passed at runtime (API keys, tokens)'}
+                      {type === 'none' &&
+                        "Actions don't require auth or handle it internally"}
+                      {type === 'ephemeral' &&
+                        'Credentials passed at runtime (API keys, tokens)'}
                       {type === 'oauth' && 'Connect to your OAuth provider'}
                     </p>
                   </label>
@@ -385,7 +539,10 @@ function WizardPage() {
                     onChange={(e) =>
                       setState((s) => ({
                         ...s,
-                        oauthConfig: { ...s.oauthConfig, providerUrl: e.target.value },
+                        oauthConfig: {
+                          ...s.oauthConfig,
+                          providerUrl: e.target.value,
+                        },
                       }))
                     }
                     placeholder="OAuth Provider URL"
@@ -397,7 +554,10 @@ function WizardPage() {
                     onChange={(e) =>
                       setState((s) => ({
                         ...s,
-                        oauthConfig: { ...s.oauthConfig, clientId: e.target.value },
+                        oauthConfig: {
+                          ...s.oauthConfig,
+                          clientId: e.target.value,
+                        },
                       }))
                     }
                     placeholder="Client ID"
@@ -409,7 +569,10 @@ function WizardPage() {
                     onChange={(e) =>
                       setState((s) => ({
                         ...s,
-                        oauthConfig: { ...s.oauthConfig, scopes: e.target.value },
+                        oauthConfig: {
+                          ...s.oauthConfig,
+                          scopes: e.target.value,
+                        },
                       }))
                     }
                     placeholder="Scopes (comma-separated)"
@@ -438,26 +601,38 @@ function WizardPage() {
           {/* Step 4: Deploy */}
           {state.currentStep === 4 && (
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">Ready to Launch</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                Ready to Launch
+              </h2>
 
               <div className="bg-slate-900 rounded-lg p-4 mb-4 border border-slate-700">
-                <h3 className="text-indigo-400 font-semibold">{state.serverName}</h3>
-                <p className="text-slate-400 text-sm">{state.serverDescription}</p>
+                <h3 className="text-indigo-400 font-semibold">
+                  {state.serverName}
+                </h3>
+                <p className="text-slate-400 text-sm">
+                  {state.serverDescription}
+                </p>
                 <div className="flex gap-8 mt-3">
                   <div>
-                    <span className="text-2xl font-bold text-green-400">{state.generatedTools.length}</span>
+                    <span className="text-2xl font-bold text-green-400">
+                      {state.generatedTools.length}
+                    </span>
                     <span className="text-slate-500 text-sm ml-2">Tools</span>
                   </div>
                   <div>
-                    <span className="text-lg font-semibold text-green-400 capitalize">{state.authType}</span>
-                    <span className="text-slate-500 text-sm ml-2">Auth Type</span>
+                    <span className="text-lg font-semibold text-green-400 capitalize">
+                      {state.authType}
+                    </span>
+                    <span className="text-slate-500 text-sm ml-2">
+                      Auth Type
+                    </span>
                   </div>
                 </div>
               </div>
 
-
-
-              <h3 className="text-slate-400 text-sm font-semibold mb-2">Choose Your Plan</h3>
+              <h3 className="text-slate-400 text-sm font-semibold mb-2">
+                Choose Your Plan
+              </h3>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <label
                   className={`p-4 bg-slate-900 rounded-lg border cursor-pointer
@@ -468,7 +643,9 @@ function WizardPage() {
                     name="tier"
                     value="free"
                     checked={state.selectedTier === 'free'}
-                    onChange={() => setState((s) => ({ ...s, selectedTier: 'free' }))}
+                    onChange={() =>
+                      setState((s) => ({ ...s, selectedTier: 'free' }))
+                    }
                     className="hidden"
                   />
                   <div className="flex justify-between items-center mb-2">
@@ -480,18 +657,24 @@ function WizardPage() {
                     <li>✓ Shared runtime</li>
                     <li>✓ Instant activation</li>
                   </ul>
-                  {tierInfo?.curated_libraries && tierInfo.curated_libraries.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-700">
-                      <p className="text-xs text-slate-500 mb-1">Allowed Libraries:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {tierInfo.curated_libraries.map((lib) => (
-                          <span key={lib} className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
-                            {lib}
-                          </span>
-                        ))}
+                  {tierInfo?.curated_libraries &&
+                    tierInfo.curated_libraries.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-700">
+                        <p className="text-xs text-slate-500 mb-1">
+                          Allowed Libraries:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {tierInfo.curated_libraries.map((lib) => (
+                            <span
+                              key={lib}
+                              className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded"
+                            >
+                              {lib}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </label>
                 <label
                   className={`p-4 bg-slate-900 rounded-lg border cursor-pointer
@@ -502,7 +685,9 @@ function WizardPage() {
                     name="tier"
                     value="paid"
                     checked={state.selectedTier === 'paid'}
-                    onChange={() => setState((s) => ({ ...s, selectedTier: 'paid' }))}
+                    onChange={() =>
+                      setState((s) => ({ ...s, selectedTier: 'paid' }))
+                    }
                     className="hidden"
                   />
                   <div className="flex justify-between items-center mb-2">
@@ -520,13 +705,22 @@ function WizardPage() {
               {/* Code Preview removed */}
               {state.generatedTools.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="text-slate-400 text-sm font-semibold mb-2">Generated Tools</h3>
+                  <h3 className="text-slate-400 text-sm font-semibold mb-2">
+                    Generated Tools
+                  </h3>
                   <div className="space-y-3">
                     {state.generatedTools.map((tool) => (
-                      <div key={tool.id} className="p-3 bg-slate-900 rounded-lg border border-slate-700">
+                      <div
+                        key={tool.id}
+                        className="p-3 bg-slate-900 rounded-lg border border-slate-700"
+                      >
                         <div>
-                          <span className="font-medium text-white">{tool.name}</span>
-                          <span className="text-slate-500 text-sm ml-2">— {tool.description}</span>
+                          <span className="font-medium text-white">
+                            {tool.name}
+                          </span>
+                          <span className="text-slate-500 text-sm ml-2">
+                            — {tool.description}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -563,18 +757,24 @@ function WizardPage() {
           {/* Step 5: Result */}
           {state.currentStep === 5 && state.result && (
             <section>
-              <h2 className="text-xl font-semibold text-white mb-4">🎉 Your MCP Server is Active!</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                🎉 Your MCP Server is Active!
+              </h2>
 
               <div className="bg-slate-900 rounded-lg p-4 border-l-4 border-indigo-500 mb-6">
                 {state.result.mcpEndpoint && (
                   <>
                     <p className="mb-2">
                       <strong className="text-slate-300">MCP Endpoint:</strong>{' '}
-                      <code className="text-indigo-400">{state.result.mcpEndpoint}</code>
+                      <code className="text-indigo-400">
+                        {state.result.mcpEndpoint}
+                      </code>
                     </p>
                     <p>
                       <strong className="text-slate-300">Tools Active:</strong>{' '}
-                      <span className="text-green-400">{state.result.toolsCount}</span>
+                      <span className="text-green-400">
+                        {state.result.toolsCount}
+                      </span>
                     </p>
                   </>
                 )}

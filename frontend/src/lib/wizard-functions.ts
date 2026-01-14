@@ -35,7 +35,9 @@ export const refineActions = createServerFn({ method: 'POST' })
 
 // Select which tools to keep
 export const confirmActions = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ serverId: z.string(), selectedActions: z.array(z.string()) }))
+  .inputValidator(
+    z.object({ serverId: z.string(), selectedActions: z.array(z.string()) }),
+  )
   .handler(async ({ data }) => {
     await getSession()
     return backend.wizardConfirmActions(data.serverId, data.selectedActions)
@@ -43,14 +45,20 @@ export const confirmActions = createServerFn({ method: 'POST' })
 
 // Configure auth
 export const configureAuth = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ 
-    serverId: z.string(), 
-    authType: z.string(), 
-    authConfig: z.record(z.unknown()).optional() 
-  }))
+  .inputValidator(
+    z.object({
+      serverId: z.string(),
+      authType: z.string(),
+      authConfig: z.record(z.string(), z.any()).optional(),
+    }),
+  )
   .handler(async ({ data }) => {
     await getSession()
-    return backend.wizardConfigureAuth(data.serverId, data.authType, data.authConfig)
+    return backend.wizardConfigureAuth(
+      data.serverId,
+      data.authType,
+      data.authConfig,
+    )
   })
 
 // Generate code
@@ -90,4 +98,30 @@ export const getTierInfo = createServerFn({ method: 'GET' })
   .inputValidator(z.object({ tier: z.string() }))
   .handler(async ({ data }) => {
     return backend.getTierInfo(data.tier)
+  })
+
+// === Server Management Functions ===
+
+// List all servers for current user
+export const listUserServers = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getSession()
+    return backend.listServers(session.user.id)
+  },
+)
+
+// Get full details for a specific server
+export const getServerDetailsById = createServerFn({ method: 'GET' })
+  .inputValidator(z.object({ serverId: z.string() }))
+  .handler(async ({ data }) => {
+    await getSession()
+    return backend.getServerDetails(data.serverId)
+  })
+
+// Delete a server
+export const deleteServerById = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ serverId: z.string() }))
+  .handler(async ({ data }) => {
+    await getSession()
+    return backend.deleteServer(data.serverId)
   })

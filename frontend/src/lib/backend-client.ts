@@ -13,7 +13,10 @@ interface RequestOptions {
   headers?: Record<string, string>
 }
 
-async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options: RequestOptions = {},
+): Promise<T> {
   const url = `${BACKEND_URL}${endpoint}`
   const config: RequestInit = {
     method: options.method || 'GET',
@@ -30,7 +33,9 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   const response = await fetch(url, config)
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+    const error = await response
+      .json()
+      .catch(() => ({ detail: 'Unknown error' }))
     throw new Error(error.detail || `HTTP ${response.status}`)
   }
 
@@ -59,7 +64,13 @@ export interface RefineResponse {
 
 export interface GenerateCodeResponse {
   server_id: string
-  tools: Array<{ id: string; name: string; description: string; code?: string; has_code: boolean }>
+  tools: Array<{
+    id: string
+    name: string
+    description: string
+    code?: string
+    has_code: boolean
+  }>
 }
 
 export interface ActivateResponse {
@@ -85,21 +96,30 @@ export interface TierInfo {
 }
 
 // Wizard API
-export async function wizardStart(customerId: string, description: string): Promise<StartWizardResponse> {
+export async function wizardStart(
+  customerId: string,
+  description: string,
+): Promise<StartWizardResponse> {
   return request('/api/wizard/start', {
     method: 'POST',
     body: { customer_id: customerId, description },
   })
 }
 
-export async function wizardRefine(serverId: string, feedback: string): Promise<RefineResponse> {
+export async function wizardRefine(
+  serverId: string,
+  feedback: string,
+): Promise<RefineResponse> {
   return request(`/api/wizard/${serverId}/refine`, {
     method: 'POST',
     body: { feedback },
   })
 }
 
-export async function wizardConfirmActions(serverId: string, selectedActions: Array<string>): Promise<void> {
+export async function wizardConfirmActions(
+  serverId: string,
+  selectedActions: Array<string>,
+): Promise<void> {
   return request(`/api/wizard/${serverId}/tools/select`, {
     method: 'POST',
     body: { selected_tool_names: selectedActions },
@@ -109,7 +129,7 @@ export async function wizardConfirmActions(serverId: string, selectedActions: Ar
 export async function wizardConfigureAuth(
   serverId: string,
   authType: string,
-  authConfig?: Record<string, unknown>
+  authConfig?: Record<string, unknown>,
 ): Promise<void> {
   return request(`/api/wizard/${serverId}/auth`, {
     method: 'POST',
@@ -117,24 +137,32 @@ export async function wizardConfigureAuth(
   })
 }
 
-export async function wizardGenerateCode(serverId: string): Promise<GenerateCodeResponse> {
+export async function wizardGenerateCode(
+  serverId: string,
+): Promise<GenerateCodeResponse> {
   return request(`/api/wizard/${serverId}/generate-code`, {
     method: 'POST',
   })
 }
 
-export async function wizardGetState(serverId: string): Promise<Record<string, unknown>> {
+export async function wizardGetState(
+  serverId: string,
+): Promise<Record<string, unknown>> {
   return request(`/api/wizard/${serverId}`)
 }
 
 // Server API
-export async function serverActivate(serverId: string): Promise<ActivateResponse> {
+export async function serverActivate(
+  serverId: string,
+): Promise<ActivateResponse> {
   return request(`/api/servers/${serverId}/activate`, {
     method: 'POST',
   })
 }
 
-export async function serverCreateVPS(serverId: string): Promise<CreateVPSResponse> {
+export async function serverCreateVPS(
+  serverId: string,
+): Promise<CreateVPSResponse> {
   return request(`/api/servers/${serverId}/create-vps`, {
     method: 'POST',
     body: { server_id: serverId },
@@ -143,4 +171,70 @@ export async function serverCreateVPS(serverId: string): Promise<CreateVPSRespon
 
 export async function getTierInfo(tier: string): Promise<TierInfo> {
   return request(`/api/servers/tier-info/${tier}`)
+}
+
+// === Server Management Types ===
+
+export interface MCPServerListItem {
+  id: string
+  name: string
+  description: string | null
+  status: string
+  wizard_step: string
+  tools_count: number
+  is_deployed: boolean
+  mcp_endpoint: string | null
+  created_at: string
+}
+
+export interface MCPServerListResponse {
+  servers: Array<MCPServerListItem>
+}
+
+export interface MCPServerDetails {
+  id: string
+  name: string
+  description: string | null
+  status: string
+  wizard_step: string
+  auth_type: string
+  auth_config: { [key: string]: any } | null
+  meta: Record<string, any>
+  tier: string
+  is_deployed: boolean
+  mcp_endpoint: string | null
+  tools: Array<{
+    id: string
+    name: string
+    description: string
+    parameters: Array<{ name: string; type: string; description?: string }>
+    has_code: boolean
+  }>
+  created_at: string
+  updated_at: string
+}
+
+export interface DeleteServerResponse {
+  status: string
+  server_id: string
+}
+
+// === Server Management API ===
+
+export async function listServers(
+  customerId: string,
+): Promise<MCPServerListResponse> {
+  return request(`/api/servers/list/${customerId}`)
+}
+
+export async function getServerDetails(
+  serverId: string,
+): Promise<MCPServerDetails> {
+  return request(`/api/servers/${serverId}/details`)
+}
+
+export async function deleteServer(
+  serverId: string,
+): Promise<DeleteServerResponse> {
+  return request(`/api/servers/${serverId}`, { method: 'DELETE' })
 }

@@ -7,7 +7,12 @@ interface ActionCardProps {
   onToggle: () => void
 }
 
-export function ActionCard({ action, selected, disabled, onToggle }: ActionCardProps) {
+export function ActionCard({
+  action,
+  selected,
+  disabled,
+  onToggle,
+}: ActionCardProps) {
   return (
     <div
       onClick={() => !disabled && onToggle()}
@@ -22,7 +27,9 @@ export function ActionCard({ action, selected, disabled, onToggle }: ActionCardP
           onChange={onToggle}
           className="w-4 h-4"
         />
-        <span className="font-semibold text-indigo-400 font-mono">{action.name}</span>
+        <span className="font-semibold text-indigo-400 font-mono">
+          {action.name}
+        </span>
         {action.auth_required && (
           <span className="text-xs px-2 py-0.5 rounded bg-amber-500 text-slate-900 font-semibold">
             Auth Required

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { authClient } from '@/lib/auth-client'
 
@@ -48,7 +48,10 @@ function RegisterPage() {
           <p className="text-slate-400 mt-2">Create your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-slate-800 rounded-2xl p-6 border border-slate-700"
+        >
           {error && (
             <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
               {error}
@@ -56,7 +59,9 @@ function RegisterPage() {
           )}
 
           <div className="mb-4">
-            <label className="block text-slate-300 text-sm font-medium mb-2">Name</label>
+            <label className="block text-slate-300 text-sm font-medium mb-2">
+              Name
+            </label>
             <input
               type="text"
               value={name}
@@ -68,7 +73,9 @@ function RegisterPage() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-slate-300 text-sm font-medium mb-2">Email</label>
+            <label className="block text-slate-300 text-sm font-medium mb-2">
+              Email
+            </label>
             <input
               type="email"
               value={email}
@@ -80,7 +87,9 @@ function RegisterPage() {
           </div>
 
           <div className="mb-6">
-            <label className="block text-slate-300 text-sm font-medium mb-2">Password</label>
+            <label className="block text-slate-300 text-sm font-medium mb-2">
+              Password
+            </label>
             <input
               type="password"
               value={password}

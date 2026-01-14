@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { authClient } from '@/lib/auth-client'
 
-import ParaglideLocaleSwitcher from './LocaleSwitcher.tsx'
 
 import { useState } from 'react'
-import { Home, Menu, X, LogOut } from 'lucide-react'
+import { Home, LogOut, Menu, Server, X } from 'lucide-react'
+import ParaglideLocaleSwitcher from './LocaleSwitcher.tsx'
+import { authClient } from '@/lib/auth-client'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
@@ -72,7 +72,19 @@ export default function Header() {
             }}
           >
             <Home size={20} />
-            <span className="font-medium">Home</span>
+            <span className="font-medium">New Server</span>
+          </Link>
+          <Link
+            to="/servers"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Server size={20} />
+            <span className="font-medium">My Servers</span>
           </Link>
         </nav>
 
