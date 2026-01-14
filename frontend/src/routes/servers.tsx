@@ -1,6 +1,7 @@
 import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 import type { MCPServerListItem } from '@/lib/backend-client'
 import { getSession } from '@/lib/auth-functions'
@@ -86,7 +87,7 @@ function ServerCard({
                 navigator.clipboard.writeText(
                   `${env.VITE_BACKEND_URL}${server.mcp_endpoint}`,
                 )
-                alert('MCP URL copied!')
+                toast.success('MCP URL copied!')
               }}
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
             >
@@ -180,7 +181,7 @@ function ServersPage() {
       setDeleteTarget(null)
     },
     onError: (error) => {
-      alert(`Failed to delete: ${error.message}`)
+      toast.error('Failed to delete', { description: error.message })
     },
   })
 

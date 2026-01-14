@@ -1,12 +1,14 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
+import { toast } from 'sonner'
 
 import type { Action } from '@/lib/backend-client'
 import { WizardProgress } from '@/components/wizard/WizardProgress'
 import { WizardProgressIndicator } from '@/components/wizard/WizardProgressIndicator'
 import { ActionCard } from '@/components/wizard/ActionCard'
+import { env } from '@/env'
 
 import {
   activateServer,
@@ -67,14 +69,18 @@ interface WizardState {
   selectedTier: 'free' | 'paid'
   generatedTools: Array<GeneratedTool>
   result: {
+    serverId?: string
     mcpEndpoint?: string
     toolsCount?: number
     message?: string
+    status?: string
+    ipAddress?: string
   } | null
 }
 
 function WizardPage() {
   const { serverId: initialServerId } = Route.useSearch()
+  const navigate = useNavigate()
 
   const [state, setState] = useState<WizardState>({
     currentStep: 1,
@@ -177,7 +183,7 @@ function WizardPage() {
         selectedActions: result.actions.slice(0, 3).map((a) => a.name),
       }))
     },
-    onError: (error) => alert(`Error: ${error.message}`),
+    onError: (error) => toast.error('Error', { description: error.message }),
   })
 
   // Mutation: Refine Actions
@@ -200,7 +206,7 @@ function WizardPage() {
       }))
       setRefineInput('')
     },
-    onError: (error) => alert(`Error: ${error.message}`),
+    onError: (error) => toast.error('Error', { description: error.message }),
   })
 
   // Mutation: Confirm Actions
@@ -215,7 +221,7 @@ function WizardPage() {
     onSuccess: () => {
       setState((s) => ({ ...s, currentStep: 3 }))
     },
-    onError: (error) => alert(`Error: ${error.message}`),
+    onError: (error) => toast.error('Error', { description: error.message }),
   })
 
   // Mutation: Configure Auth & Generate Code
@@ -248,7 +254,7 @@ function WizardPage() {
         })),
       }))
     },
-    onError: (error) => alert(`Error: ${error.message}`),
+    onError: (error) => toast.error('Error', { description: error.message }),
   })
 
   // Mutation: Activate Server
@@ -259,12 +265,14 @@ function WizardPage() {
         ...s,
         currentStep: 5,
         result: {
+          serverId: result.server_id,
           mcpEndpoint: result.mcp_endpoint,
           toolsCount: result.tools_count,
+          status: result.status,
         },
       }))
     },
-    onError: (error) => alert(`Error: ${error.message}`),
+    onError: (error) => toast.error('Error', { description: error.message }),
   })
 
   // Mutation: Create VPS
@@ -275,11 +283,14 @@ function WizardPage() {
         ...s,
         currentStep: 5,
         result: {
+          serverId: result.server_id,
           message: result.message,
+          status: result.status,
+          ipAddress: result.ip_address,
         },
       }))
     },
-    onError: (error) => alert(`Error: ${error.message}`),
+    onError: (error) => toast.error('Error', { description: error.message }),
   })
 
   // Handlers
@@ -316,7 +327,7 @@ function WizardPage() {
         }
       }
       if (s.selectedTier === 'free' && s.selectedActions.length >= 3) {
-        alert('Free tier limited to 3 actions')
+        toast.error('Free tier limited to 3 actions')
         return s
       }
       return { ...s, selectedActions: [...s.selectedActions, name] }
@@ -887,34 +898,104 @@ function WizardPage() {
                 🎉 Your MCP Server is Active!
               </h2>
 
-              <div className="bg-slate-900 rounded-lg p-4 border-l-4 border-indigo-500 mb-6">
+              <div className="bg-slate-900 rounded-lg p-4 border-l-4 border-indigo-500 mb-6 space-y-3">
+                {/* Server Name and Description */}
+                <div>
+                  <h3 className="text-lg font-semibold text-indigo-400 mb-1">
+                    {state.serverName}
+                  </h3>
+                  {state.serverDescription && (
+                    <p className="text-slate-400 text-sm">
+                      {state.serverDescription}
+                    </p>
+                  )}
+                </div>
+
+                {/* MCP Endpoint (for activated servers) */}
                 {state.result.mcpEndpoint && (
-                  <>
-                    <p className="mb-2">
-                      <strong className="text-slate-300">MCP Endpoint:</strong>{' '}
-                      <code className="text-indigo-400">
-                        {state.result.mcpEndpoint}
+                  <div>
+                    <strong className="text-slate-300 text-sm">MCP Endpoint:</strong>
+                    <div className="mt-1 flex items-center gap-2">
+                      <code className="text-indigo-400 text-sm break-all bg-slate-800 px-2 py-1 rounded flex-1">
+                        {`${env.VITE_BACKEND_URL}${state.result.mcpEndpoint}`}
                       </code>
-                    </p>
-                    <p>
-                      <strong className="text-slate-300">Tools Active:</strong>{' '}
-                      <span className="text-green-400">
-                        {state.result.toolsCount}
-                      </span>
-                    </p>
-                  </>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${env.VITE_BACKEND_URL}${state.result.mcpEndpoint}`
+                          )
+                          toast.success('URL copied!')
+                        }}
+                        className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded transition-colors whitespace-nowrap"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
                 )}
-                {state.result.message && !state.result.mcpEndpoint && (
-                  <p className="text-slate-400">{state.result.message}</p>
+
+                {/* IP Address (for VPS deployments) */}
+                {state.result.ipAddress && (
+                  <div>
+                    <strong className="text-slate-300 text-sm">IP Address:</strong>{' '}
+                    <code className="text-indigo-400 text-sm">
+                      {state.result.ipAddress}
+                    </code>
+                  </div>
+                )}
+
+                {/* Tools Count */}
+                {state.result.toolsCount !== undefined && (
+                  <div>
+                    <strong className="text-slate-300 text-sm">Tools Active:</strong>{' '}
+                    <span className="text-green-400 font-semibold">
+                      {state.result.toolsCount}
+                    </span>
+                  </div>
+                )}
+
+                {/* Auth Type */}
+                {state.authType !== 'none' && (
+                  <div>
+                    <strong className="text-slate-300 text-sm">Authentication:</strong>{' '}
+                    <span className="text-slate-400 capitalize">
+                      {state.authType === 'ephemeral' ? 'Ephemeral Credentials' : 'OAuth Integration'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Message (for VPS deployments) */}
+                {state.result.message && (
+                  <div>
+                    <p className="text-slate-400 text-sm">{state.result.message}</p>
+                  </div>
                 )}
               </div>
 
-              <button
-                onClick={handleStartOver}
-                className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
-              >
-                Create Another Server
-              </button>
+              <div className="flex gap-3">
+                {state.result?.serverId && (
+                  <button
+                    onClick={() => {
+                      const serverId = state.result?.serverId
+                      if (serverId) {
+                        navigate({ 
+                          to: '/server/$serverId', 
+                          params: { serverId } 
+                        })
+                      }
+                    }}
+                    className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    Go to Details
+                  </button>
+                )}
+                <button
+                  onClick={handleStartOver}
+                  className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                >
+                  Create Another Server
+                </button>
+              </div>
             </section>
           )}
         </main>

@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 import type { MCPServerDetails } from '@/lib/backend-client'
 import { getSession } from '@/lib/auth-functions'
@@ -102,7 +103,7 @@ function ServerDetailPage() {
       navigate({ to: '/servers' })
     },
     onError: (error) => {
-      alert(`Failed to delete: ${error.message}`)
+      toast.error('Failed to delete', { description: error.message })
       setShowDeleteModal(false)
     },
   })
@@ -202,7 +203,7 @@ function ServerDetailPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(fullEndpoint)
-                    alert('URL copied!')
+                    toast.success('URL copied!')
                   }}
                   className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded transition-colors"
                 >
