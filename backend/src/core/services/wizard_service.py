@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from core.services.llm_client import ChatMessage, get_llm_client
 from core.services.tool_loader import get_tool_loader
-from infrastructure.models.mcp_server import MCPTool
+from infrastructure.models.mcp_server import MCPTool, WizardStep
 
 
 class ActionSpec(BaseModel):
@@ -139,6 +139,10 @@ class WizardService:
                 name=server_name,
                 description=server_description,
                 customer_id=customer_id,
+                meta={
+                    "user_prompt": description,
+                    "wizard_step": WizardStep.ACTIONS.value,
+                },
             )
         )
 
@@ -338,9 +342,12 @@ Update the actions based on this feedback. Return the complete updated list.""",
             "server_name": server.name,
             "description": server.description,
             "status": server.status,
+            "wizard_step": server.wizard_step,
+            "user_prompt": server.meta.get("user_prompt") if server.meta else None,
             "tier": server.tier,
             "auth_type": server.auth_type,
             "auth_config": server.auth_config,
+            "meta": server.meta,
             "tools": [
                 {
                     "id": str(t.id),

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from core.services.tier_service import FREE_TIER_MAX_TOOLS
 from core.services.wizard_service import WizardService
+from infrastructure.models.mcp_server import WizardStep
 from infrastructure.repositories.repo_provider import Provider
 
 router = APIRouter()
@@ -62,6 +63,10 @@ async def start_wizard(request: StartWizardRequest) -> StartWizardResponse:
             description=request.description,
         )
 
+        # Update wizard step to ACTIONS
+        server_repo = Provider.mcp_server_repo()
+        await server_repo.update_wizard_step(result.server_id, WizardStep.ACTIONS)
+
         return StartWizardResponse(
             server_id=result.server_id,
             server_name=result.server_name,
@@ -114,6 +119,7 @@ async def refine_actions(server_id: UUID, request: RefineActionsRequest) -> dict
         logger.error(f"Error refining actions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/{server_id}/tools/select")
 async def select_tools(server_id: UUID, request: SelectToolsRequest) -> dict:
     """
@@ -134,6 +140,10 @@ async def select_tools(server_id: UUID, request: SelectToolsRequest) -> dict:
 
     try:
         await service.confirm_actions(server_id, request.selected_tool_names)
+
+        # Update wizard step to AUTH
+        server_repo = Provider.mcp_server_repo()
+        await server_repo.update_wizard_step(server_id, WizardStep.AUTH)
 
         return {
             "server_id": str(server_id),
@@ -193,6 +203,10 @@ async def configure_auth(server_id: UUID, request: ConfigureAuthRequest) -> dict
             auth_type=request.auth_type,
             auth_config=request.auth_config,
         )
+
+        # Update wizard step to DEPLOY
+        server_repo = Provider.mcp_server_repo()
+        await server_repo.update_wizard_step(server_id, WizardStep.DEPLOY)
 
         return {
             "server_id": str(server_id),

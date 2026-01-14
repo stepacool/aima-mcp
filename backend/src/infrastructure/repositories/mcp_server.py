@@ -10,6 +10,7 @@ from infrastructure.models.mcp_server import (
     MCPServer,
     MCPServerStatus,
     MCPTool,
+    WizardStep,
 )
 from infrastructure.repositories.base import BaseCRUDRepo
 
@@ -20,6 +21,7 @@ class MCPServerCreate(BaseModel):
     customer_id: str
     auth_type: str = "none"
     auth_config: dict[str, Any] | None = None
+    meta: dict[str, Any] | None = None
 
 
 class MCPServerUpdate(BaseModel):
@@ -67,7 +69,10 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
             result = await session.execute(
                 select(self.model)
                 .where(self.model.id == server_id)
-                .options(selectinload(self.model.tools))
+                .options(
+                    selectinload(self.model.tools),
+                    selectinload(self.model.deployment),
+                )
             )
             return result.scalars().first()
 
@@ -91,6 +96,19 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
             )
             return list(result.scalars().all())
 
+    async def get_by_customer_with_stats(self, customer_id: str) -> list[MCPServer]:
+        """Get all servers for a customer with tool counts and deployment status."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model)
+                .where(self.model.customer_id == customer_id)
+                .options(
+                    selectinload(self.model.tools),
+                    selectinload(self.model.deployment),
+                )
+            )
+            return list(result.scalars().all())
+
     async def update_status(self, server_id: UUID, status: MCPServerStatus) -> bool:
         """Update server status."""
         async with self.db.session() as session:
@@ -103,6 +121,35 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
                 await session.commit()
                 return True
             return False
+
+    async def update_wizard_step(self, server_id: UUID, step: WizardStep) -> bool:
+        """Update wizard step in server meta."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.id == server_id)
+            )
+            server = result.scalars().first()
+            if server:
+                # Update meta with wizard_step
+                new_meta = {**(server.meta or {}), "wizard_step": step.value}
+                server.meta = new_meta
+                await session.commit()
+                return True
+            return False
+
+    async def get_with_full_details(self, server_id: UUID) -> MCPServer | None:
+        """Get server with all related data (tools, prompts, deployment)."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model)
+                .where(self.model.id == server_id)
+                .options(
+                    selectinload(self.model.tools),
+                    selectinload(self.model.prompts),
+                    selectinload(self.model.deployment),
+                )
+            )
+            return result.scalars().first()
 
 
 class MCPToolRepo(BaseCRUDRepo[MCPTool, MCPToolCreate, MCPToolUpdate]):

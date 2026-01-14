@@ -19,6 +19,16 @@ class MCPServerStatus(str, Enum):
     READY = "ready"  # Ready for deployment (all tools validated)
 
 
+class WizardStep(str, Enum):
+    """Wizard step the server is currently at."""
+
+    DESCRIBE = "describe"  # Step 1: Initial description
+    ACTIONS = "actions"  # Step 2: Define/refine actions
+    AUTH = "auth"  # Step 3: Configure authentication
+    DEPLOY = "deploy"  # Step 4: Review and deploy
+    COMPLETE = "complete"  # Step 5: Completed/active
+
+
 class MCPServer(CustomBase):
     """Represents a user-created MCP server configuration."""
 
@@ -36,6 +46,12 @@ class MCPServer(CustomBase):
         nullable=False,
         index=True,
     )
+    meta: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+
+    @property
+    def wizard_step(self) -> str:
+        """Get wizard step from meta, defaults to 'complete' for existing servers."""
+        return self.meta.get("wizard_step", WizardStep.COMPLETE.value)
 
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"

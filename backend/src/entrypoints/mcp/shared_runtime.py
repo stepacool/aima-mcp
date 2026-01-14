@@ -4,7 +4,8 @@ Shared MCP Runtime for Free Tier Users.
 Uses the simple register_new_customer_app pattern to mount
 customer MCP servers dynamically.
 """
-from contextlib import asynccontextmanager, AsyncExitStack
+
+from contextlib import AsyncExitStack
 from uuid import UUID
 
 from fastapi import FastAPI
@@ -45,6 +46,34 @@ async def register_new_customer_app(
 
     logger.info(f"Registered and started MCP app at /mcp/{server_id}")
     return mcp
+
+
+def unregister_mcp_app(app: FastAPI, server_id: UUID) -> bool:
+    """
+    Unregister/unmount an MCP app from FastAPI.
+
+    Note: This only removes the route from FastAPI. The lifespan context
+    will be cleaned up when the app shuts down via the AsyncExitStack.
+
+    Args:
+        app: FastAPI application instance
+        server_id: UUID of the server to unmount
+
+    Returns:
+        True if the app was found and unmounted, False otherwise
+    """
+    mount_path = f"/mcp/{server_id}"
+
+    # Find and remove the mounted route
+    for i, route in enumerate(app.routes):
+        if hasattr(route, "path") and route.path == mount_path:
+            app.routes.pop(i)
+            logger.info(f"Unmounted MCP app from {mount_path}")
+            return True
+
+    logger.warning(f"No MCP app found at {mount_path} to unmount")
+    return False
+
 
 async def load_and_register_all_mcp_servers(
     app: FastAPI,

@@ -149,7 +149,7 @@ class Application:
                 logger.info(f"Response: {response.status_code}")
                 return response
 
-        self.app.add_middleware(RequestLoggingMiddleware)
+        # self.app.add_middleware(RequestLoggingMiddleware)
 
         self.app.include_router(api_router)
 
