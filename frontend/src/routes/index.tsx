@@ -14,7 +14,7 @@ import {
   generateCode,
   getTierInfo,
   refineActions,
-  selectTools,
+  confirmActions,
   startWizard,
 } from '@/lib/wizard-functions'
 import { getSession } from '@/lib/auth-functions'
@@ -48,7 +48,6 @@ interface WizardState {
     clientId: string
     scopes: string
   }
-  generatedTools: Array<ToolWithCode>
   selectedTier: 'free' | 'paid'
   generatedTools: Array<GeneratedTool>
   result: {
@@ -68,7 +67,6 @@ function WizardPage() {
     selectedActions: [],
     authType: 'none',
     oauthConfig: { providerUrl: '', clientId: '', scopes: '' },
-    generatedTools: [],
     selectedTier: 'free',
     generatedTools: [],
     result: null,
@@ -149,7 +147,7 @@ function WizardPage() {
     setLoading(true)
     setLoadingText('Confirming tool selection...')
     try {
-      await selectTools({ data: { serverId: state.serverId, selectedToolNames: state.selectedActions } })
+      await confirmActions({ data: { serverId: state.serverId, selectedActions: state.selectedActions } })
       setState((s) => ({ ...s, currentStep: 3 }))
     } catch (e) {
       alert(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`)
@@ -221,7 +219,7 @@ function WizardPage() {
     setLoading(true)
     setLoadingText('Deploying to dedicated VPC...')
     try {
-      const result = await deployServer({ data: { serverId: state.serverId, target: 'dedicated' } })
+      const result = await createVPS({ data: { serverId: state.serverId } })
       setState((s) => ({
         ...s,
         currentStep: 5,
@@ -246,7 +244,6 @@ function WizardPage() {
       selectedActions: [],
       authType: 'none',
       oauthConfig: { providerUrl: '', clientId: '', scopes: '' },
-      generatedTools: [],
       selectedTier: 'free',
       generatedTools: [],
       result: null,
@@ -458,23 +455,7 @@ function WizardPage() {
                 </div>
               </div>
 
-              {/* Generated Code Preview */}
-              <h3 className="text-slate-400 text-sm font-semibold mb-2">Generated Tool Code</h3>
-              <div className="space-y-3 mb-4 max-h-80 overflow-y-auto">
-                {state.generatedTools.map((tool) => (
-                  <details key={tool.id} className="bg-slate-900 rounded-lg border border-slate-700">
-                    <summary className="px-4 py-3 cursor-pointer hover:bg-slate-800 rounded-lg">
-                      <span className="font-medium text-indigo-400">{tool.name}</span>
-                      <span className="text-slate-500 text-sm ml-2">— {tool.description}</span>
-                    </summary>
-                    <div className="px-4 pb-4">
-                      <pre className="bg-slate-950 rounded-lg p-3 text-sm text-slate-300 overflow-x-auto whitespace-pre-wrap">
-                        <code>{tool.code}</code>
-                      </pre>
-                    </div>
-                  </details>
-                ))}
-              </div>
+
 
               <h3 className="text-slate-400 text-sm font-semibold mb-2">Choose Your Plan</h3>
               <div className="grid grid-cols-2 gap-4 mb-4">

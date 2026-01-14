@@ -59,7 +59,7 @@ export interface RefineResponse {
 
 export interface GenerateCodeResponse {
   server_id: string
-  tools: Array<{ id: string; name: string; description: string; has_code: boolean }>
+  tools: Array<{ id: string; name: string; description: string; code?: string; has_code: boolean }>
 }
 
 export interface ActivateResponse {

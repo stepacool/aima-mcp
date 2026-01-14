@@ -34,11 +34,11 @@ export const refineActions = createServerFn({ method: 'POST' })
   })
 
 // Select which tools to keep
-export const selectTools = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ serverId: z.string(), selectedToolNames: z.array(z.string()) }))
+export const confirmActions = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ serverId: z.string(), selectedActions: z.array(z.string()) }))
   .handler(async ({ data }) => {
     await getSession()
-    return backend.wizardSelectTools(data.serverId, data.selectedToolNames)
+    return backend.wizardConfirmActions(data.serverId, data.selectedActions)
   })
 
 // Configure auth
@@ -78,11 +78,11 @@ export const activateServer = createServerFn({ method: 'POST' })
   })
 
 // Deploy to dedicated VPC (paid tier)
-export const deployServer = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ serverId: z.string(), target: z.string().default('dedicated') }))
+export const createVPS = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ serverId: z.string() }))
   .handler(async ({ data }) => {
     await getSession()
-    return backend.serverDeploy(data.serverId, data.target)
+    return backend.serverCreateVPS(data.serverId)
   })
 
 // Get tier info
