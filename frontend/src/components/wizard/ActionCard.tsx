@@ -31,7 +31,13 @@ export function ActionCard({
           type="checkbox"
           checked={selected}
           disabled={disabled}
-          onChange={onToggle}
+          onChange={(e) => {
+            e.stopPropagation()
+            onToggle()
+          }}
+          onClick={(e) => {
+            e.stopPropagation()
+          }}
           className="w-4 h-4"
         />
         <span className="font-semibold text-indigo-400 font-mono">

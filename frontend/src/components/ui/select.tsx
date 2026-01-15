@@ -101,8 +101,26 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  showCheckbox,
+  checked,
+  onCheckboxClick,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  showCheckbox?: boolean
+  checked?: boolean
+  onCheckboxClick?: (e: React.MouseEvent) => void
+}) {
+  const handleClick = React.useCallback(
+    (e: React.MouseEvent) => {
+      if (showCheckbox && onCheckboxClick) {
+        e.preventDefault()
+        e.stopPropagation()
+        onCheckboxClick(e)
+      }
+    },
+    [showCheckbox, onCheckboxClick],
+  )
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -112,9 +130,27 @@ function SelectItem({
       )}
       {...props}
     >
+      {showCheckbox && (
+        <input
+          type="checkbox"
+          checked={checked ?? false}
+          onChange={(e) => {
+            e.stopPropagation()
+            if (onCheckboxClick) {
+              onCheckboxClick(e as any)
+            }
+          }}
+          onClick={handleClick}
+          className="w-4 h-4 cursor-pointer"
+          data-slot="select-item-checkbox"
+        />
+      )}
       <span
         data-slot="select-item-indicator"
-        className="absolute right-2 flex size-3.5 items-center justify-center"
+        className={cn(
+          "absolute right-2 flex size-3.5 items-center justify-center",
+          showCheckbox && "hidden"
+        )}
       >
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />
