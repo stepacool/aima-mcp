@@ -52,6 +52,9 @@ For each tool specify:
 - parameters: List of inputs needed (each with name, type, description)
 - auth_required: Whether authentication is needed
 
+If an OpenAPI schema is provided, use it to derive accurate API endpoints, parameters, and descriptions.
+Each OpenAPI path/operation should map to one tool. Use the operation's parameters and request body schema.
+
 Output ONLY valid JSON in this exact format:
 {
     "server_name": "descriptive_snake_case_name",
@@ -61,7 +64,7 @@ Output ONLY valid JSON in this exact format:
             "name": "action_name",
             "description": "What this action does",
             "parameters": [
-                {"name": "param1", "type": "string", "description": "..."}
+                {"name": "param1", "type": "string", "description": "...", "required": true}
             ],
             "auth_required": false
         }
@@ -105,6 +108,7 @@ class WizardService:
         self,
         customer_id: str,
         description: str,
+        openapi_schema: str | None = None,
     ) -> WizardResult:
         """
         Step 1: Create server, suggest actions, save to DB.
@@ -116,10 +120,22 @@ class WizardService:
         Returns:
             WizardResult with server_id and suggested actions
         """
+        # Build user message with optional OpenAPI schema context
+        user_content = description
+        if openapi_schema:
+            user_content = f"""User Description: {description}
+
+OpenAPI Schema:
+```json
+{openapi_schema}
+```
+
+Generate actions based on both the description and the OpenAPI schema above."""
+
         # Ask LLM to suggest actions
         messages = [
             ChatMessage(role="system", content=ACTION_SUGGESTION_PROMPT),
-            ChatMessage(role="user", content=description),
+            ChatMessage(role="user", content=user_content),
         ]
 
         response = await self.llm.chat(messages, temperature=0.7)
@@ -142,6 +158,7 @@ class WizardService:
                 meta={
                     "user_prompt": description,
                     "wizard_step": WizardStep.ACTIONS.value,
+                    **({"openapi_schema": openapi_schema} if openapi_schema else {}),
                 },
             )
         )

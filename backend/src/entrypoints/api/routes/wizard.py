@@ -18,6 +18,7 @@ router = APIRouter()
 class StartWizardRequest(BaseModel):
     customer_id: str
     description: str
+    openapi_schema: str | None = None
 
 
 class StartWizardResponse(BaseModel):
@@ -62,6 +63,7 @@ async def start_wizard(request: StartWizardRequest) -> StartWizardResponse:
         result = await service.start_wizard(
             customer_id=request.customer_id,
             description=request.description,
+            openapi_schema=request.openapi_schema,
         )
 
         # Update wizard step to ACTIONS
