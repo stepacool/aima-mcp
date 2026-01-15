@@ -161,6 +161,14 @@ function WizardPage() {
       } else if (step === 1 && serverState.description) {
         setDescription(serverState.description as string)
       }
+
+      // Restore OpenAPI schema if present in draft
+      const savedSchema = serverState.meta?.openapi_schema as string | undefined
+      if (savedSchema) {
+        setOpenapiSchema(savedSchema)
+        // Create a virtual file object to show the user that a schema was loaded
+        setOpenapiFile(new File([savedSchema], 'openapi-schema.json', { type: 'application/json' }))
+      }
     }
   }, [serverState, initialServerId])
 
