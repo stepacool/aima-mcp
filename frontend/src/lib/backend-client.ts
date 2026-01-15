@@ -99,10 +99,15 @@ export interface TierInfo {
 export async function wizardStart(
   customerId: string,
   description: string,
+  openapiSchema?: string,
 ): Promise<StartWizardResponse> {
   return request('/api/wizard/start', {
     method: 'POST',
-    body: { customer_id: customerId, description },
+    body: {
+      customer_id: customerId,
+      description,
+      ...(openapiSchema ? { openapi_schema: openapiSchema } : {}),
+    },
   })
 }
 

@@ -98,6 +98,8 @@ function WizardPage() {
 
   const [description, setDescription] = useState('')
   const [refineInput, setRefineInput] = useState('')
+  const [openapiFile, setOpenapiFile] = useState<File | null>(null)
+  const [openapiSchema, setOpenapiSchema] = useState<string | null>(null)
 
   // Query: Get Wizard State (Resuming)
   const { data: serverState, isLoading: isLoadingState } = useQuery({
@@ -171,7 +173,8 @@ function WizardPage() {
 
   // Mutation: Start Wizard
   const startWizardMutation = useMutation({
-    mutationFn: (desc: string) => startWizard({ data: { description: desc } }),
+    mutationFn: ({ desc, schema }: { desc: string; schema?: string }) => 
+      startWizard({ data: { description: desc, openapiSchema: schema } }),
     onSuccess: (result) => {
       setState((s) => ({
         ...s,
@@ -305,9 +308,52 @@ function WizardPage() {
         description: description,
       })
     } else {
-      // Create new draft
-      startWizardMutation.mutate(description)
+      // Create new draft with optional OpenAPI schema
+      startWizardMutation.mutate({ 
+        desc: description, 
+        schema: openapiSchema || undefined 
+      })
     }
+  }
+
+  // Handle OpenAPI file selection
+  async function handleOpenapiFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) {
+      setOpenapiFile(null)
+      setOpenapiSchema(null)
+      return
+    }
+
+    // Validate file type
+    const validTypes = ['application/json', 'application/x-yaml', 'text/yaml', 'text/x-yaml']
+    const isValidType = validTypes.includes(file.type) || 
+      file.name.endsWith('.json') || 
+      file.name.endsWith('.yaml') || 
+      file.name.endsWith('.yml')
+    
+    if (!isValidType) {
+      toast.error('Invalid file type', { description: 'Please upload a JSON or YAML file' })
+      e.target.value = ''
+      return
+    }
+
+    setOpenapiFile(file)
+    
+    try {
+      const content = await file.text()
+      setOpenapiSchema(content)
+      toast.success('File loaded', { description: file.name })
+    } catch {
+      toast.error('Failed to read file')
+      setOpenapiFile(null)
+      setOpenapiSchema(null)
+    }
+  }
+
+  function clearOpenapiFile() {
+    setOpenapiFile(null)
+    setOpenapiSchema(null)
   }
 
   function handleRefine() {
@@ -486,6 +532,51 @@ function WizardPage() {
                 className="w-full bg-slate-900 border border-slate-600 rounded-lg p-4 text-white placeholder:text-slate-500 resize-y min-h-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={startWizardMutation.isPending}
               />
+              
+              {/* OpenAPI File Upload */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  OpenAPI Schema (optional)
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 relative">
+                    <input
+                      type="file"
+                      accept=".json,.yaml,.yml,application/json,application/x-yaml"
+                      onChange={handleOpenapiFileChange}
+                      disabled={startWizardMutation.isPending}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                    />
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-300 hover:bg-slate-600 transition-colors cursor-pointer">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span>{openapiFile ? openapiFile.name : 'Upload OpenAPI spec'}</span>
+                    </div>
+                  </label>
+                  {openapiFile && (
+                    <button
+                      type="button"
+                      onClick={clearOpenapiFile}
+                      className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
+                      title="Remove file"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {openapiSchema && (
+                  <p className="mt-2 text-sm text-green-400 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Schema loaded ({Math.round(openapiSchema.length / 1024)}KB)
+                  </p>
+                )}
+              </div>
+
               <button
                 onClick={handleDescribe}
                 disabled={!description.trim() || startWizardMutation.isPending}

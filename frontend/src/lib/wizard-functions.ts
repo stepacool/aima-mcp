@@ -19,10 +19,13 @@ async function getSession() {
 
 // Start wizard - describe system
 export const startWizard = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ description: z.string() }))
+  .inputValidator(z.object({ 
+    description: z.string(),
+    openapiSchema: z.string().optional(),
+  }))
   .handler(async ({ data }) => {
     const session = await getSession()
-    return backend.wizardStart(session.user.id, data.description)
+    return backend.wizardStart(session.user.id, data.description, data.openapiSchema)
   })
 
 // Refine actions
