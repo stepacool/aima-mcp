@@ -147,7 +147,11 @@ function ServerCard({
   }
 
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 p-5 hover:border-slate-600 transition-all">
+    <Link
+      to="/server/$serverId"
+      params={{ serverId: server.id }}
+      className="block bg-slate-800 rounded-xl border border-slate-700 p-5 hover:border-slate-600 hover:bg-slate-700/50 transition-all cursor-pointer"
+    >
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="text-lg font-semibold text-white">{server.name}</h3>
@@ -169,6 +173,7 @@ function ServerCard({
           <Link
             to="/"
             search={{ serverId: server.id }}
+            onClick={(e) => e.stopPropagation()}
             className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm rounded-lg transition-colors"
           >
             Continue Setup
@@ -178,7 +183,8 @@ function ServerCard({
         {isActive && server.mcp_endpoint && (
           <>
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation()
                 navigator.clipboard.writeText(
                   `${env.VITE_BACKEND_URL}${server.mcp_endpoint}`,
                 )
@@ -189,19 +195,28 @@ function ServerCard({
               Copy URL
             </button>
             <button
-              onClick={handleCopyJson}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCopyJson()
+              }}
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
             >
               Copy JSON
             </button>
             <button
-              onClick={handleAddToCursor}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleAddToCursor()
+              }}
               className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-sm rounded-lg border border-purple-500/30 transition-colors"
             >
               Add to Cursor
             </button>
             <button
-              onClick={handleAddToClaudeCode}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleAddToClaudeCode()
+              }}
               className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-sm rounded-lg border border-purple-500/30 transition-colors"
             >
               Add to Claude Code
@@ -210,23 +225,18 @@ function ServerCard({
           </>
         )}
 
-        <Link
-          to="/server/$serverId"
-          params={{ serverId: server.id }}
-          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
-        >
-          View Details
-        </Link>
-
         <button
-          onClick={() => onDelete(server.id)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(server.id)
+          }}
           disabled={deleting}
           className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm rounded-lg border border-red-500/30 transition-colors disabled:opacity-50"
         >
           {deleting ? 'Deleting...' : 'Delete'}
         </button>
       </div>
-    </div>
+    </Link>
   )
 }
 
