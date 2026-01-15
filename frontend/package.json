@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "dotenv -e .env.local -- sh -c \"NODE_OPTIONS='--import ./instrument.server.mjs' vite dev --port 3000\"",
-    "build": "vite build && cp instrument.server.mjs .output/server",
+    "build": "vite build",
+    "build:local": "NITRO_PRESET=node vite build && cp instrument.server.mjs .output/server",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
@@ -69,6 +70,7 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "nitro": "npm:nitro-nightly@latest",
     "@inlang/paraglide-js": "^2.8.0",
     "@tanstack/devtools-event-client": "^0.4.0",
     "@tanstack/devtools-vite": "^0.3.11",
