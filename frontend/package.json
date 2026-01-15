@@ -6,6 +6,7 @@
     "dev": "dotenv -e .env.local -- sh -c \"NODE_OPTIONS='--import ./instrument.server.mjs' vite dev --port 3000\"",
     "build": "vite build",
     "build:local": "NITRO_PRESET=node vite build && cp instrument.server.mjs .output/server",
+    "deploy": "wrangler deploy",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
@@ -70,7 +71,6 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "nitro": "npm:nitro-nightly@latest",
     "@inlang/paraglide-js": "^2.8.0",
     "@tanstack/devtools-event-client": "^0.4.0",
     "@tanstack/devtools-vite": "^0.3.11",
@@ -85,11 +85,13 @@
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^16.0.0",
     "jsdom": "^27.0.0",
+    "nitro": "npm:nitro-nightly@latest",
     "prettier": "^3.5.3",
     "tsx": "^4.0.0",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
     "vitest": "^3.0.5",
-    "web-vitals": "^5.1.0"
+    "web-vitals": "^5.1.0",
+    "wrangler": "^4.59.1"
   }
 }

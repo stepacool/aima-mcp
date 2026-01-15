@@ -30,7 +30,7 @@ const config = defineConfig({
     tailwindcss(),
     tanstackStart(),
     nitro({
-      preset: 'vercel',
+      preset: (process.env.NITRO_PRESET as any) || 'vercel',
     }),
     viteReact(),
   ],
