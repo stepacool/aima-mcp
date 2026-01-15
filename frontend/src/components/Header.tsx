@@ -4,11 +4,12 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Home, LogOut, Menu, Server, X } from 'lucide-react'
 import ParaglideLocaleSwitcher from './LocaleSwitcher.tsx'
-import { authClient } from '@/lib/auth-client'
+import { authClient, getUserProfileFromSession } from '@/lib/auth-client'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const { data: session } = authClient.useSession()
+  const userProfile = getUserProfileFromSession(session)
 
   async function handleLogout() {
     await authClient.signOut()
@@ -31,9 +32,14 @@ export default function Header() {
           </h1>
         </div>
 
-        {session?.user && (
+        {userProfile && (
           <div className="flex items-center gap-4">
-            <span className="text-slate-300">{session.user.email}</span>
+            <div className="flex flex-col items-end gap-1">
+              {userProfile.name && (
+                <span className="text-white font-medium">{userProfile.name}</span>
+              )}
+              <span className="text-slate-300">{userProfile.email}</span>
+            </div>
             <button
               onClick={handleLogout}
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
