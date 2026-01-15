@@ -184,6 +184,7 @@ function ServerCard({
           <>
             <button
               onClick={(e) => {
+                e.preventDefault()
                 e.stopPropagation()
                 navigator.clipboard.writeText(
                   `${env.VITE_BACKEND_URL}${server.mcp_endpoint}`,
@@ -196,6 +197,7 @@ function ServerCard({
             </button>
             <button
               onClick={(e) => {
+                e.preventDefault()
                 e.stopPropagation()
                 handleCopyJson()
               }}
@@ -205,6 +207,7 @@ function ServerCard({
             </button>
             <button
               onClick={(e) => {
+                e.preventDefault()
                 e.stopPropagation()
                 handleAddToCursor()
               }}
@@ -214,6 +217,7 @@ function ServerCard({
             </button>
             <button
               onClick={(e) => {
+                e.preventDefault()
                 e.stopPropagation()
                 handleAddToClaudeCode()
               }}
@@ -227,6 +231,7 @@ function ServerCard({
 
         <button
           onClick={(e) => {
+            e.preventDefault()
             e.stopPropagation()
             onDelete(server.id)
           }}
