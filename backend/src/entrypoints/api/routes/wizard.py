@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 class StartWizardRequest(BaseModel):
-    customer_id: str
+    customer_id: UUID
     description: str
     openapi_schema: str | None = None
 

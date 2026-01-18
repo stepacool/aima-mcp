@@ -106,7 +106,7 @@ class WizardService:
 
     async def start_wizard(
         self,
-        customer_id: str,
+        customer_id: UUID,
         description: str,
         openapi_schema: str | None = None,
     ) -> WizardResult:

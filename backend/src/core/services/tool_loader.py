@@ -2,6 +2,7 @@
 
 import textwrap
 from typing import Any, Callable
+from uuid import UUID
 
 from fastmcp.tools.tool import FunctionTool
 from loguru import logger
@@ -29,7 +30,7 @@ class DynamicToolLoader:
         description: str,
         parameters: list[dict[str, Any]],
         code: str,
-        customer_id: str,
+        customer_id: UUID,
         tier: Tier = Tier.FREE,
     ) -> FunctionTool:
         """
@@ -86,7 +87,7 @@ class DynamicToolLoader:
         return tool
 
     def get_customer_tools(
-        self, customer_id: str, tool_specs: list[dict]
+        self, customer_id: UUID, tool_specs: list[dict]
     ) -> list[FunctionTool]:
         """
         Get all tools for a customer, compiling them if needed.
@@ -121,7 +122,7 @@ class DynamicToolLoader:
 
         return tools
 
-    def invalidate_customer_tools(self, customer_id: str) -> None:
+    def invalidate_customer_tools(self, customer_id: UUID) -> None:
         """Remove all cached tools for a customer."""
         keys_to_remove = [
             k for k in self._compiled_tools if k.startswith(f"{customer_id}:")
