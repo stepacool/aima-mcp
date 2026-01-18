@@ -1,5 +1,5 @@
 """Tests for shared MCP runtime - lifespan loading and dynamic registration."""
-
+from contextlib import AsyncExitStack
 from typing import Type
 
 import pytest
@@ -102,7 +102,8 @@ class TestLifespanMCPLoading:
         server, tool = active_server_with_tool
 
         app = FastAPI()
-        registered_servers = await load_and_register_all_mcp_servers(app)
+        async with AsyncExitStack() as stack:
+            registered_servers = await load_and_register_all_mcp_servers(app, stack)
 
         # Should have loaded 1 server
         assert len(registered_servers) == 1
@@ -123,7 +124,8 @@ class TestLifespanMCPLoading:
         server, tool = active_server_with_tool
 
         app = FastAPI()
-        registered_servers = await load_and_register_all_mcp_servers(app)
+        async with AsyncExitStack() as stack:
+            registered_servers = await load_and_register_all_mcp_servers(app, stack)
 
         assert len(registered_servers) == 1
 
@@ -151,7 +153,8 @@ class TestLifespanMCPLoading:
         server, tool = draft_server_with_tool
 
         app = FastAPI()
-        registered_servers = await load_and_register_all_mcp_servers(app)
+        async with AsyncExitStack() as stack:
+            registered_servers = await load_and_register_all_mcp_servers(app, stack)
 
         # Should not have loaded any servers (DRAFT status)
         assert len(registered_servers) == 0
@@ -182,8 +185,8 @@ class TestDynamicMCPRegistration:
             customer_id=server.customer_id,
             tier=Tier.FREE,
         )
-
-        mcp_server = register_new_customer_app(app, server.id, [compiled_tool])
+        async with AsyncExitStack() as stack:
+            mcp_server = await register_new_customer_app(app, server.id, [compiled_tool], stack)
 
         # Verify the server has tools via FastMCP Client
         async with Client(mcp_server) as client:
@@ -212,8 +215,8 @@ class TestDynamicMCPRegistration:
             customer_id=server.customer_id,
             tier=Tier.FREE,
         )
-
-        mcp_server = register_new_customer_app(app, server.id, [compiled_tool])
+        async with AsyncExitStack() as stack:
+            mcp_server = await register_new_customer_app(app, server.id, [compiled_tool], stack)
 
         # Verify the tool is callable via FastMCP Client
         async with Client(mcp_server) as client:
@@ -272,7 +275,8 @@ class TestMultipleServers:
             servers.append(server)
 
         app = FastAPI()
-        registered_servers = await load_and_register_all_mcp_servers(app)
+        async with AsyncExitStack() as stack:
+            registered_servers = await load_and_register_all_mcp_servers(app, stack)
 
         assert len(registered_servers) == 3
 
@@ -367,7 +371,8 @@ class TestMultipleServers:
         # ready_server is READY but has no deployment
 
         app = FastAPI()
-        registered_servers = await load_and_register_all_mcp_servers(app)
+        async with AsyncExitStack() as stack:
+            registered_servers = await load_and_register_all_mcp_servers(app, stack)
 
         # Only 1 server should be loaded (the one with active deployment)
         assert len(registered_servers) == 1
