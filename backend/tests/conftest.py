@@ -14,14 +14,14 @@ load_dotenv(test_env_path, override=True)
 
 if "settings" in sys.modules:
     del sys.modules["settings"]
-# WARNING: imports from code strictly below
-from infrastructure.db import CustomBase, Database
-from infrastructure.db import create_database as create_db_object
-from infrastructure.repositories.repo_provider import Provider
-from settings import Settings, settings
+# WARNING: imports from code strictly below (must be after settings reset)
+from infrastructure.db import CustomBase, Database  # noqa: E402
+from infrastructure.db import create_database as create_db_object  # noqa: E402
+from infrastructure.repositories.repo_provider import Provider  # noqa: E402
+from settings import Settings, settings  # noqa: E402
 
 # Import fixtures from fixtures.py to make them available
-from fixtures import (  # noqa: F401
+from fixtures import (  # noqa: E402, F401
     api_client,
     app,
     customer,
@@ -29,6 +29,16 @@ from fixtures import (  # noqa: F401
     mcp_tool,
     active_mcp_server,
     active_mcp_tool,
+)
+
+# Import wizard step fixtures
+from wizard_fixtures import (  # noqa: E402, F401
+    server_at_describe_step,
+    server_at_actions_step,
+    server_at_auth_step,
+    server_at_deploy_step,
+    server_at_deploy_step_with_oauth,
+    server_at_complete_step,
 )
 
 
