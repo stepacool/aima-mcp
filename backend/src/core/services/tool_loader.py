@@ -76,7 +76,7 @@ class DynamicToolLoader:
         # Create the FunctionTool
         tool = FunctionTool(
             fn=func,
-            name=f"{customer_id[:8]}_{name}",  # Namespaced name
+            name=f"{customer_id}_{name}",  # Namespaced name
             description=description,
             parameters=json_schema_params,
         )
