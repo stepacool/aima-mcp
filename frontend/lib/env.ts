@@ -55,6 +55,10 @@ export const env = createEnv({
 		CI: z.string().optional(),
 		VERCEL: z.string().optional(),
 		VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
+
+		// Python Backend
+		PYTHON_BACKEND_URL: z.string().url().optional(),
+		PYTHON_BACKEND_API_KEY: z.string().min(1).optional(),
 	},
 
 	/**
@@ -129,6 +133,8 @@ export const env = createEnv({
 		CI: process.env.CI,
 		VERCEL: process.env.VERCEL,
 		VERCEL_ENV: process.env.VERCEL_ENV,
+		PYTHON_BACKEND_URL: process.env.PYTHON_BACKEND_URL,
+		PYTHON_BACKEND_API_KEY: process.env.PYTHON_BACKEND_API_KEY,
 
 		// Client
 		NEXT_PUBLIC_NODE_ENV: process.env.NODE_ENV,
