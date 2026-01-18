@@ -1,36 +1,43 @@
 {
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "eslint.config.js",
-    "prettier.config.js",
-    "vite.config.js"
-  ],
-
-  "compilerOptions": {
-    "target": "ES2022",
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "allowJs": true,
-    "verbatimModuleSyntax": false,
-    "noEmit": true,
-
-    /* Linting */
-    "skipLibCheck": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  }
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"target": "ES2022",
+		"allowJs": true,
+		"resolveJsonModule": true,
+		"moduleDetection": "force",
+		"isolatedModules": true,
+		"incremental": true,
+		"disableSourceOfProjectReferenceRedirect": true,
+		"tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json",
+		"strict": true,
+		"strictNullChecks": true,
+		"noUncheckedIndexedAccess": true,
+		"checkJs": true,
+		"moduleResolution": "Bundler",
+		"noEmit": true,
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"jsx": "react-jsx",
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./*"],
+			"@tests/*": ["./tests/*"],
+			"content-collections": ["./.content-collections/generated"]
+		},
+		"plugins": [
+			{
+				"name": "next"
+			}
+		],
+		"module": "esnext"
+	},
+	"include": [
+		".",
+		"next-env.d.ts",
+		"**/*.ts",
+		"**/*.tsx",
+		".next/types/**/*.ts",
+		".next/dev/types/**/*.ts"
+	],
+	"exclude": ["node_modules", "public", "packages", "tests/e2e/**/*"]
 }

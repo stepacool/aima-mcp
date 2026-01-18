@@ -283,7 +283,7 @@ class ServerDetailsResponse(BaseModel):
 
 
 @router.get("/list/{customer_id}", response_model=ServerListResponse)
-async def list_servers(customer_id: str) -> ServerListResponse:
+async def list_servers(customer_id: UUID) -> ServerListResponse:
     """
     List all MCP servers for a customer.
 
