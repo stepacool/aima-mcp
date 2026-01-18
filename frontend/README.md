@@ -1,6 +1,7 @@
-# SaaS Template
+# Auto MCP
 
-A production-ready SaaS boilerplate with authentication, billing, organizations and more.
+A full stack app to build MCP servers with AI, deploy them on edge OR on dedicated servers. 
+Uses an AI "wizard" to build an MCP server step-by-step
 
 ## Tech Stack
 

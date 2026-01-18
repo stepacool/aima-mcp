@@ -8,6 +8,7 @@ import { assertUserIsOrgMember } from "@/lib/auth/server";
 import { db, memberTable, organizationTable } from "@/lib/db";
 import { creditBalanceTable } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
+import { createCustomer } from "@/lib/python-backend";
 import {
 	createOrganizationSchema,
 	getOrganizationByIdSchema,
@@ -87,7 +88,7 @@ export const organizationRouter = createTRPCRouter({
 		}),
 	create: protectedProcedure
 		.input(createOrganizationSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const organization = await auth.api.createOrganization({
 				headers: await headers(),
 				body: {
@@ -119,6 +120,14 @@ export const organizationRouter = createTRPCRouter({
 					"Failed to initialize credit balance for new organization",
 				);
 			}
+
+			// Create customer in Python backend
+			await createCustomer({
+				id: organization.id,
+				name: organization.name,
+				email: ctx.user.email,
+				meta: input.metadata,
+			});
 
 			return organization;
 		}),
