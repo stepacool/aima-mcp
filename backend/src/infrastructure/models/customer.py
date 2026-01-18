@@ -17,10 +17,6 @@ class Customer(CustomBase):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    # Better Auth user ID - for linking to frontend auth system
-    auth_user_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, unique=True, index=True
-    )
 
     api_keys: Mapped[list["APIKey"]] = relationship(back_populates="customer")
 
