@@ -71,16 +71,16 @@ export function OrganizationMenuItems(): React.JSX.Element {
 					icon: LayoutDashboardIcon,
 					exactMatch: true,
 				},
-				{
-					label: "Leads",
-					href: `${basePath}/leads`,
-					icon: UserSearchIcon,
-				},
-				{
-					label: "AI Chatbot",
-					href: `${basePath}/chatbot`,
-					icon: BotIcon,
-				},
+				// {
+				// 	label: "Leads",
+				// 	href: `${basePath}/leads`,
+				// 	icon: UserSearchIcon,
+				// },
+				// {
+				// 	label: "AI Chatbot",
+				// 	href: `${basePath}/chatbot`,
+				// 	icon: BotIcon,
+				// },
 				{
 					label: "MCP Servers",
 					href: `${basePath}/mcp-servers`,

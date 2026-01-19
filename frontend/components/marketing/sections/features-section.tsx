@@ -72,9 +72,9 @@ function FeatureCard({ feature }: { feature: Feature }) {
 export function FeaturesSection() {
 	const features: Feature[] = [
 		{
-			title: "Auth & Organizations",
+			title: "Text to MCP Builder",
 			description:
-				"Secure authentication with Better Auth. Built-in support for multi-tenant organizations, member invitations and granular role-based permissions.",
+				"Use Natural language to describe what you want your AI to use. Be it SQL database, excel sheet or API, our AI will build you a zero config MCP server with one-click deployment.",
 			link: "#",
 			linkText: "Explore Auth",
 			color: "blue",
@@ -119,7 +119,7 @@ export function FeaturesSection() {
 								"sm:text-5xl sm:leading-14",
 							)}
 						>
-							The complete SaaS foundation
+							Build, scale, and manage your MCP servers with zero configuration
 						</h2>
 					</div>
 					<div className="text-base leading-7 text-marketing-fg-muted text-pretty">

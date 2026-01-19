@@ -1,0 +1,146 @@
+---
+title: Creating an MCP Server
+description: Creating a server in Chat UI with examples and detailed explanation
+---
+
+This guide walks through creating an MCP server using MCPHero’s Chat UI, using a real-world PostgreSQL-backed example.
+
+We’ll build a server that exposes tools for querying customers and orders, while showing how MCPHero’s structured flow guarantees that the server is deployable, secure, and immediately usable by MCP clients.
+
+---
+
+## Example Scenario
+
+Assume you have a PostgreSQL database with the following tables:
+
+### customers
+
+| column | type |
+|------|------|
+| id | uuid |
+| name | text |
+| email | text |
+| created_at | timestamp |
+
+### orders
+
+| column | type |
+|------|------|
+| id | uuid |
+| customer_id | uuid |
+| amount | numeric |
+| status | text |
+| created_at | timestamp |
+
+The goal is to create an MCP server that allows clients to:
+
+- Look up a customer by name
+- Fetch all orders for a given customer
+- Fetch all orders created in the last hour
+
+---
+
+## Step 1: Describe the Server in Chat
+
+You start by describing what you want in natural language.
+
+**Example prompt:**
+
+> I have a PostgreSQL database with customers and orders.
+> I want MCP tools to:
+> - find a customer by name
+> - fetch all orders for a given customer
+> - fetch all orders created in the last hour
+
+At this stage, the AI focuses only on **intent discovery**, not code generation.
+
+---
+
+## Step 2: Tool Discovery & Selection
+
+Based on your description, MCPHero proposes a set of tools with explicit responsibilities.
+
+**Proposed tools:**
+- `get_customer_by_name`
+- `get_customers_orders`
+- `get_last_hour_orders`
+
+You can:
+- Accept all tools
+- Rename them
+- Remove tools you don’t need
+- Add new ones
+
+This confirmation step prevents accidental or unused tools from being generated.
+
+---
+
+## Step 3: Authentication Configuration
+
+Next, you configure how the MCP server authenticates incoming requests.
+
+Common options include:
+- Static API key via request header
+- OAuth2 provider
+- No authentication (internal usage)
+
+**Example configuration:**
+- Header name: `X-API-Key`
+
+The generated server will automatically enforce this authentication for every request.
+
+---
+
+## Step 4: Runtime Values & Database Credentials
+
+Because this server connects to PostgreSQL, MCPHero explicitly asks for the required runtime values.
+
+**Example values:**
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+
+These values are:
+- Injected at runtime
+- Never hardcoded into the codebase
+- Handled differently depending on deployment type (static vs ephemeral)
+
+---
+
+## Step 5: Deploy the Server
+
+Before any tools are exposed, the **server itself is deployed first**.
+
+Once deployment completes, MCPHero provides:
+
+- A **server URL**
+- Authentication instructions (header name + value)
+- Environment status and logs
+
+At this point, the MCP is already live
+
+---
+
+## Post-deployment steps
+### Connect to the Server from MCP clients
+
+After deployment, MCPHero shows ready-to-use connection details along with **one-click integrations** for popular MCP clients.
+
+You’ll see:
+- Server URL
+- Required authentication headers
+- Tool discovery endpoint
+
+### One-click client setup
+
+Convenient buttons are provided to instantly connect the server to:
+- Claude
+- Cursor
+- Other MCP-compatible clients
+
+### Try MCP functions in browser interactively.
+
+You can test and call your MCP tools from the server page after it is deployed.
+Depending on tier, source code is visible.

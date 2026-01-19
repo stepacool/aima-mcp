@@ -60,16 +60,16 @@ const organizationNavItems: NavItem[] = [
 		href: "/dashboard/organization",
 		icon: LayoutDashboardIcon,
 	},
-	{
-		title: "Leads",
-		href: "/dashboard/organization/leads",
-		icon: UserSearchIcon,
-	},
-	{
-		title: "AI Chatbot",
-		href: "/dashboard/organization/chatbot",
-		icon: BotIcon,
-	},
+	// {
+	// 	title: "Leads",
+	// 	href: "/dashboard/organization/leads",
+	// 	icon: UserSearchIcon,
+	// },
+	// {
+	// 	title: "AI Chatbot",
+	// 	href: "/dashboard/organization/chatbot",
+	// 	icon: BotIcon,
+	// },
 	{
 		title: "General Settings",
 		href: "/dashboard/organization/settings?tab=general",

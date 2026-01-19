@@ -93,15 +93,14 @@ export function HeroSection() {
 								"lg:text-[5rem] lg:leading-20",
 							)}
 						>
-							Production-ready SaaS. Right out of the box.
+							Ship MCPs fast. Deploy in one click.
 						</h1>
 
 						{/* Description */}
 						<div className="flex max-w-3xl flex-col gap-4 text-lg leading-8 text-marketing-fg-muted">
 							<p>
-								Demo application built with Achromatic. Next.js 16 starter kit
-								with auth, organizations, subscriptions, credits, AI chatbot and
-								admin panel - powered by Better Auth and tRPC.
+								"Loveable for MCP servers" lets you use natural language to build MCP servers.
+                                All things considered from oAuth to ephemeral state and monitoring.
 							</p>
 						</div>
 

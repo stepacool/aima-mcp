@@ -5,19 +5,6 @@
 		"[House][Homepage](/)",
 		"---Introduction---",
 		"index",
-		"what-is-fumadocs",
-		"comparisons",
-		"---Setup---",
-		"manual-installation",
-		"static-export",
-		"---Writing---",
-		"markdown",
-		"internationalization",
-		"---UI---",
-		"overview",
-		"theme",
-		"search",
-		"components",
-		"mdx"
+		"creating-an-mcp-server"
 	]
 }
