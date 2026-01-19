@@ -15,9 +15,25 @@ import { cn } from "@/lib/utils";
 import type { WizardAuthType } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
 
+// Helper to extract tool name from string or object
+function getToolName(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
+	if (typeof tool === "string") {
+		return tool;
+	}
+	return tool.name || tool.id || String(tool);
+}
+
+// Helper to extract tool key for React key prop
+function getToolKey(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
+	if (typeof tool === "string") {
+		return tool;
+	}
+	return tool.id || tool.name || String(tool);
+}
+
 interface AuthStepProps {
 	serverId: string;
-	selectedTools: string[];
+	selectedTools: (string | { id?: string; name?: string; [key: string]: unknown })[];
 	onAuthConfigured: (authType: WizardAuthType) => void;
 }
 
@@ -104,10 +120,10 @@ export function AuthStep({
 							<div className="flex flex-wrap gap-2">
 								{selectedTools.map((tool) => (
 									<span
-										key={tool}
+										key={getToolKey(tool)}
 										className="rounded-full bg-primary/10 px-3 py-1 text-primary text-sm"
 									>
-										{tool}
+										{getToolName(tool)}
 									</span>
 								))}
 							</div>

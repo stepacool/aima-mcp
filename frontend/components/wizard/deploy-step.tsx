@@ -18,9 +18,25 @@ import { trpc } from "@/trpc/client";
 
 interface DeployStepProps {
 	serverId: string;
-	selectedTools: string[];
+	selectedTools: (string | { id?: string; name?: string; [key: string]: unknown })[];
 	authType: WizardAuthType;
 	onServerActivated: (serverUrl: string) => void;
+}
+
+// Helper to extract tool name from string or object
+function getToolName(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
+	if (typeof tool === "string") {
+		return tool;
+	}
+	return tool.name || tool.id || String(tool);
+}
+
+// Helper to extract tool key for React key prop
+function getToolKey(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
+	if (typeof tool === "string") {
+		return tool;
+	}
+	return tool.id || tool.name || String(tool);
 }
 
 export function DeployStep({
@@ -103,13 +119,13 @@ export function DeployStep({
 							<CardContent>
 								<div className="flex flex-wrap gap-2">
 									{selectedTools.map((tool) => (
-										<span
-											key={tool}
-											className="rounded-full bg-primary/10 px-3 py-1 text-primary text-sm"
-										>
-											{tool}
-										</span>
-									))}
+									<span
+										key={getToolKey(tool)}
+										className="rounded-full bg-primary/10 px-3 py-1 text-primary text-sm"
+									>
+										{getToolName(tool)}
+									</span>
+								))}
 								</div>
 							</CardContent>
 						</Card>

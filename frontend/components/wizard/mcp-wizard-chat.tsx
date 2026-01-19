@@ -81,7 +81,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 			// map wizard_step to our local state
 			setCurrentStep(wizardState.wizardStep as WizardStep);
 			setSuggestedTools(wizardState.tools);
-			setSelectedTools(wizardState.selectedTools);
+			// Restore selectedTools from wizard state (array of tool names)
+			if (wizardState.selectedTools && wizardState.selectedTools.length > 0) {
+				setSelectedTools(wizardState.selectedTools);
+			}
 			setAuthType(
 				wizardState.authType === "none" ||
 					wizardState.authType === "api_key" ||
@@ -112,7 +115,8 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				setCurrentStep(nextStep);
 
 				if (nextStep === WizardStep.actions) {
-					setSuggestedTools(result.suggestedTools);
+					setSuggestedTools(result.tools);
+					setSelectedTools(result.tools.map((tool) => tool.name));
 				} else {
 					// Add to in-progress sessions for async tracking
 					// User can navigate away and return later
@@ -171,6 +175,14 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		}
 	}, [serverId, refetch, retryMutation]);
 
+	// Handle step click navigation (for going back to previous steps)
+	const handleStepClick = useCallback((step: WizardStep) => {
+		// Only allow navigating to steps that have been completed or are current
+		// The WizardStepIndicator already enforces this, but we double-check here
+		if (step === currentStep) return; // No action needed if clicking current step
+		setCurrentStep(step);
+	}, [currentStep]);
+
 	// Show loading state when restoring from URL (brief initial load)
 	if (urlServerId && isLoadingState && !wizardState) {
 		return <CenteredSpinner />;
@@ -210,7 +222,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		<div className="flex h-full flex-col">
 			{/* Step Indicator */}
 			<div className="shrink-0 border-b bg-background/80 px-4 py-3 backdrop-blur-sm">
-				<WizardStepIndicator currentStep={currentStep} />
+				<WizardStepIndicator currentStep={currentStep} onStepClick={handleStepClick} />
 			</div>
 
 			{/* Processing Banner - Non-blocking indicator during async processing */}

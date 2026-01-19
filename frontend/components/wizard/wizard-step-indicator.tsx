@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface WizardStepIndicatorProps {
 	currentStep: WizardStep;
 	className?: string;
+	onStepClick?: (step: WizardStep) => void;
 }
 
 const STEPS = [
@@ -27,8 +28,11 @@ function getStepIndex(step: WizardStep): number {
 export function WizardStepIndicator({
 	currentStep,
 	className,
+	onStepClick,
 }: WizardStepIndicatorProps) {
 	const currentIndex = getStepIndex(currentStep);
+	// Determine if describe step is active (processing state) - clicking should be disabled
+	const isDescribeStep = currentStep === WizardStep.describe;
 
 	return (
 		<div className={cn("flex items-center justify-center gap-2", className)}>
@@ -36,16 +40,29 @@ export function WizardStepIndicator({
 				const isComplete = index < currentIndex;
 				const isCurrent = index === currentIndex;
 				const isPending = index > currentIndex;
+				// Allow clicking on current step or completed steps, but not when in describe/processing state
+				const isClickable = onStepClick && (isCurrent || isComplete) && !isDescribeStep;
+
+				const handleClick = () => {
+					if (isClickable) {
+						onStepClick(step.key);
+					}
+				};
 
 				return (
 					<div key={step.key} className="flex items-center">
 						{/* Step Circle */}
-						<div
+						<button
+							type="button"
+							onClick={handleClick}
+							disabled={!isClickable}
 							className={cn(
 								"flex size-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors",
 								isComplete && "border-primary bg-primary text-primary-foreground",
 								isCurrent && "border-primary text-primary",
-								isPending && "border-muted-foreground/30 text-muted-foreground/50"
+								isPending && "border-muted-foreground/30 text-muted-foreground/50",
+								isClickable && "cursor-pointer hover:opacity-80",
+								!isClickable && "cursor-default"
 							)}
 						>
 							{isComplete ? (
@@ -53,13 +70,18 @@ export function WizardStepIndicator({
 							) : (
 								<span>{index + 1}</span>
 							)}
-						</div>
+						</button>
 
 						{/* Step Label (visible on larger screens) */}
-						<div
+						<button
+							type="button"
+							onClick={handleClick}
+							disabled={!isClickable}
 							className={cn(
-								"ml-2 hidden flex-col md:flex",
-								isPending && "opacity-50"
+								"ml-2 hidden flex-col md:flex text-left",
+								isPending && "opacity-50",
+								isClickable && "cursor-pointer hover:opacity-80",
+								!isClickable && "cursor-default"
 							)}
 						>
 							<span
@@ -70,7 +92,7 @@ export function WizardStepIndicator({
 							>
 								{step.label}
 							</span>
-						</div>
+						</button>
 
 						{/* Connector Line */}
 						{index < STEPS.length - 1 && (
