@@ -29,6 +29,14 @@ class WizardStep(str, Enum):
     COMPLETE = "complete"  # Step 5: Completed/active
 
 
+class ProcessingStatus(str, Enum):
+    """Status of background processing operations."""
+
+    IDLE = "idle"  # No background work in progress
+    PROCESSING = "processing"  # Background task running
+    FAILED = "failed"  # Background task failed
+
+
 class MCPServer(CustomBase):
     """Represents a user-created MCP server configuration."""
 
@@ -53,6 +61,16 @@ class MCPServer(CustomBase):
     def wizard_step(self) -> str:
         """Get wizard step from meta, defaults to 'complete' for existing servers."""
         return self.meta.get("wizard_step", WizardStep.COMPLETE.value)
+
+    @property
+    def processing_status(self) -> str:
+        """Get processing status from meta, defaults to 'idle'."""
+        return self.meta.get("processing_status", ProcessingStatus.IDLE.value)
+
+    @property
+    def processing_error(self) -> str | None:
+        """Get processing error from meta, if any."""
+        return self.meta.get("processing_error")
 
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"

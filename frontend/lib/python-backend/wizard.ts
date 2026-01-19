@@ -12,7 +12,9 @@ export interface WizardTool {
 export interface WizardState {
 	id: string;
 	customerId: string;
-	step: "ACTIONS" | "AUTH" | "DEPLOY" | "COMPLETE";
+	wizard_step: "describe" | "actions" | "auth" | "deploy" | "complete";
+	processing_status: "idle" | "processing" | "failed";
+	processing_error: string | null;
 	description: string;
 	suggestedTools: WizardTool[];
 	selectedTools: string[];
@@ -33,7 +35,8 @@ export interface StartWizardParams {
 export interface StartWizardResponse {
 	id: string;
 	suggestedTools: WizardTool[];
-	step: "ACTIONS";
+	step: "ACTIONS" | "DESCRIBE";
+	status?: string;
 }
 
 export interface RefineWizardActionsParams {
@@ -76,6 +79,11 @@ export interface ActivateServerResponse {
 	step: "COMPLETE";
 }
 
+export interface RetryToolGenerationResponse {
+	serverId: string;
+	status: "retrying";
+}
+
 /**
  * Starts a new wizard session in the Python backend.
  * This initiates the MCP server creation process and returns suggested tools.
@@ -84,7 +92,7 @@ export async function startWizard(
 	params: StartWizardParams
 ): Promise<StartWizardResponse> {
 	try {
-		const response = await pythonBackendClient.post<StartWizardResponse>(
+		const response = await pythonBackendClient.post<any>(
 			"/api/wizard/start",
 			{
 				customerId: params.customerId,
@@ -93,10 +101,22 @@ export async function startWizard(
 			}
 		);
 		logger.info(
-			{ customerId: params.customerId, wizardId: response.data.id },
+			{ customerId: params.customerId, wizardId: response.data.serverId },
 			"Wizard started in Python backend"
 		);
-		return response.data;
+
+		// Map backend response (camelCased by client) to frontend interface
+		// Backend returns: serverId, serverName, description, status, actions
+		return {
+			id: response.data.serverId,
+			suggestedTools: response.data.actions?.map((a: any) => ({
+				name: a.name,
+				description: a.description,
+				inputSchema: { ...a.parameters }, // Map parameters to inputSchema
+			})) || [],
+			step: response.data.status === "processing" ? "DESCRIBE" : "ACTIONS",
+			status: response.data.status || "processing",
+		};
 	} catch (error) {
 		logger.error(
 			{ customerId: params.customerId, error },
@@ -245,6 +265,28 @@ export async function activateServer(
 		logger.error(
 			{ serverId, error },
 			"Failed to activate server in Python backend"
+		);
+		throw error;
+	}
+}
+
+/**
+ * Retries tool generation after a failure.
+ * Only works if the server is in a FAILED processing state.
+ */
+export async function retryToolGeneration(
+	serverId: string
+): Promise<RetryToolGenerationResponse> {
+	try {
+		const response = await pythonBackendClient.post<RetryToolGenerationResponse>(
+			`/api/wizard/${serverId}/retry`
+		);
+		logger.info({ serverId }, "Retrying tool generation in Python backend");
+		return response.data;
+	} catch (error) {
+		logger.error(
+			{ serverId, error },
+			"Failed to retry tool generation in Python backend"
 		);
 		throw error;
 	}

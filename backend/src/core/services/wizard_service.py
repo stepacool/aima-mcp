@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from core.services.llm_client import ChatMessage, get_llm_client
 from core.services.tool_loader import get_tool_loader
-from infrastructure.models.mcp_server import MCPTool, WizardStep
+from infrastructure.models.mcp_server import MCPTool, ProcessingStatus, WizardStep
 
 
 class ActionSpec(BaseModel):
@@ -104,21 +104,56 @@ class WizardService:
         self.llm = get_llm_client()
         self.tool_loader = get_tool_loader()
 
-    async def start_wizard(
+    async def create_server_draft(
         self,
         customer_id: UUID,
         description: str,
         openapi_schema: str | None = None,
     ) -> WizardResult:
         """
-        Step 1: Create server, suggest actions, save to DB.
+        Step 1a: Create server in DRAFT state.
 
         Args:
-            customer_id: Customer ID (Auth user ID)
-            description: User's description of what they want
+            customer_id: Customer ID
+            description: User's description
 
         Returns:
-            WizardResult with server_id and suggested actions
+            WizardResult with server_id and "processing" status
+        """
+        from infrastructure.repositories.mcp_server import MCPServerCreate
+
+        # Create server in DB with DRAFT status/DESCRIBE step/PROCESSING status
+        server = await self.server_repo.create(
+            MCPServerCreate(
+                name="draft_server",  # Placeholder, will be updated by LLM
+                description=description,
+                customer_id=customer_id,
+                meta={
+                    "user_prompt": description,
+                    "wizard_step": WizardStep.DESCRIBE.value,
+                    "processing_status": ProcessingStatus.PROCESSING.value,
+                    **({"openapi_schema": openapi_schema} if openapi_schema else {}),
+                },
+            )
+        )
+
+        return WizardResult(
+            server_id=server.id,
+            server_name=server.name,
+            description=server.description or description,
+            actions=[],
+        )
+
+    async def process_wizard_start(
+        self,
+        server_id: UUID,
+        description: str,
+        openapi_schema: str | None = None,
+    ) -> None:
+        """
+        Step 1b: Background task to generate actions.
+
+        See start_wizard (legacy) for logic.
         """
         # Build user message with optional OpenAPI schema context
         user_content = description
@@ -132,61 +167,60 @@ OpenAPI Schema:
 
 Generate actions based on both the description and the OpenAPI schema above."""
 
-        # Ask LLM to suggest actions
-        messages = [
-            ChatMessage(role="system", content=ACTION_SUGGESTION_PROMPT),
-            ChatMessage(role="user", content=user_content),
-        ]
+        try:
+            # Ask LLM to suggest actions
+            messages = [
+                ChatMessage(role="system", content=ACTION_SUGGESTION_PROMPT),
+                ChatMessage(role="user", content=user_content),
+            ]
 
-        response = await self.llm.chat(messages, temperature=0.7)
+            response = await self.llm.chat(messages, temperature=0.7)
 
-        # Parse the JSON response
-        design = self._extract_json(response.content)
+            # Parse the JSON response
+            design = self._extract_json(response.content)
 
-        server_name = design.get("server_name", "mcp_server")
-        server_description = design.get("description", description)
-        actions_data = design.get("actions", [])
+            server_name = design.get("server_name", "mcp_server")
+            server_description = design.get("description", description)
+            actions_data = design.get("actions", [])
 
-        # Create server in DB
-        from infrastructure.repositories.mcp_server import MCPServerCreate
+            # Update server info
+            from infrastructure.repositories.mcp_server import MCPServerUpdate
 
-        server = await self.server_repo.create(
-            MCPServerCreate(
-                name=server_name,
-                description=server_description,
-                customer_id=customer_id,
-                meta={
-                    "user_prompt": description,
-                    "wizard_step": WizardStep.ACTIONS.value,
-                    **({"openapi_schema": openapi_schema} if openapi_schema else {}),
-                },
+            await self.server_repo.update(
+                server_id,
+                MCPServerUpdate(
+                    name=server_name,
+                    description=server_description,
+                ),
             )
-        )
 
-        # Create tools in DB (without code yet)
-        actions = []
-        for action_data in actions_data:
-            action = ActionSpec(**action_data)
-            actions.append(action)
+            # Create tools in DB (without code yet)
+            for action_data in actions_data:
+                action = ActionSpec(**action_data)
 
-            from infrastructure.repositories.mcp_server import MCPToolCreate
+                from infrastructure.repositories.mcp_server import MCPToolCreate
 
-            await self.tool_repo.create(
-                MCPToolCreate(
-                    server_id=server.id,
-                    name=action.name,
-                    description=action.description,
-                    parameters_schema={"parameters": action.parameters},
-                    code="",  # Will be generated in refine step
+                await self.tool_repo.create(
+                    MCPToolCreate(
+                        server_id=server_id,
+                        name=action.name,
+                        description=action.description,
+                        parameters_schema={"parameters": action.parameters},
+                        code="",  # Will be generated in refine step
+                    )
                 )
+
+            # Update wizard step to ACTIONS and processing status to IDLE
+            await self.server_repo.update_wizard_step_with_status(
+                server_id, WizardStep.ACTIONS, ProcessingStatus.IDLE
             )
 
-        return WizardResult(
-            server_id=server.id,
-            server_name=server_name,
-            description=server_description,
-            actions=actions,
-        )
+        except Exception as e:
+            logger.error(f"Error processing wizard start for server {server_id}: {e}")
+            # Set error state - keep wizard_step as DESCRIBE, set FAILED status
+            await self.server_repo.update_processing_status(
+                server_id, ProcessingStatus.FAILED, str(e)
+            )
 
     async def refine_actions(
         self,
@@ -313,6 +347,9 @@ Update the actions based on this feedback. Return the complete updated list.""",
                 else:
                     logger.error("Tool repo missing delete method")
 
+        # Transition to AUTH step (centralized here, not in routes)
+        await self.server_repo.update_wizard_step(server_id, WizardStep.AUTH)
+
     async def generate_tool_codes(self, server_id: UUID) -> list[MCPTool]:
         """
         Generate code for all tools in a server.
@@ -359,6 +396,42 @@ Update the actions based on this feedback. Return the complete updated list.""",
             MCPServerUpdate(auth_type=auth_type, auth_config=auth_config),
         )
 
+        # Transition to DEPLOY step (centralized here, not in routes)
+        await self.server_repo.update_wizard_step(server_id, WizardStep.DEPLOY)
+
+    async def retry_tool_generation(self, server_id: UUID) -> dict[str, Any]:
+        """
+        Retry tool generation after a failure.
+
+        Resets processing status to PROCESSING and returns server info for
+        the background task to be re-triggered.
+        """
+        server = await self.server_repo.get_by_uuid(server_id)
+        if not server:
+            raise ValueError(f"Server {server_id} not found")
+
+        # Only allow retry if in failed state
+        if server.processing_status != ProcessingStatus.FAILED.value:
+            raise ValueError(
+                f"Cannot retry: server is not in failed state "
+                f"(current: {server.processing_status})"
+            )
+
+        # Delete any partially created tools from the failed attempt
+        await self.tool_repo.delete_tools_for_server(server_id)
+
+        # Reset to processing state
+        await self.server_repo.update_processing_status(
+            server_id, ProcessingStatus.PROCESSING
+        )
+
+        # Return info needed for background task
+        return {
+            "server_id": str(server.id),
+            "description": server.meta.get("user_prompt", server.description),
+            "openapi_schema": server.meta.get("openapi_schema"),
+        }
+
     async def get_server_state(self, server_id: UUID) -> dict[str, Any]:
         """Get current state of a server for the wizard UI."""
         server = await self.server_repo.get_with_tools(server_id)
@@ -367,10 +440,13 @@ Update the actions based on this feedback. Return the complete updated list.""",
 
         return {
             "server_id": str(server.id),
+            "customer_id": str(server.customer_id),
             "server_name": server.name,
             "description": server.description,
             "status": server.status,
             "wizard_step": server.wizard_step,
+            "processing_status": server.processing_status,
+            "processing_error": server.processing_error,
             "user_prompt": server.meta.get("user_prompt") if server.meta else None,
             "tier": server.tier,
             "auth_type": server.auth_type,

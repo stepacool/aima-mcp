@@ -2,13 +2,23 @@ import { z } from "zod/v4";
 
 // Wizard step enum (managed by Python backend)
 export const WizardStep = {
-	stepZero: "STEP_ZERO", // AI onboarding chat (frontend only)
-	actions: "ACTIONS", // Select tools
-	auth: "AUTH", // Configure authentication
-	deploy: "DEPLOY", // Review and deploy
-	complete: "COMPLETE", // Server is live
+	stepZero: "step_zero", // AI onboarding chat (frontend only)
+	describe: "describe", // Processing initial description
+	actions: "actions", // Select tools
+	auth: "auth", // Configure authentication
+	deploy: "deploy", // Review and deploy
+	complete: "complete", // Server is live
 } as const;
 export type WizardStep = (typeof WizardStep)[keyof typeof WizardStep];
+
+// Processing status enum (tracks background task state)
+export const ProcessingStatus = {
+	idle: "idle", // No background work in progress
+	processing: "processing", // Background task running
+	failed: "failed", // Background task failed
+} as const;
+export type ProcessingStatus =
+	(typeof ProcessingStatus)[keyof typeof ProcessingStatus];
 
 // Auth type enum for wizard
 export const WizardAuthType = z.enum(["none", "api_key", "oauth"]);
@@ -81,3 +91,9 @@ export const activateServerSchema = z.object({
 	serverId: z.string(),
 });
 export type ActivateServerInput = z.infer<typeof activateServerSchema>;
+
+// Retry wizard tool generation (calls Python backend /api/wizard/{id}/retry)
+export const retryWizardSchema = z.object({
+	serverId: z.string(),
+});
+export type RetryWizardInput = z.infer<typeof retryWizardSchema>;

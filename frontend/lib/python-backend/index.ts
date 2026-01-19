@@ -12,6 +12,7 @@ export {
 	generateWizardCode,
 	getWizardState,
 	activateServer,
+	retryToolGeneration,
 	type WizardTool,
 	type WizardState,
 	type StartWizardParams,
@@ -24,4 +25,5 @@ export {
 	type ConfigureWizardAuthResponse,
 	type GenerateWizardCodeResponse,
 	type ActivateServerResponse,
+	type RetryToolGenerationResponse,
 } from "./wizard";

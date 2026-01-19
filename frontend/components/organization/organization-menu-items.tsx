@@ -1,14 +1,15 @@
 "use client";
 
 import {
-    BotIcon,
-    ChevronRight,
-    CoinsIcon,
-    CreditCardIcon,
-    LayoutDashboardIcon, PlusIcon,
-    SettingsIcon,
-    UserSearchIcon,
-    UsersIcon,
+	BotIcon,
+	ChevronRight,
+	CoinsIcon,
+	CreditCardIcon,
+	LayoutDashboardIcon,
+	PlusIcon,
+	SettingsIcon,
+	UserSearchIcon,
+	UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -30,6 +31,8 @@ import {
 	SidebarMenuSubItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { InProgressWizardIndicator } from "@/components/wizard/in-progress-wizard-indicator";
+import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
 
 type MenuItem = {
@@ -51,9 +54,11 @@ export function OrganizationMenuItems(): React.JSX.Element {
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
 	const { state } = useSidebar();
+	const { session } = useSession();
 	const [openGroup, setOpenGroup] = React.useState<string>("Acquisition");
 
 	const basePath = "/dashboard/organization";
+	const organizationId = session?.activeOrganizationId;
 
 	const menuGroups: MenuGroup[] = [
 		{
@@ -152,6 +157,11 @@ export function OrganizationMenuItems(): React.JSX.Element {
 			/* Overriding the hardcoded { disply:table } to get full flex height */
 			verticalScrollBar
 		>
+			{/* In-Progress Wizard Sessions - only renders when there are active sessions */}
+			{organizationId && (
+				<InProgressWizardIndicator organizationId={organizationId} />
+			)}
+
 			{menuGroups.map((group, groupIndex) => {
 				if (!group.collapsible) {
 					return (

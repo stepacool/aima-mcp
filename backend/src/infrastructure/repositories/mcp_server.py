@@ -10,6 +10,7 @@ from infrastructure.models.mcp_server import (
     MCPServer,
     MCPServerStatus,
     MCPTool,
+    ProcessingStatus,
     WizardStep,
 )
 from infrastructure.repositories.base import BaseCRUDRepo
@@ -133,6 +134,62 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
             if server:
                 # Update meta with wizard_step
                 new_meta = {**(server.meta or {}), "wizard_step": step.value}
+                server.meta = new_meta
+                await session.commit()
+                return True
+            return False
+
+    async def update_processing_status(
+        self,
+        server_id: UUID,
+        status: ProcessingStatus,
+        error: str | None = None,
+    ) -> bool:
+        """Update processing status in server meta."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.id == server_id)
+            )
+            server = result.scalars().first()
+            if server:
+                new_meta = {
+                    **(server.meta or {}),
+                    "processing_status": status.value,
+                }
+                # Clear error if not failed, set error if failed
+                if status == ProcessingStatus.FAILED and error:
+                    new_meta["processing_error"] = error
+                elif status != ProcessingStatus.FAILED:
+                    new_meta.pop("processing_error", None)
+                server.meta = new_meta
+                await session.commit()
+                return True
+            return False
+
+    async def update_wizard_step_with_status(
+        self,
+        server_id: UUID,
+        step: WizardStep,
+        status: ProcessingStatus,
+        error: str | None = None,
+    ) -> bool:
+        """Update both wizard step and processing status atomically."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.id == server_id)
+            )
+            server = result.scalars().first()
+            if server:
+                new_meta = {
+                    **(server.meta or {}),
+                    "wizard_step": step.value,
+                    "processing_status": status.value,
+                }
+                # Clear error if not failed, set error if failed
+                if status == ProcessingStatus.FAILED and error:
+                    new_meta["processing_error"] = error
+                elif status != ProcessingStatus.FAILED:
+                    new_meta.pop("processing_error", None)
                 server.meta = new_meta
                 await session.commit()
                 return True

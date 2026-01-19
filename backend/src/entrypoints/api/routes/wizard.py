@@ -3,13 +3,12 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from loguru import logger
 from pydantic import BaseModel
 
 from core.services.tier_service import FREE_TIER_MAX_TOOLS
 from core.services.wizard_service import WizardService
-from infrastructure.models.mcp_server import WizardStep
 from infrastructure.repositories.repo_provider import Provider
 
 router = APIRouter()
@@ -25,7 +24,8 @@ class StartWizardResponse(BaseModel):
     server_id: UUID
     server_name: str
     description: str
-    actions: list[dict[str, Any]]
+    status: str = "processing"
+    actions: list[dict[str, Any]] = []
 
 
 class RefineActionsRequest(BaseModel):
@@ -51,38 +51,40 @@ def get_wizard_service() -> WizardService:
 
 
 @router.post("/start", response_model=StartWizardResponse)
-async def start_wizard(request: StartWizardRequest) -> StartWizardResponse:
+async def start_wizard(
+    request: StartWizardRequest,
+    background_tasks: BackgroundTasks,
+) -> StartWizardResponse:
     """
-    Step 1: Start wizard - describe system and get suggested actions.
+    Step 1: Start wizard - describe system.
 
-    Creates a new MCP server in the database and suggests actions.
+    Creates draft server and triggers background generation of actions.
+    Returns immediately with status="processing".
     """
     service = get_wizard_service()
 
     try:
-        result = await service.start_wizard(
+        # Create draft server immediately
+        result = await service.create_server_draft(
             customer_id=request.customer_id,
             description=request.description,
             openapi_schema=request.openapi_schema,
         )
 
-        # Update wizard step to ACTIONS
-        server_repo = Provider.mcp_server_repo()
-        await server_repo.update_wizard_step(result.server_id, WizardStep.ACTIONS)
+        # Schedule heavy LLM work in background
+        background_tasks.add_task(
+            service.process_wizard_start,
+            server_id=result.server_id,
+            description=request.description,
+            openapi_schema=request.openapi_schema,
+        )
 
         return StartWizardResponse(
             server_id=result.server_id,
             server_name=result.server_name,
             description=result.description,
-            actions=[
-                {
-                    "name": a.name,
-                    "description": a.description,
-                    "parameters": a.parameters,
-                    "auth_required": a.auth_required,
-                }
-                for a in result.actions
-            ],
+            status="processing",
+            actions=[],
         )
     except Exception as e:
         logger.error(f"Error starting wizard: {e}")
@@ -130,6 +132,7 @@ async def select_tools(server_id: UUID, request: SelectToolsRequest) -> dict:
     Step 2b: Select which tools to keep.
 
     Validates free tier limit (max 3 tools) and removes unselected tools.
+    Transitions to AUTH step (handled in service layer).
     """
     # Validate free tier limit
     if len(request.selected_tool_names) > FREE_TIER_MAX_TOOLS:
@@ -143,11 +146,8 @@ async def select_tools(server_id: UUID, request: SelectToolsRequest) -> dict:
     service = get_wizard_service()
 
     try:
+        # confirm_actions now handles the AUTH transition internally
         await service.confirm_actions(server_id, request.selected_tool_names)
-
-        # Update wizard step to AUTH
-        server_repo = Provider.mcp_server_repo()
-        await server_repo.update_wizard_step(server_id, WizardStep.AUTH)
 
         return {
             "server_id": str(server_id),
@@ -198,19 +198,17 @@ async def configure_auth(server_id: UUID, request: ConfigureAuthRequest) -> dict
     Step 3: Configure authentication.
 
     Updates the server's auth configuration in the database.
+    Transitions to DEPLOY step (handled in service layer).
     """
     service = get_wizard_service()
 
     try:
+        # configure_auth now handles the DEPLOY transition internally
         await service.configure_auth(
             server_id=server_id,
             auth_type=request.auth_type,
             auth_config=request.auth_config,
         )
-
-        # Update wizard step to DEPLOY
-        server_repo = Provider.mcp_server_repo()
-        await server_repo.update_wizard_step(server_id, WizardStep.DEPLOY)
 
         return {
             "server_id": str(server_id),
@@ -235,4 +233,40 @@ async def get_server_state(server_id: UUID) -> dict:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error getting server state: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{server_id}/retry")
+async def retry_tool_generation(
+    server_id: UUID,
+    background_tasks: BackgroundTasks,
+) -> dict:
+    """
+    Retry tool generation after a failure.
+
+    Resets processing status and re-triggers the background generation task.
+    Only works if the server is in a FAILED processing state.
+    """
+    service = get_wizard_service()
+
+    try:
+        # Reset state and get info for background task
+        result = await service.retry_tool_generation(server_id)
+
+        # Schedule the background task again
+        background_tasks.add_task(
+            service.process_wizard_start,
+            server_id=server_id,
+            description=result["description"],
+            openapi_schema=result.get("openapi_schema"),
+        )
+
+        return {
+            "server_id": str(server_id),
+            "status": "retrying",
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error retrying tool generation: {e}")
         raise HTTPException(status_code=500, detail=str(e))

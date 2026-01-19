@@ -134,14 +134,25 @@ class TestWizardFixtures:
 # ============================================================================
 
 
+# ============================================================================
+# Test: DESCRIBE → ACTIONS Transition (start_wizard)
+# ============================================================================
+
+
 class TestDescribeToActionsTransition:
     """Tests for the DESCRIBE → ACTIONS step transition via start_wizard."""
 
     async def test_start_wizard_creates_server_with_actions(
-        self, wizard_client: AsyncClient, customer: Customer
+        self, wizard_client: AsyncClient, customer: Customer, provider: Type[Provider]
     ):
         """Test that start_wizard creates server and transitions to ACTIONS."""
         mock_response = json.dumps(make_sample_actions_response())
+
+        # We need to access the service to manualy run the background task
+        from core.services.wizard_service import get_wizard_service
+        service = get_wizard_service(
+            Provider.mcp_server_repo(), Provider.mcp_tool_repo()
+        )
 
         with patch("core.services.wizard_service.get_llm_client") as mock_get_llm:
             mock_llm = AsyncMock()
@@ -159,21 +170,46 @@ class TestDescribeToActionsTransition:
         assert response.status_code == 200
         data = response.json()
 
+        # Check immediate response (async processing)
         assert "server_id" in data
-        assert data["server_name"] == "weather_api_server"
-        assert len(data["actions"]) == 4
+        assert data["server_name"] == "draft_server" # Placeholder initially
+        assert data["status"] == "processing"
+        assert len(data["actions"]) == 0
 
-        # Verify server is at ACTIONS step
-        server = await Provider.mcp_server_repo().get_with_tools(
-            UUID(data["server_id"])
-        )
+        server_id = UUID(data["server_id"])
+
+        # manually run what would be the background task
+        # We need to re-patch for the service call or reuse the mocked service instance?
+        # get_wizard_service creates a singleton, but our patch only affected the scope of the call?
+        # The background task will use the SAME service instance (singleton).
+        # We need to ensure the LLM mock is still active if we call it now.
+        
+        with patch("core.services.wizard_service.get_llm_client") as mock_get_llm:
+            mock_llm = AsyncMock()
+            mock_llm.chat.return_value = mock_llm_response(mock_response)
+            mock_get_llm.return_value = mock_llm
+            
+            await service.process_wizard_start(
+                server_id=server_id,
+                description="I want to create a weather API server"
+            )
+
+        # Verify server is at ACTIONS step and has tools
+        server = await Provider.mcp_server_repo().get_with_tools(server_id)
         assert server.wizard_step == WizardStep.ACTIONS.value
+        assert server.name == "weather_api_server"
+        assert len(server.tools) == 4
 
     async def test_start_wizard_with_openapi_schema(
-        self, wizard_client: AsyncClient, customer: Customer
+        self, wizard_client: AsyncClient, customer: Customer, provider: Type[Provider]
     ):
         """Test start_wizard with OpenAPI schema included."""
         mock_response = json.dumps(make_sample_actions_response())
+        
+        from core.services.wizard_service import get_wizard_service
+        service = get_wizard_service(
+            Provider.mcp_server_repo(), Provider.mcp_tool_repo()
+        )
 
         openapi_schema = json.dumps(
             {
@@ -197,20 +233,32 @@ class TestDescribeToActionsTransition:
                     "openapi_schema": openapi_schema,
                 },
             )
+            
+            server_id = UUID(response.json()["server_id"])
+            
+            # Manually run background task
+            await service.process_wizard_start(
+                server_id=server_id,
+                description="Weather API server",
+                openapi_schema=openapi_schema
+            )
 
         assert response.status_code == 200
 
         # Verify OpenAPI schema is stored in meta
-        server = await Provider.mcp_server_repo().get_by_uuid(
-            UUID(response.json()["server_id"])
-        )
+        server = await Provider.mcp_server_repo().get_by_uuid(server_id)
         assert server.meta.get("openapi_schema") == openapi_schema
 
     async def test_start_wizard_creates_tools_without_code(
-        self, wizard_client: AsyncClient, customer: Customer
+        self, wizard_client: AsyncClient, customer: Customer, provider: Type[Provider]
     ):
         """Test that tools created by start_wizard have no code initially."""
         mock_response = json.dumps(make_sample_actions_response())
+        
+        from core.services.wizard_service import get_wizard_service
+        service = get_wizard_service(
+            Provider.mcp_server_repo(), Provider.mcp_tool_repo()
+        )
 
         with patch("core.services.wizard_service.get_llm_client") as mock_get_llm:
             mock_llm = AsyncMock()
@@ -224,10 +272,15 @@ class TestDescribeToActionsTransition:
                     "description": "Weather server",
                 },
             )
+            
+            server_id = UUID(response.json()["server_id"])
+            
+            await service.process_wizard_start(
+                server_id=server_id,
+                description="Weather server"
+            )
 
-        server = await Provider.mcp_server_repo().get_with_tools(
-            UUID(response.json()["server_id"])
-        )
+        server = await Provider.mcp_server_repo().get_with_tools(server_id)
 
         # All tools should have empty code at this stage
         for tool in server.tools:

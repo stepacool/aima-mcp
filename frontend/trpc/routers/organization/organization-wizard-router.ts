@@ -5,6 +5,7 @@ import {
 	generateWizardCode,
 	getWizardState,
 	refineWizardActions,
+	retryToolGeneration,
 	selectWizardTools,
 	startWizard,
 } from "@/lib/python-backend";
@@ -14,6 +15,7 @@ import {
 	generateWizardCodeSchema,
 	getWizardStateSchema,
 	refineWizardActionsSchema,
+	retryWizardSchema,
 	selectWizardToolsSchema,
 	startWizardSchema,
 } from "@/schemas/wizard-schemas";
@@ -138,6 +140,20 @@ export const organizationWizardRouter = createTRPCRouter({
 			logger.info(
 				{ serverId: input.serverId, serverUrl: result.serverUrl, organizationId: ctx.organization.id },
 				"Server activated"
+			);
+
+			return result;
+		}),
+
+	// Retry tool generation after failure
+	retry: protectedOrganizationProcedure
+		.input(retryWizardSchema)
+		.mutation(async ({ ctx, input }) => {
+			const result = await retryToolGeneration(input.serverId);
+
+			logger.info(
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
+				"Wizard tool generation retried"
 			);
 
 			return result;

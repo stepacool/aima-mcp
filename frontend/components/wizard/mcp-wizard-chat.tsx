@@ -8,9 +8,12 @@ import { AuthStep } from "@/components/wizard/auth-step";
 import { CompleteStep } from "@/components/wizard/complete-step";
 import { DeployStep } from "@/components/wizard/deploy-step";
 import { StepZeroChat } from "@/components/wizard/step-zero-chat";
+import { WizardProcessingBanner } from "@/components/wizard/wizard-processing-banner";
 import { WizardStepIndicator } from "@/components/wizard/wizard-step-indicator";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
+import { useWizardPolling, useWizardSessions } from "@/hooks/use-wizard-sessions";
 import {
+	ProcessingStatus,
 	WizardStep,
 	type WizardAuthType,
 	type WizardMessage,
@@ -34,34 +37,54 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	const [selectedTools, setSelectedTools] = useState<string[]>([]);
 	const [authType, setAuthType] = useState<WizardAuthType | null>(null);
 	const [serverUrl, setServerUrl] = useState<string | null>(null);
-	const [isLoading, setIsLoading] = useState(false);
+	const [isStarting, setIsStarting] = useState(false);
+
+	// Wizard session management for async processing
+	const { addWizardSession, removeWizardSession } = useWizardSessions(organizationId);
 
 	// Mutations
 	const startWizardMutation = trpc.organization.wizard.start.useMutation();
+	const retryMutation = trpc.organization.wizard.retry.useMutation();
 
-	// Check for existing serverId in URL and restore state from Python backend
+	// Check for existing serverId in URL
 	const urlServerId = searchParams.get("serverId");
 
-	const { data: wizardState, isLoading: isLoadingState } =
-		trpc.organization.wizard.getState.useQuery(
-			{ serverId: urlServerId! },
-			{
-				enabled: !!urlServerId,
-				retry: false,
+	// Use the polling hook for auto-refreshing wizard state
+	const {
+		wizardState,
+		isLoading: isLoadingState,
+		isProcessing,
+		hasFailed,
+		processingError,
+		refetch,
+	} = useWizardPolling(urlServerId, {
+		enabled: !!urlServerId,
+		onComplete: (step) => {
+			// When wizard finishes processing, remove from in-progress list
+			if (urlServerId && step !== WizardStep.describe) {
+				removeWizardSession(urlServerId);
 			}
-		);
+		},
+		onToolsReady: () => {
+			// Tools are ready, update suggested tools from server state
+			if (wizardState?.suggestedTools) {
+				setSuggestedTools(wizardState.suggestedTools);
+			}
+		},
+	});
 
 	// Initialize from URL params or Python backend state
 	useEffect(() => {
 		if (urlServerId && wizardState) {
 			setServerId(wizardState.id);
-			setCurrentStep(wizardState.step as WizardStep);
+			// map wizard_step to our local state
+			setCurrentStep(wizardState.wizard_step as WizardStep);
 			setSuggestedTools(wizardState.suggestedTools);
 			setSelectedTools(wizardState.selectedTools);
 			setAuthType(
 				wizardState.authType === "none" ||
-				wizardState.authType === "api_key" ||
-				wizardState.authType === "oauth"
+					wizardState.authType === "api_key" ||
+					wizardState.authType === "oauth"
 					? wizardState.authType
 					: null
 			);
@@ -72,25 +95,38 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	// Handle Step 0 readiness - start the Python backend wizard
 	const handleStepZeroReady = useCallback(
 		async (description: string) => {
-			setIsLoading(true);
+			setIsStarting(true);
 			try {
 				const result = await startWizardMutation.mutateAsync({
 					description,
 				});
 
 				setServerId(result.id);
-				setSuggestedTools(result.suggestedTools);
-				setCurrentStep(WizardStep.actions);
+
+				// Calculate next step - if processing, go to DESCRIBE, else ACTIONS
+				const nextStep = result.status === "processing"
+					? WizardStep.describe
+					: WizardStep.actions;
+
+				setCurrentStep(nextStep);
+
+				if (nextStep === WizardStep.actions) {
+					setSuggestedTools(result.suggestedTools);
+				} else {
+					// Add to in-progress sessions for async tracking
+					// User can navigate away and return later
+					addWizardSession(result.id, description);
+				}
 
 				// Update URL with server ID for resumability
 				router.replace(`/dashboard/organization/new-mcp-server?serverId=${result.id}`);
 			} catch (_error) {
 				toast.error("Failed to start wizard");
 			} finally {
-				setIsLoading(false);
+				setIsStarting(false);
 			}
 		},
-		[startWizardMutation, router]
+		[startWizardMutation, router, addWizardSession]
 	);
 
 	// Handle messages update in Step 0 (client-side only, not persisted)
@@ -121,8 +157,21 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		setCurrentStep(WizardStep.complete);
 	}, []);
 
-	// Show loading state when restoring from URL
-	if (urlServerId && isLoadingState) {
+	// Handle retry after failure
+	const handleRetry = useCallback(async () => {
+		if (!serverId) return;
+		try {
+			await retryMutation.mutateAsync({ serverId });
+			// Refetch state to start polling again
+			refetch();
+			toast.success("Retrying tool generation...");
+		} catch (_error) {
+			toast.error("Failed to retry. Please try again.");
+		}
+	}, [serverId, refetch, retryMutation]);
+
+	// Show loading state when restoring from URL (brief initial load)
+	if (urlServerId && isLoadingState && !wizardState) {
 		return <CenteredSpinner />;
 	}
 
@@ -133,11 +182,22 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				<WizardStepIndicator currentStep={currentStep} />
 			</div>
 
+			{/* Processing Banner - Non-blocking indicator during async processing */}
+			{currentStep === WizardStep.describe && serverId && (
+				<WizardProcessingBanner
+					serverId={serverId}
+					isProcessing={isProcessing}
+					hasFailed={hasFailed}
+					processingError={processingError}
+					onRetry={handleRetry}
+				/>
+			)}
+
 			{/* Step Content */}
 			<div className="min-h-0 flex-1">
 				{currentStep === WizardStep.stepZero && (
 					<>
-						{isLoading ? (
+						{isStarting ? (
 							<div className="flex h-full items-center justify-center">
 								<CenteredSpinner />
 							</div>
@@ -151,6 +211,42 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 							/>
 						)}
 					</>
+				)}
+
+				{currentStep === WizardStep.describe && (
+					<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+						{hasFailed ? (
+							<div className="max-w-md space-y-4">
+								<div className="text-destructive">
+									<p className="font-medium">Tool generation failed</p>
+									{processingError && (
+										<p className="mt-2 text-sm text-muted-foreground">
+											{processingError}
+										</p>
+									)}
+								</div>
+								<button
+									type="button"
+									onClick={handleRetry}
+									className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+								>
+									Try Again
+								</button>
+							</div>
+						) : (
+							<>
+								<CenteredSpinner />
+								<div className="max-w-md space-y-2">
+									<p className="text-muted-foreground animate-pulse">
+										Generating your MCP server tools...
+									</p>
+									<p className="text-sm text-muted-foreground/70">
+										This may take a moment. Feel free to navigate away - you can return to this page anytime.
+									</p>
+								</div>
+							</>
+						)}
+					</div>
 				)}
 
 				{currentStep === WizardStep.actions && serverId && (
