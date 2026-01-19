@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { TextStreamChatTransport } from "ai";
-import { SparklesIcon } from "lucide-react";
+import { AlertCircleIcon, SparklesIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Conversation,
@@ -68,17 +68,26 @@ export function StepZeroChat({
 
 	// Track if we've already detected readiness to prevent double-firing
 	const readinessDetectedRef = useRef(false);
+	// Track if we've already initialized from props to prevent re-initialization loop
+	const initializedRef = useRef(false);
+	// Track streaming errors to display in UI
+	const [streamError, setStreamError] = useState<string | null>(null);
 
 	const { messages, setMessages, sendMessage, status } = useChat({
 		id: sessionId,
 		transport: new TextStreamChatTransport({
 			api: "/api/ai/wizard-chat",
 			body: {
-				sessionId,
 				organizationId,
 			},
 		}),
+		onError: (err) => {
+			// Handle streaming errors (e.g., API key issues)
+			setStreamError(err.message || "Failed to get a response");
+		},
 		onFinish: () => {
+			// Clear any previous errors on successful completion
+			setStreamError(null);
 			// Check the last assistant message for readiness marker
 			// We need to do this on next tick to ensure messages are updated
 			setTimeout(() => {
@@ -97,9 +106,12 @@ export function StepZeroChat({
 		},
 	});
 
-	// Initialize messages from props
+	// Initialize messages from props (only once on mount)
 	useEffect(() => {
+		if (initializedRef.current) return;
+
 		if (initialMessages.length > 0) {
+			initializedRef.current = true;
 			const parsedMessages = initialMessages.map((msg, i) => ({
 				id: msg.id || `msg-${i}`,
 				role: msg.role as "user" | "assistant",
@@ -123,7 +135,8 @@ export function StepZeroChat({
 				}
 			}
 		}
-	}, [initialMessages, setMessages, onReady]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	// Check for readiness marker when messages change
 	useEffect(() => {
@@ -142,25 +155,42 @@ export function StepZeroChat({
 		}
 	}, [messages, onReady]);
 
-	// Update parent when messages change
+	// Update parent when messages change (but not during initialization)
+	const lastMessageCountRef = useRef(0);
 	useEffect(() => {
-		if (messages.length > 0) {
-			const wizardMessages: WizardMessage[] = messages.map((m, i) => ({
-				id: m.id || `msg-${i}`,
-				role: m.role as "user" | "assistant",
-				content: getMessageText(m),
-				createdAt: new Date().toISOString(),
-			}));
-			onMessagesUpdate(wizardMessages);
+		// Skip if no messages or if count hasn't changed (avoid duplicate updates)
+		if (messages.length === 0 || messages.length === lastMessageCountRef.current) {
+			return;
 		}
+		lastMessageCountRef.current = messages.length;
+
+		const wizardMessages: WizardMessage[] = messages.map((m, i) => ({
+			id: m.id || `msg-${i}`,
+			role: m.role as "user" | "assistant",
+			content: getMessageText(m),
+			createdAt: new Date().toISOString(),
+		}));
+		onMessagesUpdate(wizardMessages);
 	}, [messages, onMessagesUpdate]);
 
 	const isStreaming = status === "streaming" || status === "submitted";
 	const chatStatus: ChatStatus = isStreaming ? "streaming" : "ready";
 
+	// Filter out empty assistant messages (can happen on API errors)
+	const displayMessages = messages.filter((m) => {
+		if (m.role === "assistant") {
+			const text = getMessageText(m);
+			return text.trim().length > 0;
+		}
+		return true;
+	});
+
 	const handleSendMessage = useCallback(
 		async (text: string) => {
 			if (!text.trim()) return;
+
+			// Clear any previous errors when sending a new message
+			setStreamError(null);
 
 			sendMessage({
 				role: "user",
@@ -183,7 +213,7 @@ export function StepZeroChat({
 			{/* Messages */}
 			<Conversation className="min-h-0 flex-1">
 				<ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 py-8">
-					{messages.length === 0 ? (
+					{displayMessages.length === 0 && !streamError ? (
 						<div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
 							<div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
 								<SparklesIcon className="size-8 text-primary" />
@@ -217,7 +247,8 @@ export function StepZeroChat({
 							</Suggestions>
 						</div>
 					) : (
-						messages.map((message) => (
+						<>
+						{displayMessages.map((message) => (
 							<Message key={message.id} from={message.role}>
 								<div
 									className={cn(
@@ -259,10 +290,28 @@ export function StepZeroChat({
 									</div>
 								</div>
 							</Message>
-						))
+						))}
+
+					{/* Error message */}
+					{streamError && (
+						<div className="flex w-full gap-4">
+							<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+								<AlertCircleIcon className="size-4 text-destructive" />
+							</div>
+							<div className="flex min-w-0 flex-1 flex-col gap-1">
+								<div className="rounded-2xl bg-destructive/10 px-4 py-3 text-destructive">
+									<p className="font-medium">Something went wrong</p>
+									<p className="text-sm opacity-80">
+										{streamError}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+					</>
 					)}
 
-					{isStreaming && messages[messages.length - 1]?.role === "user" && (
+					{isStreaming && displayMessages[displayMessages.length - 1]?.role === "user" && (
 						<Message from="assistant">
 							<div className="flex w-full gap-4">
 								<Avatar className="size-8 shrink-0">
