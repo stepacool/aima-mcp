@@ -1,14 +1,14 @@
 "use client";
 
 import {
-	BotIcon,
-	ChevronRight,
-	CoinsIcon,
-	CreditCardIcon,
-	LayoutDashboardIcon,
-	SettingsIcon,
-	UserSearchIcon,
-	UsersIcon,
+    BotIcon,
+    ChevronRight,
+    CoinsIcon,
+    CreditCardIcon,
+    LayoutDashboardIcon, PlusIcon,
+    SettingsIcon,
+    UserSearchIcon,
+    UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -74,6 +74,11 @@ export function OrganizationMenuItems(): React.JSX.Element {
 					label: "AI Chatbot",
 					href: `${basePath}/chatbot`,
 					icon: BotIcon,
+				},
+                {
+					label: "Create New MCP Server",
+					href: `${basePath}/new-mcp-server`,
+					icon: PlusIcon,
 				},
 			],
 			collapsible: false,

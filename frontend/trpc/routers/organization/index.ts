@@ -18,6 +18,7 @@ import { organizationAiRouter } from "@/trpc/routers/organization/organization-a
 import { organizationCreditRouter } from "@/trpc/routers/organization/organization-credit-router";
 import { organizationLeadRouter } from "@/trpc/routers/organization/organization-lead-router";
 import { organizationSubscriptionRouter } from "@/trpc/routers/organization/organization-subscription-router";
+import { organizationWizardRouter } from "@/trpc/routers/organization/organization-wizard-router";
 
 async function generateOrganizationSlug(name: string): Promise<string> {
 	const baseSlug = slugify(name, {
@@ -137,4 +138,5 @@ export const organizationRouter = createTRPCRouter({
 	credit: organizationCreditRouter,
 	lead: organizationLeadRouter,
 	subscription: organizationSubscriptionRouter,
+	wizard: organizationWizardRouter,
 });
