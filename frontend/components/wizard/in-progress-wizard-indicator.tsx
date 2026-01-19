@@ -75,7 +75,7 @@ function WizardSessionItem({
 		}
 	}, [wizardState, isProcessing, error, onComplete]);
 
-	const step = wizardState?.wizard_step as WizardStep | undefined;
+	const step = wizardState?.wizardStep as WizardStep | undefined;
 
 	return (
 		<SidebarMenuItem>

@@ -68,8 +68,8 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		},
 		onToolsReady: () => {
 			// Tools are ready, update suggested tools from server state
-			if (wizardState?.suggestedTools) {
-				setSuggestedTools(wizardState.suggestedTools);
+			if (wizardState?.tools) {
+				setSuggestedTools(wizardState.tools);
 			}
 		},
 	});
@@ -77,10 +77,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	// Initialize from URL params or Python backend state
 	useEffect(() => {
 		if (urlServerId && wizardState) {
-			setServerId(wizardState.id);
+			setServerId(wizardState.serverId);
 			// map wizard_step to our local state
-			setCurrentStep(wizardState.wizard_step as WizardStep);
-			setSuggestedTools(wizardState.suggestedTools);
+			setCurrentStep(wizardState.wizardStep as WizardStep);
+			setSuggestedTools(wizardState.tools);
 			setSelectedTools(wizardState.selectedTools);
 			setAuthType(
 				wizardState.authType === "none" ||
@@ -102,7 +102,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					description,
 				});
 
-				setServerId(result.id);
+				setServerId(result.serverId);
 
 				// Calculate next step - if processing, go to DESCRIBE, else ACTIONS
 				const nextStep = result.status === "processing"
@@ -116,11 +116,11 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				} else {
 					// Add to in-progress sessions for async tracking
 					// User can navigate away and return later
-					addWizardSession(result.id, description);
+					addWizardSession(result.serverId, description);
 				}
 
 				// Update URL with server ID for resumability
-				router.replace(`/dashboard/organization/new-mcp-server?serverId=${result.id}`);
+				router.replace(`/dashboard/organization/new-mcp-server?serverId=${result.serverId}`);
 			} catch (_error) {
 				toast.error("Failed to start wizard");
 			} finally {

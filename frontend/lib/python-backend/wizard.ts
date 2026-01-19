@@ -1,7 +1,6 @@
 import { logger } from "@/lib/logger";
 import { pythonBackendClient } from "./client";
-
-// Types for wizard API responses
+import { ProcessingStatus, WizardAuthType, WizardStep } from "@/schemas/wizard-schemas";
 
 export interface WizardTool {
 	name: string;
@@ -9,19 +8,28 @@ export interface WizardTool {
 	inputSchema?: Record<string, unknown>;
 }
 
+export interface WizardMeta {
+	userPrompt: string;
+	wizardStep: WizardStep;
+	processingStatus: ProcessingStatus;
+	processingError: string | null;
+	openapiSchema?: string | null;
+}
+
 export interface WizardState {
-	id: string;
+	serverId: string;
 	customerId: string;
-	wizard_step: "describe" | "actions" | "auth" | "deploy" | "complete";
-	processing_status: "idle" | "processing" | "failed";
-	processing_error: string | null;
+	wizardStep: WizardStep;
+	processingStatus: ProcessingStatus;
+	processingError: string | null;
 	description: string;
-	suggestedTools: WizardTool[];
+	tools: WizardTool[];
 	selectedTools: string[];
-	authType: "none" | "api_key" | "oauth" | null;
+	authType: WizardAuthType;
 	authConfig: Record<string, unknown> | null;
 	generatedCode: string | null;
 	serverUrl: string | null;
+	meta: WizardMeta;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -33,9 +41,9 @@ export interface StartWizardParams {
 }
 
 export interface StartWizardResponse {
-	id: string;
-	suggestedTools: WizardTool[];
-	step: "ACTIONS" | "DESCRIBE";
+	serverId: string;
+	tools: WizardTool[];
+	step: "actions" | "describe";
 	status?: string;
 }
 
@@ -56,18 +64,18 @@ export interface SelectWizardToolsParams {
 
 export interface SelectWizardToolsResponse {
 	selectedTools: string[];
-	step: "AUTH";
+	step: "auth";
 }
 
 export interface ConfigureWizardAuthParams {
 	serverId: string;
-	authType: "none" | "api_key" | "oauth";
+	authType: WizardAuthType;
 	authConfig?: Record<string, unknown> | null;
 }
 
 export interface ConfigureWizardAuthResponse {
-	authType: "none" | "api_key" | "oauth";
-	step: "DEPLOY";
+	authType: WizardAuthType;
+	step: "deploy";
 }
 
 export interface GenerateWizardCodeResponse {
@@ -76,7 +84,7 @@ export interface GenerateWizardCodeResponse {
 
 export interface ActivateServerResponse {
 	serverUrl: string;
-	step: "COMPLETE";
+	step: "complete";
 }
 
 export interface RetryToolGenerationResponse {
@@ -104,19 +112,8 @@ export async function startWizard(
 			{ customerId: params.customerId, wizardId: response.data.serverId },
 			"Wizard started in Python backend"
 		);
+		return response.data;
 
-		// Map backend response (camelCased by client) to frontend interface
-		// Backend returns: serverId, serverName, description, status, actions
-		return {
-			id: response.data.serverId,
-			suggestedTools: response.data.actions?.map((a: any) => ({
-				name: a.name,
-				description: a.description,
-				inputSchema: { ...a.parameters }, // Map parameters to inputSchema
-			})) || [],
-			step: response.data.status === "processing" ? "DESCRIBE" : "ACTIONS",
-			status: response.data.status || "processing",
-		};
 	} catch (error) {
 		logger.error(
 			{ customerId: params.customerId, error },

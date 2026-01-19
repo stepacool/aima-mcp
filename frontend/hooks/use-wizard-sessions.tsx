@@ -162,7 +162,7 @@ export function useWizardPolling(
 				const state = query.state.data;
 				if (!state) return 3000; // Keep polling if no data yet
 				// Continue polling only while processing
-				return isProcessingStatus(state.processing_status) ? 3000 : false;
+				return isProcessingStatus(state.processingStatus) ? 3000 : false;
 			},
 			refetchIntervalInBackground: true, // Continue polling even when tab is inactive
 		}
@@ -177,7 +177,7 @@ export function useWizardPolling(
 	useEffect(() => {
 		if (!data) return;
 
-		const { wizard_step, processing_status, processing_error } = data;
+		const { wizardStep: wizard_step, processingStatus: processing_status, processingError: processing_error } = data;
 
 		// Notify when tools are ready (only once)
 		if (
@@ -221,9 +221,9 @@ export function useWizardPolling(
 		isLoading,
 		error,
 		refetch,
-		isProcessing: data ? isProcessingStatus(data.processing_status) : true,
-		hasFailed: data ? hasFailedStatus(data.processing_status) : false,
-		processingError: data?.processing_error ?? null,
+		isProcessing: data ? isProcessingStatus(data.processingStatus) : true,
+		hasFailed: data ? hasFailedStatus(data.processingStatus) : false,
+		processingError: data?.processingError ?? null,
 	};
 }
 

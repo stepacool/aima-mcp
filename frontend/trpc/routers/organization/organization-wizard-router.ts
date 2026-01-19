@@ -39,7 +39,7 @@ export const organizationWizardRouter = createTRPCRouter({
 			});
 
 			logger.info(
-				{ serverId: result.id, organizationId: ctx.organization.id },
+				{ serverId: result.serverId, organizationId: ctx.organization.id },
 				"Wizard started via Python backend"
 			);
 
