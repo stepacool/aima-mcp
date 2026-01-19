@@ -14,6 +14,7 @@ import {
 	Trash2Icon,
 	WrenchIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
@@ -209,6 +210,20 @@ export function McpServerDetail({
 							</p>
 						</div>
 					</div>
+					{server.status === "draft" && (
+						<div className="mt-4 pt-4 border-t">
+							<Button
+								asChild
+								className="w-full sm:w-auto"
+							>
+								<Link
+									href={`/dashboard/organization/new-mcp-server?serverId=${server.id}`}
+								>
+									Continue Setup
+								</Link>
+							</Button>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 

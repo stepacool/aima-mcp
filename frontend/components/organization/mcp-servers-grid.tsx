@@ -261,17 +261,32 @@ export function McpServersGrid(): React.JSX.Element {
 								<p className="text-xs text-muted-foreground">
 									Created {format(new Date(server.createdAt), "MMM d, yyyy")}
 								</p>
-								<Button
-									variant="outline"
-									size="sm"
-									asChild
-								>
-									<Link
-										href={`/dashboard/organization/mcp-servers/${server.id}`}
+								<div className="flex gap-2">
+									{server.status === "draft" && (
+										<Button
+											variant="default"
+											size="sm"
+											asChild
+										>
+											<Link
+												href={`/dashboard/organization/new-mcp-server?serverId=${server.id}`}
+											>
+												Continue Setup
+											</Link>
+										</Button>
+									)}
+									<Button
+										variant="outline"
+										size="sm"
+										asChild
 									>
-										View Details
-									</Link>
-								</Button>
+										<Link
+											href={`/dashboard/organization/mcp-servers/${server.id}`}
+										>
+											View Details
+										</Link>
+									</Button>
+								</div>
 							</div>
 						</CardFooter>
 					</Card>
