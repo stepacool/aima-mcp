@@ -17,6 +17,7 @@ import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { organizationAiRouter } from "@/trpc/routers/organization/organization-ai-router";
 import { organizationCreditRouter } from "@/trpc/routers/organization/organization-credit-router";
 import { organizationLeadRouter } from "@/trpc/routers/organization/organization-lead-router";
+import { organizationServerRouter } from "@/trpc/routers/organization/organization-server-router";
 import { organizationSubscriptionRouter } from "@/trpc/routers/organization/organization-subscription-router";
 import { organizationWizardRouter } from "@/trpc/routers/organization/organization-wizard-router";
 
@@ -137,6 +138,7 @@ export const organizationRouter = createTRPCRouter({
 	ai: organizationAiRouter,
 	credit: organizationCreditRouter,
 	lead: organizationLeadRouter,
+	server: organizationServerRouter,
 	subscription: organizationSubscriptionRouter,
 	wizard: organizationWizardRouter,
 });

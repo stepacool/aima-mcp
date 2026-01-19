@@ -7,6 +7,7 @@ import {
 	CreditCardIcon,
 	LayoutDashboardIcon,
 	PlusIcon,
+	ServerIcon,
 	SettingsIcon,
 	UserSearchIcon,
 	UsersIcon,
@@ -80,7 +81,12 @@ export function OrganizationMenuItems(): React.JSX.Element {
 					href: `${basePath}/chatbot`,
 					icon: BotIcon,
 				},
-                {
+				{
+					label: "MCP Servers",
+					href: `${basePath}/mcp-servers`,
+					icon: ServerIcon,
+				},
+				{
 					label: "Create New MCP Server",
 					href: `${basePath}/new-mcp-server`,
 					icon: PlusIcon,

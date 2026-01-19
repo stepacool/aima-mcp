@@ -57,6 +57,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		hasFailed,
 		processingError,
 		refetch,
+		error: queryError,
 	} = useWizardPolling(urlServerId, {
 		enabled: !!urlServerId,
 		onComplete: (step) => {
@@ -173,6 +174,36 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	// Show loading state when restoring from URL (brief initial load)
 	if (urlServerId && isLoadingState && !wizardState) {
 		return <CenteredSpinner />;
+	}
+
+	// Handle error state when wizard state fetch fails
+	if (urlServerId && !isLoadingState && !wizardState) {
+		return (
+			<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+				<p className="text-destructive">Failed to load wizard state</p>
+				{queryError && (
+					<p className="text-sm text-muted-foreground">
+						{queryError.message}
+					</p>
+				)}
+				<div className="flex gap-2">
+					<button
+						type="button"
+						onClick={() => refetch()}
+						className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+					>
+						Retry
+					</button>
+					<button
+						type="button"
+						onClick={() => router.push("/dashboard/organization/new-mcp-server")}
+						className="inline-flex items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+					>
+						Start New Wizard
+					</button>
+				</div>
+			</div>
+		);
 	}
 
 	return (

@@ -18,7 +18,10 @@ const STEPS = [
 ];
 
 function getStepIndex(step: WizardStep): number {
-	return STEPS.findIndex((s) => s.key === step);
+	// Map 'describe' (processing state) to 'stepZero' for indicator display
+	// The "describe" step is a transitional processing state before tools are ready
+	const normalizedStep = step === WizardStep.describe ? WizardStep.stepZero : step;
+	return STEPS.findIndex((s) => s.key === normalizedStep);
 }
 
 export function WizardStepIndicator({
