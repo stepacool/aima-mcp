@@ -55,7 +55,9 @@ class MCPServer(CustomBase):
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
-    env_vars
+    env_vars: Mapped[list["MCPEnvironmentVariable"]] = relationship(
+        back_populates="server", cascade="all, delete-orphan"
+    )
 
     prompts: Mapped[list["MCPPrompt"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
