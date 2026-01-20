@@ -2,7 +2,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,29 +12,14 @@ if TYPE_CHECKING:
     from infrastructure.models.deployment import Deployment
 
 
-class MCPServerStatus(str, Enum):
-    """Status of MCP server configuration."""
-
-    DRAFT = "draft"  # Server being configured
-    READY = "ready"  # Ready for deployment (all tools validated)
-
-
-class WizardStep(str, Enum):
-    """Wizard step the server is currently at."""
-
-    DESCRIBE = "describe"  # Step 1: Initial description
-    ACTIONS = "actions"  # Step 2: Define/refine actions
-    AUTH = "auth"  # Step 3: Configure authentication
-    DEPLOY = "deploy"  # Step 4: Review and deploy
-    COMPLETE = "complete"  # Step 5: Completed/active
-
-
-class ProcessingStatus(str, Enum):
-    """Status of background processing operations."""
-
-    IDLE = "idle"  # No background work in progress
-    PROCESSING = "processing"  # Background task running
-    FAILED = "failed"  # Background task failed
+class MCPServerSetupStatus(str, Enum):
+    # description = "description"
+    tools_selection = "tools_selection"
+    env_vars_setup = "env_vars_setup"
+    auth_selection = "auth_selection"
+    code_gen = "code_gen"
+    deployment_selection = "deployment_selection"
+    ready = "ready"
 
 
 class MCPServer(CustomBase):
@@ -44,11 +29,16 @@ class MCPServer(CustomBase):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(50), default=MCPServerStatus.DRAFT.value, nullable=False
+    setup_status: Mapped[MCPServerSetupStatus]= mapped_column(
+        SQLEnum(MCPServerSetupStatus),
+        nullable=False,
+        server_default="tools_selection",
+        default=MCPServerSetupStatus.tools_selection,
     )
+
     auth_type: Mapped[str] = mapped_column(String(50), default="none", nullable=False)
     auth_config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+
     customer_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("customers.id", ondelete="CASCADE"),
@@ -56,16 +46,6 @@ class MCPServer(CustomBase):
         index=True,
     )
     meta: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
-
-    @property
-    def wizard_step(self) -> str:
-        """Get wizard step from meta, defaults to 'complete' for existing servers."""
-        return self.meta.get("wizard_step", WizardStep.COMPLETE.value)
-
-    @property
-    def processing_status(self) -> str:
-        """Get processing status from meta, defaults to 'idle'."""
-        return self.meta.get("processing_status", ProcessingStatus.IDLE.value)
 
     @property
     def processing_error(self) -> str | None:
