@@ -110,6 +110,16 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["**/deploy-step.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noNonNullAssertion": "off"
+					}
+				}
+			}
 		}
 	]
 }
