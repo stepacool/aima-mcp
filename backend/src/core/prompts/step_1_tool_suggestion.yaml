@@ -1,0 +1,108 @@
+prompt: |
+  You are an expert at designing MCP server tools.
+
+  Given a system description, suggest concrete tools the server should have.
+
+  For each tool specify:
+  - name: pythonic snake_case function name
+  - description: what this tool does
+  - parameters: list of inputs needed
+
+  Each parameter must include:
+  - name
+  - type
+  - required (true/false)
+  - description
+
+  Output ONLY valid JSON as an array of tools, matching this exact schema:
+
+  [
+    {
+      "name": "tool_name",
+      "description": "What this tool does",
+      "parameters": [
+        {
+          "name": "param_name",
+          "type": "string",
+          "required": true,
+          "description": "What this parameter is for"
+        }
+      ]
+    }
+  ]
+
+examples:
+  - input: "I want to manage my GitHub repositories"
+    output: |
+      [
+        {
+          "name": "list_repositories",
+          "description": "List all repositories for the authenticated user",
+          "parameters": []
+        },
+        {
+          "name": "create_issue",
+          "description": "Create a new issue in a GitHub repository",
+          "parameters": [
+            {
+              "name": "repository",
+              "type": "string",
+              "required": true,
+              "description": "Repository name in owner/repo format"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Issue title"
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "required": false,
+              "description": "Issue body or description"
+            }
+          ]
+        }
+      ]
+
+  - input: "Weather information service"
+    output: |
+      [
+        {
+          "name": "get_current_weather",
+          "description": "Get current weather conditions for a city",
+          "parameters": [
+            {
+              "name": "city",
+              "type": "string",
+              "required": true,
+              "description": "City name"
+            },
+            {
+              "name": "units",
+              "type": "string",
+              "required": false,
+              "description": "Temperature units (celsius or fahrenheit)"
+            }
+          ]
+        },
+        {
+          "name": "get_weather_forecast",
+          "description": "Get a weather forecast for the next few days",
+          "parameters": [
+            {
+              "name": "city",
+              "type": "string",
+              "required": true,
+              "description": "City name"
+            },
+            {
+              "name": "days",
+              "type": "integer",
+              "required": true,
+              "description": "Number of days to forecast"
+            }
+          ]
+        }
+      ]

@@ -1,0 +1,96 @@
+prompt: |
+  You are an expert at designing configuration schemas for MCP servers.
+
+  Given the MCP server description and its tools, suggest the minimal set of
+  environment variables required to run the server.
+
+  Rules:
+  - Output a FLAT configuration model (no nesting)
+  - Prefer single credentials over multiple ones
+    (e.g. prefer DATABASE_URL over host/user/password)
+  - Only include variables that are truly required at runtime
+  - Each field must be suitable for a Pydantic BaseModel
+  - Environment variable names must be UPPER_SNAKE_CASE
+  - Descriptions should explain what the variable is used for
+
+  For each environment variable specify:
+  - name: environment variable name
+  - type: string | integer | boolean
+  - required: true | false
+  - description: what this variable is for
+  - secret: true | false (true for API keys, passwords, tokens)
+
+  Output ONLY valid JSON as an array, matching this exact schema:
+
+  [
+    {
+      "name": "ENV_VAR_NAME",
+      "type": "string",
+      "required": true,
+      "secret": true,
+      "description": "What this variable is used for"
+    }
+  ]
+
+examples:
+  - input: "GitHub repository management MCP server"
+    output: |
+      [
+        {
+          "name": "GITHUB_TOKEN",
+          "type": "string",
+          "required": true,
+          "secret": true,
+          "description": "GitHub personal access token used to authenticate API requests"
+        }
+      ]
+
+  - input: "Weather information service using a third-party API"
+    output: |
+      [
+        {
+          "name": "WEATHER_API_KEY",
+          "type": "string",
+          "required": true,
+          "secret": true,
+          "description": "API key for the external weather data provider"
+        },
+        {
+          "name": "WEATHER_API_BASE_URL",
+          "type": "string",
+          "required": false,
+          "secret": false,
+          "description": "Base URL for the weather API (defaults to provider standard endpoint)"
+        }
+      ]
+
+  - input: "MCP server that stores data in a PostgreSQL database"
+    output: |
+      [
+        {
+          "name": "DATABASE_URL",
+          "type": "string",
+          "required": true,
+          "secret": true,
+          "description": "PostgreSQL connection string including credentials"
+        }
+      ]
+
+  - input: "Internal MCP server with optional logging and debug mode"
+    output: |
+      [
+        {
+          "name": "LOG_LEVEL",
+          "type": "string",
+          "required": false,
+          "secret": false,
+          "description": "Logging level (debug, info, warning, error)"
+        },
+        {
+          "name": "DEBUG",
+          "type": "boolean",
+          "required": false,
+          "secret": false,
+          "description": "Enable debug mode for additional logging"
+        }
+      ]
