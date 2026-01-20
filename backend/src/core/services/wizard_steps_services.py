@@ -66,39 +66,53 @@ class WizardStepsService:
     ) -> list[Tool]:
         """
         Tools are just a list of strings for now based on the description, but saved in db regardless.
-        Suggested tools are stored in draft state in db
+        Suggested tools are stored in draft state in db.
+        Sets status to tools_generating during LLM call, then tools_selection when done.
         """
-        system_prompt = load_prompt(prompt_file)
-        response = await openai_client.chat.completions.parse(
-            model="google/gemini-3-pro-preview",
-            messages=[
-                {
-                    "role": "developer",
-                    "content": system_prompt,
-                },
-                {
-                    "role": "user",
-                    "content": description,
-                },
-            ],
-            response_format=list[Tool],
-        )
-        parsed: list[Tool] = response.choices[0].message.parsed
-
         if mcp_server_id is None:
             mcp_server = await Provider.mcp_server_repo().create()
             mcp_server_id = mcp_server.id
 
-        create_payloads = []
-        for tool in parsed:
-            create_payloads.append(MCPToolCreate(
-                server_id=mcp_server_id,
-                name=tool.name,
-                description=tool.description,
-                parameters_schema=tool.parameters,
-            ))
-        await Provider.mcp_tool_repo().create_bulk(create_payloads)
-        return parsed
+        # Set generating status
+        await Provider.mcp_server_repo().update_setup_status(
+            mcp_server_id, MCPServerSetupStatus.tools_generating
+        )
+
+        try:
+            system_prompt = load_prompt(prompt_file)
+            response = await openai_client.chat.completions.parse(
+                model="google/gemini-3-pro-preview",
+                messages=[
+                    {
+                        "role": "developer",
+                        "content": system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": description,
+                    },
+                ],
+                response_format=list[Tool],
+            )
+            parsed: list[Tool] = response.choices[0].message.parsed
+
+            create_payloads = []
+            for tool in parsed:
+                create_payloads.append(
+                    MCPToolCreate(
+                        server_id=mcp_server_id,
+                        name=tool.name,
+                        description=tool.description,
+                        parameters_schema=tool.parameters,
+                    )
+                )
+            await Provider.mcp_tool_repo().create_bulk(create_payloads)
+            return parsed
+        finally:
+            # Set to tools_selection when done (success or failure)
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.tools_selection
+            )
 
     async def step_1b_refine_suggested_tools(
         self,
@@ -110,48 +124,60 @@ class WizardStepsService:
         """
         Refine tools suggested in 1a, fetch them from db, serialize them to LLM request,
         re-create based on LLM response. Re-create everything in db.
+        Sets status to tools_generating during LLM call, then tools_selection when done.
         """
-        server_tools = await Provider.mcp_tool_repo().get_tools_for_server(
-            mcp_server_id
-        )
-        if tool_ids_for_refinement is not None:
-            server_tools = [
-                tool for tool in server_tools if tool.id in tool_ids_for_refinement
-            ]
-
-        tools_description = "\n".join(
-            f"- {tool.name}: {tool.description}" for tool in server_tools
+        # Set generating status
+        await Provider.mcp_server_repo().update_setup_status(
+            mcp_server_id, MCPServerSetupStatus.tools_generating
         )
 
-        system_prompt = load_prompt(prompt_file)
-        user_content = (
-            f"Current tools:\n{tools_description}\n\nUser feedback:\n{feedback}"
-        )
-
-        response = await openai_client.chat.completions.parse(
-            model="google/gemini-3-pro-preview",
-            messages=[
-                {"role": "developer", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ],
-            response_format=list[Tool],
-        )
-        parsed: list[Tool] = response.choices[0].message.parsed
-
-        await Provider.mcp_tool_repo().delete_tools_for_server(mcp_server_id)
-
-        create_payloads = []
-        for tool in parsed:
-            create_payloads.append(
-                MCPToolCreate(
-                    server_id=mcp_server_id,
-                    name=tool.name,
-                    description=tool.description,
-                    parameters_schema=tool.parameters,
-                )
+        try:
+            server_tools = await Provider.mcp_tool_repo().get_tools_for_server(
+                mcp_server_id
             )
-        await Provider.mcp_tool_repo().create_bulk(create_payloads)
-        return parsed
+            if tool_ids_for_refinement is not None:
+                server_tools = [
+                    tool for tool in server_tools if tool.id in tool_ids_for_refinement
+                ]
+
+            tools_description = "\n".join(
+                f"- {tool.name}: {tool.description}" for tool in server_tools
+            )
+
+            system_prompt = load_prompt(prompt_file)
+            user_content = (
+                f"Current tools:\n{tools_description}\n\nUser feedback:\n{feedback}"
+            )
+
+            response = await openai_client.chat.completions.parse(
+                model="google/gemini-3-pro-preview",
+                messages=[
+                    {"role": "developer", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+                response_format=list[Tool],
+            )
+            parsed: list[Tool] = response.choices[0].message.parsed
+
+            await Provider.mcp_tool_repo().delete_tools_for_server(mcp_server_id)
+
+            create_payloads = []
+            for tool in parsed:
+                create_payloads.append(
+                    MCPToolCreate(
+                        server_id=mcp_server_id,
+                        name=tool.name,
+                        description=tool.description,
+                        parameters_schema=tool.parameters,
+                    )
+                )
+            await Provider.mcp_tool_repo().create_bulk(create_payloads)
+            return parsed
+        finally:
+            # Set to tools_selection when done (success or failure)
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.tools_selection
+            )
 
     async def step_1c_submit_selected_tools(
         self,
@@ -175,32 +201,46 @@ class WizardStepsService:
         prompt_file: str = "step_2_env_var_suggestion.yaml",
     ) -> list[EnvVar]:
         """
-        Long running background job
+        Long running background job.
         Suggest state for the mcp server that is required to be filled by user to run it.
         Prefer DB_URI over 5-6 vars for db connection and always prefer less creds if possible.
+        Sets status to env_vars_generating during LLM call, then env_vars_setup when done.
         """
-        system_prompt = load_prompt(prompt_file)
-        response = await openai_client.chat.completions.parse(
-            model="google/gemini-3-pro-preview",
-            messages=[
-                {
-                    "role": "developer",
-                    "content": system_prompt,
-                },
-            ],
-            response_format=list[EnvVar],
+        # Set generating status
+        await Provider.mcp_server_repo().update_setup_status(
+            mcp_server_id, MCPServerSetupStatus.env_vars_generating
         )
-        parsed: list[EnvVar] = response.choices[0].message.parsed
 
-        create_payloads = []
-        for tool in parsed:
-            create_payloads.append(MCPEnvironmentVariableCreate(
-                server_id=mcp_server_id,
-                name=tool.name,
-                description=tool.description,
-            ))
-        await Provider.environment_variable_repo().create_bulk(create_payloads)
-        return parsed
+        try:
+            system_prompt = load_prompt(prompt_file)
+            response = await openai_client.chat.completions.parse(
+                model="google/gemini-3-pro-preview",
+                messages=[
+                    {
+                        "role": "developer",
+                        "content": system_prompt,
+                    },
+                ],
+                response_format=list[EnvVar],
+            )
+            parsed: list[EnvVar] = response.choices[0].message.parsed
+
+            create_payloads = []
+            for var in parsed:
+                create_payloads.append(
+                    MCPEnvironmentVariableCreate(
+                        server_id=mcp_server_id,
+                        name=var.name,
+                        description=var.description,
+                    )
+                )
+            await Provider.environment_variable_repo().create_bulk(create_payloads)
+            return parsed
+        finally:
+            # Set to env_vars_setup when done (success or failure)
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.env_vars_setup
+            )
 
     async def step_2b_refine_suggested_environment_variables_for_mcp_server(
         self,
@@ -211,44 +251,58 @@ class WizardStepsService:
         """
         Long running background job.
         If 2a's suggested vars were bad for any reason, re-send them to LLM to refine.
+        Sets status to env_vars_generating during LLM call, then env_vars_setup when done.
         """
-        env_vars = await Provider.environment_variable_repo().get_vars_for_server(
-            mcp_server_id
+        # Set generating status
+        await Provider.mcp_server_repo().update_setup_status(
+            mcp_server_id, MCPServerSetupStatus.env_vars_generating
         )
 
-        vars_description = "\n".join(
-            f"- {var.name}: {var.description}" for var in env_vars
-        )
-
-        system_prompt = load_prompt(prompt_file)
-        user_content = (
-            f"Current environment variables:\n{vars_description}\n\n"
-            f"User feedback:\n{feedback}"
-        )
-
-        response = await openai_client.chat.completions.parse(
-            model="google/gemini-3-pro-preview",
-            messages=[
-                {"role": "developer", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ],
-            response_format=list[EnvVar],
-        )
-        parsed: list[EnvVar] = response.choices[0].message.parsed
-
-        await Provider.environment_variable_repo().delete_vars_for_server(mcp_server_id)
-
-        create_payloads = []
-        for var in parsed:
-            create_payloads.append(
-                MCPEnvironmentVariableCreate(
-                    server_id=mcp_server_id,
-                    name=var.name,
-                    description=var.description,
-                )
+        try:
+            env_vars = await Provider.environment_variable_repo().get_vars_for_server(
+                mcp_server_id
             )
-        await Provider.environment_variable_repo().create_bulk(create_payloads)
-        return parsed
+
+            vars_description = "\n".join(
+                f"- {var.name}: {var.description}" for var in env_vars
+            )
+
+            system_prompt = load_prompt(prompt_file)
+            user_content = (
+                f"Current environment variables:\n{vars_description}\n\n"
+                f"User feedback:\n{feedback}"
+            )
+
+            response = await openai_client.chat.completions.parse(
+                model="google/gemini-3-pro-preview",
+                messages=[
+                    {"role": "developer", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+                response_format=list[EnvVar],
+            )
+            parsed: list[EnvVar] = response.choices[0].message.parsed
+
+            await Provider.environment_variable_repo().delete_vars_for_server(
+                mcp_server_id
+            )
+
+            create_payloads = []
+            for var in parsed:
+                create_payloads.append(
+                    MCPEnvironmentVariableCreate(
+                        server_id=mcp_server_id,
+                        name=var.name,
+                        description=var.description,
+                    )
+                )
+            await Provider.environment_variable_repo().create_bulk(create_payloads)
+            return parsed
+        finally:
+            # Set to env_vars_setup when done (success or failure)
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.env_vars_setup
+            )
 
     async def step_2c_submit_variables(
         self,
@@ -289,8 +343,21 @@ class WizardStepsService:
         Using the description of the server, all the function definitions and env vars provided,
         generate code, envs should be utilized and hardcoded into functions.
         If there's DB_URL in envs, write it in the connector code etc.
+        Sets status to code_generating during LLM call, then code_gen when done.
         """
-        ...
+        # Set generating status
+        await Provider.mcp_server_repo().update_setup_status(
+            mcp_server_id, MCPServerSetupStatus.code_generating
+        )
+
+        try:
+            # TODO: Implement code generation logic
+            pass
+        finally:
+            # Set to code_gen when done (success or failure)
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.code_gen
+            )
 
     async def step_5_deploy_to_shared(
         self,

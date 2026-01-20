@@ -96,7 +96,7 @@ function WizardSessionItem({
 						)}
 					</div>
 					<span className="flex-1 truncate text-sm">
-						{getStepLabel(step)}
+						{getStepLabel(step, isProcessing)}
 					</span>
 					<Badge
 						variant="outline"
@@ -115,16 +115,16 @@ function WizardSessionItem({
 	);
 }
 
-function getStepLabel(step: WizardStep | undefined): string {
+function getStepLabel(step: WizardStep | undefined, isProcessing: boolean): string {
 	switch (step) {
-		case WizardStep.describe:
-			return "Generating tools...";
 		case WizardStep.actions:
-			return "Select tools";
+			return isProcessing ? "Generating tools..." : "Select tools";
+		case WizardStep.envVars:
+			return isProcessing ? "Generating config..." : "Configure variables";
 		case WizardStep.auth:
 			return "Configure auth";
 		case WizardStep.deploy:
-			return "Deploy server";
+			return isProcessing ? "Generating code..." : "Deploy server";
 		case WizardStep.complete:
 			return "Complete";
 		default:

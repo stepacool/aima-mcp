@@ -1,11 +1,12 @@
 "use client";
 
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, LoaderCircleIcon } from "lucide-react";
 import { WizardStep } from "@/schemas/wizard-schemas";
 import { cn } from "@/lib/utils";
 
 interface WizardStepIndicatorProps {
 	currentStep: WizardStep;
+	isProcessing?: boolean;
 	className?: string;
 }
 
@@ -19,14 +20,12 @@ const STEPS = [
 ];
 
 function getStepIndex(step: WizardStep): number {
-	// Map 'describe' (processing state) to 'stepZero' for indicator display
-	// The "describe" step is a transitional processing state before tools are ready
-	const normalizedStep = step === WizardStep.describe ? WizardStep.stepZero : step;
-	return STEPS.findIndex((s) => s.key === normalizedStep);
+	return STEPS.findIndex((s) => s.key === step);
 }
 
 export function WizardStepIndicator({
 	currentStep,
+	isProcessing = false,
 	className,
 }: WizardStepIndicatorProps) {
 	const currentIndex = getStepIndex(currentStep);
@@ -51,6 +50,8 @@ export function WizardStepIndicator({
 						>
 							{isComplete ? (
 								<CheckIcon className="size-4" />
+							) : isCurrent && isProcessing ? (
+								<LoaderCircleIcon className="size-4 animate-spin" />
 							) : (
 								<span>{index + 1}</span>
 							)}

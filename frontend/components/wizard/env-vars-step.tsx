@@ -21,16 +21,20 @@ interface EnvVarsStepProps {
 	serverId: string;
 	suggestedEnvVars: WizardEnvVar[];
 	isProcessing: boolean;
+	processingError?: string | null;
 	onEnvVarsSubmitted: () => void;
 	onRefine: (newEnvVars: WizardEnvVar[]) => void;
+	onRetry?: () => void;
 }
 
 export function EnvVarsStep({
 	serverId,
 	suggestedEnvVars,
 	isProcessing,
+	processingError = null,
 	onEnvVarsSubmitted,
 	onRefine,
+	onRetry,
 }: EnvVarsStepProps) {
 	// Track env var values by their UUID
 	const [envVarValues, setEnvVarValues] = useState<Record<string, string>>({});
@@ -100,6 +104,31 @@ export function EnvVarsStep({
 					<p className="text-sm text-muted-foreground/70">
 						This may take a moment.
 					</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Show error state if processing failed
+	if (processingError) {
+		return (
+			<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+				<div className="max-w-md space-y-4">
+					<div className="text-destructive">
+						<p className="font-medium">Environment variable generation failed</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							{processingError}
+						</p>
+					</div>
+					{onRetry && (
+						<button
+							type="button"
+							onClick={onRetry}
+							className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+						>
+							Try Again
+						</button>
+					)}
 				</div>
 			</div>
 		);

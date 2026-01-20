@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { cn } from "@/lib/utils";
 import type { WizardTool } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
@@ -20,8 +21,11 @@ import { trpc } from "@/trpc/client";
 interface ActionsStepProps {
 	serverId: string;
 	suggestedTools: WizardTool[];
+	isProcessing?: boolean;
+	processingError?: string | null;
 	onToolsSubmitted: (toolIds: string[]) => void;
 	onRefine: (newTools: WizardTool[]) => void;
+	onRetry?: () => void;
 }
 
 const MAX_FREE_TOOLS = 3;
@@ -29,8 +33,11 @@ const MAX_FREE_TOOLS = 3;
 export function ActionsStep({
 	serverId,
 	suggestedTools,
+	isProcessing = false,
+	processingError = null,
 	onToolsSubmitted,
 	onRefine,
+	onRetry,
 }: ActionsStepProps) {
 	// Track selected tools by their UUID
 	const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
@@ -39,6 +46,48 @@ export function ActionsStep({
 
 	const submitToolsMutation = trpc.organization.wizard.submitTools.useMutation();
 	const refineActionsMutation = trpc.organization.wizard.refineActions.useMutation();
+
+	// Show loading state when backend is generating tools
+	if (isProcessing) {
+		return (
+			<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+				<CenteredSpinner />
+				<div className="max-w-md space-y-2">
+					<p className="text-muted-foreground animate-pulse">
+						Generating your MCP server tools...
+					</p>
+					<p className="text-sm text-muted-foreground/70">
+						This may take a moment. Feel free to navigate away - you can return to this page anytime.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Show error state if processing failed
+	if (processingError) {
+		return (
+			<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+				<div className="max-w-md space-y-4">
+					<div className="text-destructive">
+						<p className="font-medium">Tool generation failed</p>
+						<p className="mt-2 text-sm text-muted-foreground">
+							{processingError}
+						</p>
+					</div>
+					{onRetry && (
+						<button
+							type="button"
+							onClick={onRetry}
+							className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+						>
+							Try Again
+						</button>
+					)}
+				</div>
+			</div>
+		);
+	}
 
 	const toggleTool = (toolId: string) => {
 		const newSelected = new Set(selectedToolIds);

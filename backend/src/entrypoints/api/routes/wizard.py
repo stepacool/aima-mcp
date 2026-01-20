@@ -62,10 +62,50 @@ class AuthResponse(BaseModel):
 
 class WizardStateResponse(BaseModel):
     server_id: UUID
+    customer_id: UUID
     setup_status: str
+    wizard_step: str  # Mapped step for frontend (actions, env_vars, auth, etc.)
+    processing_status: str  # idle, processing, or failed
+    processing_error: str | None
+    description: str | None
     tools: list[ToolResponse]
+    selected_tool_ids: list[UUID]  # UUIDs of selected/remaining tools
     env_vars: list[EnvVarResponse]
+    auth_type: str
+    auth_config: dict[str, Any] | None
+    bearer_token: str | None
+    server_url: str | None
     has_auth: bool
+    created_at: str
+    updated_at: str
+
+
+def map_setup_status_to_wizard_step(setup_status: str) -> str:
+    """Map backend setup_status to frontend wizard_step."""
+    mapping = {
+        "tools_generating": "actions",
+        "tools_selection": "actions",
+        "env_vars_generating": "env_vars",
+        "env_vars_setup": "env_vars",
+        "auth_selection": "auth",
+        "code_generating": "deploy",
+        "code_gen": "deploy",
+        "deployment_selection": "deploy",
+        "ready": "complete",
+    }
+    return mapping.get(setup_status, "actions")
+
+
+def get_processing_status(setup_status: str) -> str:
+    """Determine processing status from setup_status."""
+    generating_states = {
+        "tools_generating",
+        "env_vars_generating",
+        "code_generating",
+    }
+    if setup_status in generating_states:
+        return "processing"
+    return "idle"
 
 
 def get_wizard_service() -> WizardStepsService:
@@ -339,9 +379,21 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
     env_vars = await Provider.environment_variable_repo().get_vars_for_server(server_id)
     api_key = await Provider.api_key_repo().get_by_server_id(server_id)
 
+    setup_status_value = server.setup_status.value
+    wizard_step = map_setup_status_to_wizard_step(setup_status_value)
+    processing_status = get_processing_status(setup_status_value)
+
+    # Get processing error from meta if any
+    processing_error = server.processing_error
+
     return WizardStateResponse(
         server_id=server_id,
-        setup_status=server.setup_status.value,
+        customer_id=server.customer_id,
+        setup_status=setup_status_value,
+        wizard_step=wizard_step,
+        processing_status=processing_status,
+        processing_error=processing_error,
+        description=server.description,
         tools=[
             ToolResponse(
                 id=tool.id,
@@ -351,6 +403,7 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
             )
             for tool in tools
         ],
+        selected_tool_ids=[tool.id for tool in tools],
         env_vars=[
             EnvVarResponse(
                 id=var.id,
@@ -360,5 +413,11 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
             )
             for var in env_vars
         ],
+        auth_type=server.auth_type,
+        auth_config=server.auth_config,
+        bearer_token=api_key.key if api_key else None,
+        server_url=None,  # Will be set when deployed
         has_auth=api_key is not None,
+        created_at=server.created_at.isoformat() if server.created_at else "",
+        updated_at=server.updated_at.isoformat() if server.updated_at else "",
     )

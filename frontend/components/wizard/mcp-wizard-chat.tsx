@@ -9,7 +9,6 @@ import { CompleteStep } from "@/components/wizard/complete-step";
 import { DeployStep } from "@/components/wizard/deploy-step";
 import { EnvVarsStep } from "@/components/wizard/env-vars-step";
 import { StepZeroChat } from "@/components/wizard/step-zero-chat";
-import { WizardProcessingBanner } from "@/components/wizard/wizard-processing-banner";
 import { WizardStepIndicator } from "@/components/wizard/wizard-step-indicator";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { useWizardPolling, useWizardSessions } from "@/hooks/use-wizard-sessions";
@@ -64,7 +63,8 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		enabled: !!urlServerId,
 		onComplete: (step) => {
 			// When wizard finishes processing, remove from in-progress list
-			if (urlServerId && step !== WizardStep.describe) {
+			// This triggers when any step completes and is no longer processing
+			if (urlServerId && step !== WizardStep.stepZero) {
 				removeWizardSession(urlServerId);
 			}
 		},
@@ -116,8 +116,8 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 
 				setServerId(result.serverId);
 
-				// Always go to DESCRIBE step first (backend processes in background)
-				setCurrentStep(WizardStep.describe);
+				// Go to actions step (backend processes in background, component handles loading state)
+				setCurrentStep(WizardStep.actions);
 
 				// Add to in-progress sessions for async tracking
 				// User can navigate away and return later
@@ -224,19 +224,8 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		<div className="flex h-full flex-col">
 			{/* Step Indicator */}
 			<div className="shrink-0 border-b bg-background/80 px-4 py-3 backdrop-blur-sm">
-				<WizardStepIndicator currentStep={currentStep} />
+				<WizardStepIndicator currentStep={currentStep} isProcessing={isProcessing} />
 			</div>
-
-			{/* Processing Banner - Non-blocking indicator during async processing */}
-			{currentStep === WizardStep.describe && serverId && (
-				<WizardProcessingBanner
-					serverId={serverId}
-					isProcessing={isProcessing}
-					hasFailed={hasFailed}
-					processingError={processingError}
-					onRetry={handleRetry}
-				/>
-			)}
 
 			{/* Step Content */}
 			<div className="min-h-0 flex-1">
@@ -258,48 +247,15 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					</>
 				)}
 
-				{currentStep === WizardStep.describe && (
-					<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-						{hasFailed ? (
-							<div className="max-w-md space-y-4">
-								<div className="text-destructive">
-									<p className="font-medium">Tool generation failed</p>
-									{processingError && (
-										<p className="mt-2 text-sm text-muted-foreground">
-											{processingError}
-										</p>
-									)}
-								</div>
-								<button
-									type="button"
-									onClick={handleRetry}
-									className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-								>
-									Try Again
-								</button>
-							</div>
-						) : (
-							<>
-								<CenteredSpinner />
-								<div className="max-w-md space-y-2">
-									<p className="text-muted-foreground animate-pulse">
-										Generating your MCP server tools...
-									</p>
-									<p className="text-sm text-muted-foreground/70">
-										This may take a moment. Feel free to navigate away - you can return to this page anytime.
-									</p>
-								</div>
-							</>
-						)}
-					</div>
-				)}
-
 				{currentStep === WizardStep.actions && serverId && (
 					<ActionsStep
 						serverId={serverId}
 						suggestedTools={suggestedTools}
+						isProcessing={isProcessing}
+						processingError={hasFailed ? processingError : null}
 						onToolsSubmitted={handleToolsSubmitted}
 						onRefine={handleToolsRefined}
+						onRetry={handleRetry}
 					/>
 				)}
 
@@ -308,8 +264,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						serverId={serverId}
 						suggestedEnvVars={suggestedEnvVars}
 						isProcessing={isProcessing}
+						processingError={hasFailed ? processingError : null}
 						onEnvVarsSubmitted={handleEnvVarsSubmitted}
 						onRefine={handleEnvVarsRefined}
+						onRetry={handleRetry}
 					/>
 				)}
 

@@ -13,11 +13,22 @@ if TYPE_CHECKING:
 
 
 class MCPServerSetupStatus(str, Enum):
-    # description = "description"
-    tools_selection = "tools_selection"
-    env_vars_setup = "env_vars_setup"
+    # Tools step
+    tools_generating = "tools_generating"  # LLM is generating/refining tools
+    tools_selection = "tools_selection"  # User reviews and selects tools
+
+    # Env vars step
+    env_vars_generating = "env_vars_generating"  # LLM is generating/refining env vars
+    env_vars_setup = "env_vars_setup"  # User reviews and fills env vars
+
+    # Auth step
     auth_selection = "auth_selection"
-    code_gen = "code_gen"
+
+    # Code generation step
+    code_generating = "code_generating"  # LLM is generating code
+    code_gen = "code_gen"  # Code is ready for review
+
+    # Deployment step
     deployment_selection = "deployment_selection"
     ready = "ready"
 
@@ -50,7 +61,7 @@ class MCPServer(CustomBase):
     @property
     def processing_error(self) -> str | None:
         """Get processing error from meta, if any."""
-        return self.meta.get("processing_error")
+        return self.meta.get("processing_error") if self.meta is not None else None
 
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
