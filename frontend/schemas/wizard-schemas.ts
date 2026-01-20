@@ -5,6 +5,7 @@ export const WizardStep = {
 	stepZero: "step_zero", // AI onboarding chat (frontend only)
 	describe: "describe", // Processing initial description
 	actions: "actions", // Select tools
+	envVars: "env_vars", // Configure environment variables
 	auth: "auth", // Configure authentication
 	deploy: "deploy", // Review and deploy
 	complete: "complete", // Server is live
@@ -24,13 +25,23 @@ export type ProcessingStatus =
 export const WizardAuthType = z.enum(["none", "api_key", "oauth"]);
 export type WizardAuthType = z.infer<typeof WizardAuthType>;
 
-// Tool schema
+// Tool schema with UUID
 export const wizardToolSchema = z.object({
+	id: z.string(), // UUID from backend
 	name: z.string(),
 	description: z.string(),
-	inputSchema: z.record(z.string(), z.unknown()).optional(),
+	parameters: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 export type WizardTool = z.infer<typeof wizardToolSchema>;
+
+// Environment variable schema
+export const wizardEnvVarSchema = z.object({
+	id: z.string(), // UUID from backend
+	name: z.string(),
+	description: z.string(),
+	value: z.string().optional(),
+});
+export type WizardEnvVar = z.infer<typeof wizardEnvVarSchema>;
 
 // Message schema for pre-wizard chat (Step 0 - frontend only)
 export const wizardMessageSchema = z.object({
@@ -48,29 +59,60 @@ export const startWizardSchema = z.object({
 });
 export type StartWizardInput = z.infer<typeof startWizardSchema>;
 
-// Refine wizard actions (calls Python backend /api/wizard/{id}/refine)
+// Refine wizard actions (calls Python backend /api/wizard/{id}/tools/refine)
 export const refineWizardActionsSchema = z.object({
 	serverId: z.string(),
 	feedback: z.string().min(1, "Feedback is required"),
-	description: z.string().optional().nullable(),
+	toolIds: z.array(z.string()).optional(), // Optional list of tool UUIDs
 });
 export type RefineWizardActionsInput = z.infer<typeof refineWizardActionsSchema>;
 
-// Select wizard tools (calls Python backend /api/wizard/{id}/tools/select)
-export const selectWizardToolsSchema = z.object({
+// Get wizard tools (calls Python backend /api/wizard/{id}/tools)
+export const getWizardToolsSchema = z.object({
 	serverId: z.string(),
-	selectedToolNames: z
+});
+export type GetWizardToolsInput = z.infer<typeof getWizardToolsSchema>;
+
+// Submit wizard tools (calls Python backend /api/wizard/{id}/tools/submit)
+export const submitWizardToolsSchema = z.object({
+	serverId: z.string(),
+	selectedToolIds: z
 		.array(z.string())
 		.min(1, "At least one tool must be selected")
 		.max(3, "Maximum 3 tools allowed for free tier"),
 });
-export type SelectWizardToolsInput = z.infer<typeof selectWizardToolsSchema>;
+export type SubmitWizardToolsInput = z.infer<typeof submitWizardToolsSchema>;
+
+// Suggest env vars (calls Python backend /api/wizard/{id}/env-vars/suggest)
+export const suggestEnvVarsSchema = z.object({
+	serverId: z.string(),
+});
+export type SuggestEnvVarsInput = z.infer<typeof suggestEnvVarsSchema>;
+
+// Get env vars (calls Python backend /api/wizard/{id}/env-vars)
+export const getEnvVarsSchema = z.object({
+	serverId: z.string(),
+});
+export type GetEnvVarsInput = z.infer<typeof getEnvVarsSchema>;
+
+// Refine env vars (calls Python backend /api/wizard/{id}/env-vars/refine)
+export const refineEnvVarsSchema = z.object({
+	serverId: z.string(),
+	feedback: z.string().min(1, "Feedback is required"),
+});
+export type RefineEnvVarsInput = z.infer<typeof refineEnvVarsSchema>;
+
+// Submit env vars (calls Python backend /api/wizard/{id}/env-vars/submit)
+export const submitEnvVarsSchema = z.object({
+	serverId: z.string(),
+	values: z.record(z.string(), z.string()), // Map of UUID to value
+});
+export type SubmitEnvVarsInput = z.infer<typeof submitEnvVarsSchema>;
 
 // Configure wizard auth (calls Python backend /api/wizard/{id}/auth)
+// Backend generates API key and returns bearer token
 export const configureWizardAuthSchema = z.object({
 	serverId: z.string(),
-	authType: WizardAuthType,
-	authConfig: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 export type ConfigureWizardAuthInput = z.infer<typeof configureWizardAuthSchema>;
 

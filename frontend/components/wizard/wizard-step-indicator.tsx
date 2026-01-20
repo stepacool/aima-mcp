@@ -12,7 +12,8 @@ interface WizardStepIndicatorProps {
 const STEPS = [
 	{ key: WizardStep.stepZero, label: "Describe", description: "Tell us what you want to build" },
 	{ key: WizardStep.actions, label: "Tools", description: "Select the tools for your server" },
-	{ key: WizardStep.auth, label: "Auth", description: "Configure authentication" },
+	{ key: WizardStep.envVars, label: "Config", description: "Configure environment variables" },
+	{ key: WizardStep.auth, label: "Auth", description: "Generate API key" },
 	{ key: WizardStep.deploy, label: "Deploy", description: "Review and deploy your server" },
 	{ key: WizardStep.complete, label: "Complete", description: "Your server is live" },
 ];

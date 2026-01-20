@@ -1,6 +1,6 @@
 "use client";
 
-import { CodeIcon, CopyIcon, RocketIcon } from "lucide-react";
+import { CheckIcon, CodeIcon, CopyIcon, KeyIcon, RocketIcon, WrenchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,38 +13,28 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { WizardAuthType } from "@/schemas/wizard-schemas";
+import type { WizardTool } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
 
 interface DeployStepProps {
 	serverId: string;
-	selectedTools: (string | { id?: string; name?: string; [key: string]: unknown })[];
-	authType: WizardAuthType;
+	selectedToolIds: string[];
+	suggestedTools: WizardTool[];
+	bearerToken: string;
 	onServerActivated: (serverUrl: string) => void;
-}
-
-// Helper to extract tool name from string or object
-function getToolName(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
-	if (typeof tool === "string") {
-		return tool;
-	}
-	return tool.name || tool.id || String(tool);
-}
-
-// Helper to extract tool key for React key prop
-function getToolKey(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
-	if (typeof tool === "string") {
-		return tool;
-	}
-	return tool.id || tool.name || String(tool);
 }
 
 export function DeployStep({
 	serverId,
-	selectedTools,
-	authType,
+	selectedToolIds,
+	suggestedTools,
+	bearerToken,
 	onServerActivated,
 }: DeployStepProps) {
+	// Get selected tools by matching IDs
+	const selectedTools = suggestedTools.filter((tool) =>
+		selectedToolIds.includes(tool.id)
+	);
 	const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
 	const generateCodeMutation =
@@ -88,12 +78,18 @@ export function DeployStep({
 		}
 	};
 
-	const authTypeLabel =
-		authType === "none"
-			? "No Authentication"
-			: authType === "api_key"
-				? "API Key"
-				: "OAuth 2.0";
+	const [tokenCopied, setTokenCopied] = useState(false);
+
+	const handleCopyToken = async () => {
+		try {
+			await navigator.clipboard.writeText(bearerToken);
+			setTokenCopied(true);
+			toast.success("API key copied to clipboard");
+			setTimeout(() => setTokenCopied(false), 2000);
+		} catch (_error) {
+			toast.error("Failed to copy to clipboard");
+		}
+	};
 
 	return (
 		<div className="flex h-full flex-col">
@@ -112,20 +108,20 @@ export function DeployStep({
 						<Card>
 							<CardHeader className="pb-2">
 								<CardTitle className="flex items-center gap-2 text-base">
-									<CodeIcon className="size-4" />
+									<WrenchIcon className="size-4" />
 									Tools
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<div className="flex flex-wrap gap-2">
 									{selectedTools.map((tool) => (
-									<span
-										key={getToolKey(tool)}
-										className="rounded-full bg-primary/10 px-3 py-1 text-primary text-sm"
-									>
-										{getToolName(tool)}
-									</span>
-								))}
+										<span
+											key={tool.id}
+											className="rounded-full bg-primary/10 px-3 py-1 text-primary text-sm"
+										>
+											{tool.name}
+										</span>
+									))}
 								</div>
 							</CardContent>
 						</Card>
@@ -133,12 +129,27 @@ export function DeployStep({
 						<Card>
 							<CardHeader className="pb-2">
 								<CardTitle className="flex items-center gap-2 text-base">
-									<RocketIcon className="size-4" />
+									<KeyIcon className="size-4" />
 									Authentication
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<span className="text-muted-foreground">{authTypeLabel}</span>
+								<div className="flex items-center justify-between">
+									<span className="text-muted-foreground">API Key</span>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={handleCopyToken}
+										className="h-7 px-2"
+									>
+										{tokenCopied ? (
+											<CheckIcon className="size-3 text-green-500" />
+										) : (
+											<CopyIcon className="size-3" />
+										)}
+										<span className="ml-1 text-xs">{tokenCopied ? "Copied" : "Copy Key"}</span>
+									</Button>
+								</div>
 							</CardContent>
 						</Card>
 					</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyIcon, LockIcon, ShieldOffIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, KeyIcon, WrenchIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,89 +12,63 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { WizardAuthType } from "@/schemas/wizard-schemas";
+import type { WizardTool } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
-
-// Helper to extract tool name from string or object
-function getToolName(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
-	if (typeof tool === "string") {
-		return tool;
-	}
-	return tool.name || tool.id || String(tool);
-}
-
-// Helper to extract tool key for React key prop
-function getToolKey(tool: string | { id?: string; name?: string; [key: string]: unknown }): string {
-	if (typeof tool === "string") {
-		return tool;
-	}
-	return tool.id || tool.name || String(tool);
-}
 
 interface AuthStepProps {
 	serverId: string;
-	selectedTools: (string | { id?: string; name?: string; [key: string]: unknown })[];
-	onAuthConfigured: (authType: WizardAuthType) => void;
+	selectedToolIds: string[];
+	suggestedTools: WizardTool[];
+	onAuthConfigured: (bearerToken: string) => void;
 }
-
-interface AuthOption {
-	type: WizardAuthType;
-	title: string;
-	description: string;
-	icon: React.ComponentType<{ className?: string }>;
-	recommended?: boolean;
-}
-
-const AUTH_OPTIONS: AuthOption[] = [
-	{
-		type: "none",
-		title: "No Authentication",
-		description:
-			"Anyone can access your MCP server. Good for public APIs or testing.",
-		icon: ShieldOffIcon,
-	},
-	{
-		type: "api_key",
-		title: "API Key",
-		description:
-			"Secure your server with an API key. Simple and effective for most use cases.",
-		icon: KeyIcon,
-		recommended: true,
-	},
-	{
-		type: "oauth",
-		title: "OAuth 2.0",
-		description:
-			"Full OAuth authentication flow. Best for user-specific access and enterprise needs.",
-		icon: LockIcon,
-	},
-];
 
 export function AuthStep({
 	serverId,
-	selectedTools,
+	selectedToolIds,
+	suggestedTools,
 	onAuthConfigured,
 }: AuthStepProps) {
-	const [selectedAuth, setSelectedAuth] = useState<WizardAuthType | null>(null);
+	const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+	const [copied, setCopied] = useState(false);
 
-	const configureAuthMutation =
-		trpc.organization.wizard.configureAuth.useMutation();
+	const configureAuthMutation = trpc.organization.wizard.configureAuth.useMutation();
 
-	const handleContinue = async () => {
-		if (!selectedAuth) {
-			toast.error("Please select an authentication method");
-			return;
+	// Get selected tools by matching IDs
+	const selectedTools = suggestedTools.filter((tool) =>
+		selectedToolIds.includes(tool.id)
+	);
+
+	const handleGenerateToken = async () => {
+		try {
+			const result = await configureAuthMutation.mutateAsync({
+				serverId,
+			});
+			setGeneratedToken(result.bearerToken);
+			toast.success("API key generated successfully");
+		} catch (_error) {
+			toast.error("Failed to generate API key");
 		}
+	};
+
+	const handleCopyToken = async () => {
+		if (!generatedToken) return;
 
 		try {
-			await configureAuthMutation.mutateAsync({
-				serverId,
-				authType: selectedAuth,
-			});
-			onAuthConfigured(selectedAuth);
+			await navigator.clipboard.writeText(generatedToken);
+			setCopied(true);
+			toast.success("API key copied to clipboard");
+			setTimeout(() => setCopied(false), 2000);
 		} catch (_error) {
-			toast.error("Failed to configure authentication");
+			toast.error("Failed to copy to clipboard");
 		}
+	};
+
+	const handleContinue = () => {
+		if (!generatedToken) {
+			toast.error("Please generate an API key first");
+			return;
+		}
+		onAuthConfigured(generatedToken);
 	};
 
 	return (
@@ -103,9 +77,9 @@ export function AuthStep({
 				<div className="mx-auto max-w-3xl space-y-6">
 					{/* Header */}
 					<div className="text-center">
-						<h2 className="font-semibold text-2xl">Configure Authentication</h2>
+						<h2 className="font-semibold text-2xl">Generate API Key</h2>
 						<p className="mt-2 text-muted-foreground">
-							Choose how you want to secure access to your MCP server.
+							Create an API key to secure access to your MCP server.
 						</p>
 					</div>
 
@@ -120,78 +94,82 @@ export function AuthStep({
 							<div className="flex flex-wrap gap-2">
 								{selectedTools.map((tool) => (
 									<span
-										key={getToolKey(tool)}
-										className="rounded-full bg-primary/10 px-3 py-1 text-primary text-sm"
+										key={tool.id}
+										className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-primary text-sm"
 									>
-										{getToolName(tool)}
+										<WrenchIcon className="size-3" />
+										{tool.name}
 									</span>
 								))}
 							</div>
 						</CardContent>
 					</Card>
 
-					{/* Auth Options */}
-					<div className="space-y-3">
-						{AUTH_OPTIONS.map((option) => {
-							const isSelected = selectedAuth === option.type;
-							const Icon = option.icon;
-							return (
-								<Card
-									key={option.type}
-									className={cn(
-										"cursor-pointer transition-all hover:shadow-md",
-										isSelected && "border-primary ring-2 ring-primary/20"
-									)}
-									onClick={() => setSelectedAuth(option.type)}
-								>
-									<CardHeader className="pb-2">
-										<div className="flex items-start gap-4">
-											<div
-												className={cn(
-													"flex size-10 items-center justify-center rounded-lg",
-													isSelected ? "bg-primary/20" : "bg-muted"
-												)}
+					{/* API Key Generation */}
+					<Card>
+						<CardHeader>
+							<div className="flex items-center gap-3">
+								<div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+									<KeyIcon className="size-5 text-primary" />
+								</div>
+								<div>
+									<CardTitle className="text-lg">API Key Authentication</CardTitle>
+									<CardDescription>
+										Your MCP server will be secured with an API key
+									</CardDescription>
+								</div>
+							</div>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							{!generatedToken ? (
+								<div className="space-y-4">
+									<p className="text-sm text-muted-foreground">
+										Click the button below to generate a secure API key. This key will be used
+										to authenticate requests to your MCP server.
+									</p>
+									<Button
+										onClick={handleGenerateToken}
+										loading={configureAuthMutation.isPending}
+									>
+										<KeyIcon className="size-4" />
+										Generate API Key
+									</Button>
+								</div>
+							) : (
+								<div className="space-y-4">
+									<div className="rounded-lg border bg-muted/50 p-4">
+										<div className="mb-2 flex items-center justify-between">
+											<span className="text-sm font-medium text-muted-foreground">
+												Your API Key
+											</span>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={handleCopyToken}
+												className="h-8 px-2"
 											>
-												<Icon
-													className={cn(
-														"size-5",
-														isSelected ? "text-primary" : "text-muted-foreground"
-													)}
-												/>
-											</div>
-											<div className="flex-1">
-												<div className="flex items-center gap-2">
-													<CardTitle className="text-base">
-														{option.title}
-													</CardTitle>
-													{option.recommended && (
-														<span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary text-xs font-medium">
-															Recommended
-														</span>
-													)}
-												</div>
-												<CardDescription className="mt-1">
-													{option.description}
-												</CardDescription>
-											</div>
-											<div
-												className={cn(
-													"flex size-6 items-center justify-center rounded-full border-2 transition-colors",
-													isSelected
-														? "border-primary bg-primary"
-														: "border-muted-foreground/30"
+												{copied ? (
+													<CheckIcon className="size-4 text-green-500" />
+												) : (
+													<CopyIcon className="size-4" />
 												)}
-											>
-												{isSelected && (
-													<div className="size-2 rounded-full bg-white" />
-												)}
-											</div>
+												<span className="ml-1">{copied ? "Copied" : "Copy"}</span>
+											</Button>
 										</div>
-									</CardHeader>
-								</Card>
-							);
-						})}
-					</div>
+										<code className="block break-all rounded bg-background p-3 font-mono text-sm">
+											{generatedToken}
+										</code>
+									</div>
+									<div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950">
+										<p className="text-sm text-yellow-800 dark:text-yellow-200">
+											<strong>Important:</strong> Save this API key now. You won't be able to
+											see it again after leaving this page.
+										</p>
+									</div>
+								</div>
+							)}
+						</CardContent>
+					</Card>
 				</div>
 			</div>
 
@@ -200,8 +178,7 @@ export function AuthStep({
 				<div className="mx-auto flex max-w-3xl justify-end">
 					<Button
 						onClick={handleContinue}
-						loading={configureAuthMutation.isPending}
-						disabled={!selectedAuth}
+						disabled={!generatedToken}
 					>
 						Continue to Deploy
 					</Button>

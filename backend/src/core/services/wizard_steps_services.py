@@ -82,7 +82,6 @@ class WizardStepsService:
                 },
             ],
             response_format=list[Tool],
-            timeout=settings.POLLING_TIMEOUT,
         )
         parsed: list[Tool] = response.choices[0].message.parsed
 
@@ -136,7 +135,6 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ],
             response_format=list[Tool],
-            timeout=settings.POLLING_TIMEOUT,
         )
         parsed: list[Tool] = response.choices[0].message.parsed
 
@@ -191,7 +189,6 @@ class WizardStepsService:
                 },
             ],
             response_format=list[EnvVar],
-            timeout=settings.POLLING_TIMEOUT,
         )
         parsed: list[EnvVar] = response.choices[0].message.parsed
 
@@ -236,7 +233,6 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ],
             response_format=list[EnvVar],
-            timeout=settings.POLLING_TIMEOUT,
         )
         parsed: list[EnvVar] = response.choices[0].message.parsed
 

@@ -7,6 +7,7 @@ import { ActionsStep } from "@/components/wizard/actions-step";
 import { AuthStep } from "@/components/wizard/auth-step";
 import { CompleteStep } from "@/components/wizard/complete-step";
 import { DeployStep } from "@/components/wizard/deploy-step";
+import { EnvVarsStep } from "@/components/wizard/env-vars-step";
 import { StepZeroChat } from "@/components/wizard/step-zero-chat";
 import { WizardProcessingBanner } from "@/components/wizard/wizard-processing-banner";
 import { WizardStepIndicator } from "@/components/wizard/wizard-step-indicator";
@@ -15,7 +16,7 @@ import { useWizardPolling, useWizardSessions } from "@/hooks/use-wizard-sessions
 import {
 	ProcessingStatus,
 	WizardStep,
-	type WizardAuthType,
+	type WizardEnvVar,
 	type WizardMessage,
 	type WizardTool,
 } from "@/schemas/wizard-schemas";
@@ -34,8 +35,9 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	const [serverId, setServerId] = useState<string | null>(null);
 	const [preWizardMessages, setPreWizardMessages] = useState<WizardMessage[]>([]);
 	const [suggestedTools, setSuggestedTools] = useState<WizardTool[]>([]);
-	const [selectedTools, setSelectedTools] = useState<string[]>([]);
-	const [authType, setAuthType] = useState<WizardAuthType | null>(null);
+	const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
+	const [suggestedEnvVars, setSuggestedEnvVars] = useState<WizardEnvVar[]>([]);
+	const [bearerToken, setBearerToken] = useState<string | null>(null);
 	const [serverUrl, setServerUrl] = useState<string | null>(null);
 	const [isStarting, setIsStarting] = useState(false);
 
@@ -72,6 +74,12 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				setSuggestedTools(wizardState.tools);
 			}
 		},
+		onEnvVarsReady: () => {
+			// Env vars are ready, update suggested env vars from server state
+			if (wizardState?.envVars) {
+				setSuggestedEnvVars(wizardState.envVars);
+			}
+		},
 	});
 
 	// Initialize from URL params or Python backend state
@@ -81,17 +89,18 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 			// map wizard_step to our local state
 			setCurrentStep(wizardState.wizardStep as WizardStep);
 			setSuggestedTools(wizardState.tools);
-			// Restore selectedTools from wizard state (array of tool names)
-			if (wizardState.selectedTools && wizardState.selectedTools.length > 0) {
-				setSelectedTools(wizardState.selectedTools);
+			// Restore selectedToolIds from wizard state (array of UUIDs)
+			if (wizardState.selectedToolIds && wizardState.selectedToolIds.length > 0) {
+				setSelectedToolIds(wizardState.selectedToolIds);
 			}
-			setAuthType(
-				wizardState.authType === "none" ||
-					wizardState.authType === "api_key" ||
-					wizardState.authType === "oauth"
-					? wizardState.authType
-					: null
-			);
+			// Restore env vars
+			if (wizardState.envVars) {
+				setSuggestedEnvVars(wizardState.envVars);
+			}
+			// Restore bearer token
+			if (wizardState.bearerToken) {
+				setBearerToken(wizardState.bearerToken);
+			}
 			setServerUrl(wizardState.serverUrl);
 		}
 	}, [urlServerId, wizardState]);
@@ -107,21 +116,12 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 
 				setServerId(result.serverId);
 
-				// Calculate next step - if processing, go to DESCRIBE, else ACTIONS
-				const nextStep = result.status === "processing"
-					? WizardStep.describe
-					: WizardStep.actions;
+				// Always go to DESCRIBE step first (backend processes in background)
+				setCurrentStep(WizardStep.describe);
 
-				setCurrentStep(nextStep);
-
-				if (nextStep === WizardStep.actions) {
-					setSuggestedTools(result.tools);
-					setSelectedTools(result.tools.map((tool) => tool.name));
-				} else {
-					// Add to in-progress sessions for async tracking
-					// User can navigate away and return later
-					addWizardSession(result.serverId, description);
-				}
+				// Add to in-progress sessions for async tracking
+				// User can navigate away and return later
+				addWizardSession(result.serverId, description);
 
 				// Update URL with server ID for resumability
 				router.replace(`/dashboard/organization/new-mcp-server?serverId=${result.serverId}`);
@@ -139,10 +139,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		setPreWizardMessages(messages);
 	}, []);
 
-	// Handle tools selected - transition to AUTH
-	const handleToolsSelected = useCallback((tools: string[]) => {
-		setSelectedTools(tools);
-		setCurrentStep(WizardStep.auth);
+	// Handle tools submitted - transition to ENV_VARS
+	const handleToolsSubmitted = useCallback((toolIds: string[]) => {
+		setSelectedToolIds(toolIds);
+		setCurrentStep(WizardStep.envVars);
 	}, []);
 
 	// Handle tools refined
@@ -150,9 +150,19 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		setSuggestedTools(newTools);
 	}, []);
 
+	// Handle env vars submitted - transition to AUTH
+	const handleEnvVarsSubmitted = useCallback(() => {
+		setCurrentStep(WizardStep.auth);
+	}, []);
+
+	// Handle env vars refined
+	const handleEnvVarsRefined = useCallback((newEnvVars: WizardEnvVar[]) => {
+		setSuggestedEnvVars(newEnvVars);
+	}, []);
+
 	// Handle auth configured - transition to DEPLOY
-	const handleAuthConfigured = useCallback((type: WizardAuthType) => {
-		setAuthType(type);
+	const handleAuthConfigured = useCallback((token: string) => {
+		setBearerToken(token);
 		setCurrentStep(WizardStep.deploy);
 	}, []);
 
@@ -288,24 +298,36 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					<ActionsStep
 						serverId={serverId}
 						suggestedTools={suggestedTools}
-						onToolsSelected={handleToolsSelected}
+						onToolsSubmitted={handleToolsSubmitted}
 						onRefine={handleToolsRefined}
+					/>
+				)}
+
+				{currentStep === WizardStep.envVars && serverId && (
+					<EnvVarsStep
+						serverId={serverId}
+						suggestedEnvVars={suggestedEnvVars}
+						isProcessing={isProcessing}
+						onEnvVarsSubmitted={handleEnvVarsSubmitted}
+						onRefine={handleEnvVarsRefined}
 					/>
 				)}
 
 				{currentStep === WizardStep.auth && serverId && (
 					<AuthStep
 						serverId={serverId}
-						selectedTools={selectedTools}
+						selectedToolIds={selectedToolIds}
+						suggestedTools={suggestedTools}
 						onAuthConfigured={handleAuthConfigured}
 					/>
 				)}
 
-				{currentStep === WizardStep.deploy && serverId && authType && (
+				{currentStep === WizardStep.deploy && serverId && bearerToken && (
 					<DeployStep
 						serverId={serverId}
-						selectedTools={selectedTools}
-						authType={authType}
+						selectedToolIds={selectedToolIds}
+						suggestedTools={suggestedTools}
+						bearerToken={bearerToken}
 						onServerActivated={handleServerActivated}
 					/>
 				)}

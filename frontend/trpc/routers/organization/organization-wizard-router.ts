@@ -4,20 +4,30 @@ import {
 	configureWizardAuth,
 	generateWizardCode,
 	getWizardState,
+	getWizardTools,
 	refineWizardActions,
 	retryToolGeneration,
-	selectWizardTools,
+	submitWizardTools,
 	startWizard,
+	suggestEnvVars,
+	getEnvVars,
+	refineEnvVars,
+	submitEnvVars,
 } from "@/lib/python-backend";
 import {
 	activateServerSchema,
 	configureWizardAuthSchema,
 	generateWizardCodeSchema,
 	getWizardStateSchema,
+	getWizardToolsSchema,
 	refineWizardActionsSchema,
 	retryWizardSchema,
-	selectWizardToolsSchema,
+	submitWizardToolsSchema,
 	startWizardSchema,
+	suggestEnvVarsSchema,
+	getEnvVarsSchema,
+	refineEnvVarsSchema,
+	submitEnvVarsSchema,
 } from "@/schemas/wizard-schemas";
 import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
 
@@ -52,16 +62,21 @@ export const organizationWizardRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const state = await getWizardState(input.serverId);
 
-			// Verify the wizard belongs to this organization
-			if (state.customerId !== ctx.organization.id) {
-				logger.warn(
-					{ serverId: input.serverId, organizationId: ctx.organization.id },
-					"Unauthorized wizard access attempt"
-				);
-				throw new Error("Unauthorized");
-			}
-
 			return state;
+		}),
+
+	// Get wizard tools
+	getTools: protectedOrganizationProcedure
+		.input(getWizardToolsSchema)
+		.query(async ({ ctx, input }) => {
+			const result = await getWizardTools(input.serverId);
+
+			logger.info(
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
+				"Wizard tools fetched"
+			);
+
+			return result;
 		}),
 
 	// Refine suggested tools based on feedback
@@ -71,7 +86,7 @@ export const organizationWizardRouter = createTRPCRouter({
 			const result = await refineWizardActions({
 				serverId: input.serverId,
 				feedback: input.feedback,
-				description: input.description,
+				toolIds: input.toolIds,
 			});
 
 			logger.info(
@@ -82,35 +97,96 @@ export const organizationWizardRouter = createTRPCRouter({
 			return result;
 		}),
 
-	// Select tools (transitions wizard from ACTIONS to AUTH)
-	selectTools: protectedOrganizationProcedure
-		.input(selectWizardToolsSchema)
+	// Submit selected tools (transitions wizard from ACTIONS to ENV_VARS)
+	submitTools: protectedOrganizationProcedure
+		.input(submitWizardToolsSchema)
 		.mutation(async ({ ctx, input }) => {
-			const result = await selectWizardTools({
+			const result = await submitWizardTools({
 				serverId: input.serverId,
-				selectedToolNames: input.selectedToolNames,
+				selectedToolIds: input.selectedToolIds,
 			});
 
 			logger.info(
-				{ serverId: input.serverId, tools: input.selectedToolNames, organizationId: ctx.organization.id },
-				"Wizard tools selected"
+				{ serverId: input.serverId, toolIds: input.selectedToolIds, organizationId: ctx.organization.id },
+				"Wizard tools submitted"
+			);
+
+			return result;
+		}),
+
+	// Suggest environment variables
+	suggestEnvVars: protectedOrganizationProcedure
+		.input(suggestEnvVarsSchema)
+		.mutation(async ({ ctx, input }) => {
+			const result = await suggestEnvVars(input.serverId);
+
+			logger.info(
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
+				"Env vars suggestion triggered"
+			);
+
+			return result;
+		}),
+
+	// Get environment variables
+	getEnvVars: protectedOrganizationProcedure
+		.input(getEnvVarsSchema)
+		.query(async ({ ctx, input }) => {
+			const result = await getEnvVars(input.serverId);
+
+			logger.info(
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
+				"Env vars fetched"
+			);
+
+			return result;
+		}),
+
+	// Refine environment variables based on feedback
+	refineEnvVars: protectedOrganizationProcedure
+		.input(refineEnvVarsSchema)
+		.mutation(async ({ ctx, input }) => {
+			const result = await refineEnvVars({
+				serverId: input.serverId,
+				feedback: input.feedback,
+			});
+
+			logger.info(
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
+				"Env vars refined"
+			);
+
+			return result;
+		}),
+
+	// Submit environment variable values
+	submitEnvVars: protectedOrganizationProcedure
+		.input(submitEnvVarsSchema)
+		.mutation(async ({ ctx, input }) => {
+			const result = await submitEnvVars({
+				serverId: input.serverId,
+				values: input.values,
+			});
+
+			logger.info(
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
+				"Env vars submitted"
 			);
 
 			return result;
 		}),
 
 	// Configure auth (transitions wizard from AUTH to DEPLOY)
+	// Returns bearer token for API access
 	configureAuth: protectedOrganizationProcedure
 		.input(configureWizardAuthSchema)
 		.mutation(async ({ ctx, input }) => {
 			const result = await configureWizardAuth({
 				serverId: input.serverId,
-				authType: input.authType,
-				authConfig: input.authConfig,
 			});
 
 			logger.info(
-				{ serverId: input.serverId, authType: input.authType, organizationId: ctx.organization.id },
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
 				"Wizard auth configured"
 			);
 

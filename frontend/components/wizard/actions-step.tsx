@@ -20,7 +20,7 @@ import { trpc } from "@/trpc/client";
 interface ActionsStepProps {
 	serverId: string;
 	suggestedTools: WizardTool[];
-	onToolsSelected: (tools: string[]) => void;
+	onToolsSubmitted: (toolIds: string[]) => void;
 	onRefine: (newTools: WizardTool[]) => void;
 }
 
@@ -29,20 +29,21 @@ const MAX_FREE_TOOLS = 3;
 export function ActionsStep({
 	serverId,
 	suggestedTools,
-	onToolsSelected,
+	onToolsSubmitted,
 	onRefine,
 }: ActionsStepProps) {
-	const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
+	// Track selected tools by their UUID
+	const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
 	const [feedback, setFeedback] = useState("");
 	const [isRefining, setIsRefining] = useState(false);
 
-	const selectToolsMutation = trpc.organization.wizard.selectTools.useMutation();
+	const submitToolsMutation = trpc.organization.wizard.submitTools.useMutation();
 	const refineActionsMutation = trpc.organization.wizard.refineActions.useMutation();
 
-	const toggleTool = (toolName: string) => {
-		const newSelected = new Set(selectedTools);
-		if (newSelected.has(toolName)) {
-			newSelected.delete(toolName);
+	const toggleTool = (toolId: string) => {
+		const newSelected = new Set(selectedToolIds);
+		if (newSelected.has(toolId)) {
+			newSelected.delete(toolId);
 		} else {
 			if (newSelected.size >= MAX_FREE_TOOLS) {
 				toast.error(`Maximum ${MAX_FREE_TOOLS} tools allowed`, {
@@ -50,9 +51,9 @@ export function ActionsStep({
 				});
 				return;
 			}
-			newSelected.add(toolName);
+			newSelected.add(toolId);
 		}
-		setSelectedTools(newSelected);
+		setSelectedToolIds(newSelected);
 	};
 
 	const handleRefine = async () => {
@@ -66,10 +67,11 @@ export function ActionsStep({
 			const result = await refineActionsMutation.mutateAsync({
 				serverId,
 				feedback: feedback.trim(),
+				toolIds: selectedToolIds.size > 0 ? Array.from(selectedToolIds) : undefined,
 			});
 			onRefine(result.suggestedTools);
 			setFeedback("");
-			setSelectedTools(new Set());
+			setSelectedToolIds(new Set());
 			toast.success("Tools refined based on your feedback");
 		} catch (_error) {
 			toast.error("Failed to refine tools");
@@ -79,19 +81,19 @@ export function ActionsStep({
 	};
 
 	const handleContinue = async () => {
-		if (selectedTools.size === 0) {
+		if (selectedToolIds.size === 0) {
 			toast.error("Please select at least one tool");
 			return;
 		}
 
 		try {
-			await selectToolsMutation.mutateAsync({
+			await submitToolsMutation.mutateAsync({
 				serverId,
-				selectedToolNames: Array.from(selectedTools),
+				selectedToolIds: Array.from(selectedToolIds),
 			});
-			onToolsSelected(Array.from(selectedTools));
+			onToolsSubmitted(Array.from(selectedToolIds));
 		} catch (_error) {
-			toast.error("Failed to select tools");
+			toast.error("Failed to submit tools");
 		}
 	};
 
@@ -111,15 +113,15 @@ export function ActionsStep({
 					{/* Tool Cards */}
 					<div className="grid gap-4 md:grid-cols-2">
 						{suggestedTools.map((tool) => {
-							const isSelected = selectedTools.has(tool.name);
+							const isSelected = selectedToolIds.has(tool.id);
 							return (
 								<Card
-									key={tool.name}
+									key={tool.id}
 									className={cn(
 										"cursor-pointer transition-all hover:shadow-md",
 										isSelected && "border-primary ring-2 ring-primary/20"
 									)}
-									onClick={() => toggleTool(tool.name)}
+									onClick={() => toggleTool(tool.id)}
 								>
 									<CardHeader className="pb-2">
 										<div className="flex items-start justify-between">
@@ -154,7 +156,7 @@ export function ActionsStep({
 					{/* Selection Counter */}
 					<div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
 						<span>
-							{selectedTools.size} / {MAX_FREE_TOOLS} tools selected
+							{selectedToolIds.size} / {MAX_FREE_TOOLS} tools selected
 						</span>
 					</div>
 
@@ -198,10 +200,10 @@ export function ActionsStep({
 				<div className="mx-auto flex max-w-4xl justify-end">
 					<Button
 						onClick={handleContinue}
-						loading={selectToolsMutation.isPending}
-						disabled={selectedTools.size === 0}
+						loading={submitToolsMutation.isPending}
+						disabled={selectedToolIds.size === 0}
 					>
-						Continue to Authentication
+						Continue to Environment Variables
 					</Button>
 				</div>
 			</div>

@@ -123,6 +123,7 @@ export function useWizardPolling(
 	options?: {
 		onComplete?: (step: WizardStep) => void;
 		onToolsReady?: () => void;
+		onEnvVarsReady?: () => void;
 		onError?: (error: string) => void;
 		onNetworkError?: (error: unknown) => void;
 		enabled?: boolean;
@@ -133,20 +134,23 @@ export function useWizardPolling(
 	// Use refs to store callbacks to avoid infinite loops
 	const onCompleteRef = useRef(options?.onComplete);
 	const onToolsReadyRef = useRef(options?.onToolsReady);
+	const onEnvVarsReadyRef = useRef(options?.onEnvVarsReady);
 	const onErrorRef = useRef(options?.onError);
 	const onNetworkErrorRef = useRef(options?.onNetworkError);
 
 	// Track what we've already notified to prevent duplicate calls
 	const notifiedRef = useRef<{
 		toolsReady: boolean;
+		envVarsReady: boolean;
 		error: string | null;
 		completedStep: string | null;
-	}>({ toolsReady: false, error: null, completedStep: null });
+	}>({ toolsReady: false, envVarsReady: false, error: null, completedStep: null });
 
 	// Update refs when callbacks change
 	useEffect(() => {
 		onCompleteRef.current = options?.onComplete;
 		onToolsReadyRef.current = options?.onToolsReady;
+		onEnvVarsReadyRef.current = options?.onEnvVarsReady;
 		onErrorRef.current = options?.onError;
 		onNetworkErrorRef.current = options?.onNetworkError;
 	});
@@ -170,7 +174,7 @@ export function useWizardPolling(
 
 	// Reset notification tracking when serverId changes
 	useEffect(() => {
-		notifiedRef.current = { toolsReady: false, error: null, completedStep: null };
+		notifiedRef.current = { toolsReady: false, envVarsReady: false, error: null, completedStep: null };
 	}, [serverId]);
 
 	// Handle all notifications in a single effect based on data changes
@@ -187,6 +191,16 @@ export function useWizardPolling(
 		) {
 			notifiedRef.current.toolsReady = true;
 			onToolsReadyRef.current?.();
+		}
+
+		// Notify when env vars are ready (only once)
+		if (
+			wizard_step === WizardStep.envVars &&
+			processing_status === ProcessingStatus.idle &&
+			!notifiedRef.current.envVarsReady
+		) {
+			notifiedRef.current.envVarsReady = true;
+			onEnvVarsReadyRef.current?.();
 		}
 
 		// Notify when processing fails (only once per error)
