@@ -11,7 +11,7 @@ from infrastructure.models.mcp_server import (
     MCPServerStatus,
     MCPTool,
     ProcessingStatus,
-    WizardStep,
+    WizardStep, MCPEnvironmentVariable,
 )
 from infrastructure.repositories.base import BaseCRUDRepo
 
@@ -255,3 +255,23 @@ class MCPToolRepo(BaseCRUDRepo[MCPTool, MCPToolCreate, MCPToolUpdate]):
                 await session.commit()
                 return True
             return False
+
+
+class MCPEnvironmentVariableCreate(BaseModel):
+    server_id: UUID
+    name: str
+    description: str
+    value: str | None = None
+
+
+class MCPEnvironmentVariableUpdate(BaseModel):
+    name: str
+    description: str
+    value: str
+
+
+class MCPEnvironmentVariableRepo(
+    BaseCRUDRepo[MCPEnvironmentVariable, MCPEnvironmentVariableCreate, MCPEnvironmentVariableUpdate]
+):
+    def __init__(self, db: Database):
+        super().__init__(db, MCPEnvironmentVariable)

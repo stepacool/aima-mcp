@@ -55,11 +55,9 @@ class MCPServer(CustomBase):
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
+    env_vars
 
     prompts: Mapped[list["MCPPrompt"]] = relationship(
-        back_populates="server", cascade="all, delete-orphan"
-    )
-    chat_sessions: Mapped[list["ChatSession"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
     deployment: Mapped[Optional["Deployment"]] = relationship(
@@ -99,11 +97,8 @@ class MCPTool(CustomBase):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    parameters_schema: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    parameters_schema: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
     code: Mapped[str] = mapped_column(Text, nullable=False)
-    is_validated: Mapped[bool] = mapped_column(default=False, nullable=False)
-    validation_errors: Mapped[Optional[list[str]]] = mapped_column(JSONB, nullable=True)
-
     server: Mapped["MCPServer"] = relationship(back_populates="tools")
 
 
@@ -126,10 +121,8 @@ class MCPPrompt(CustomBase):
     server: Mapped["MCPServer"] = relationship(back_populates="prompts")
 
 
-class ChatSession(CustomBase):
-    """Stores chat history for interactive MCP server creation."""
-
-    __tablename__ = "chat_sessions"
+class MCPEnvironmentVariable(CustomBase):
+    __tablename__ = "mcp_environment_variables"
 
     server_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -137,8 +130,7 @@ class ChatSession(CustomBase):
         nullable=False,
         index=True,
     )
-    messages: Mapped[list[dict[str, Any]]] = mapped_column(
-        JSONB, default=list, nullable=False
-    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
 
-    server: Mapped["MCPServer"] = relationship(back_populates="chat_sessions")
+    value: Mapped[str] = mapped_column(Text, nullable=True)

@@ -4,7 +4,7 @@ from infrastructure.repositories.deployment import (
     DeploymentArtifactRepo,
     DeploymentRepo,
 )
-from infrastructure.repositories.mcp_server import MCPServerRepo, MCPToolRepo
+from infrastructure.repositories.mcp_server import MCPServerRepo, MCPToolRepo, MCPEnvironmentVariableRepo
 
 
 class Provider:
@@ -14,6 +14,7 @@ class Provider:
     _customer_repo: None | CustomerRepo = None
     _deployment_repo: None | DeploymentRepo = None
     _deployment_artifact_repo: None | DeploymentArtifactRepo = None
+    _environment_variable_repo: None | MCPEnvironmentVariableRepo = None
 
     @classmethod
     def get_db(cls, **overrides):
@@ -56,3 +57,9 @@ class Provider:
         if cls._deployment_artifact_repo is None:
             cls._deployment_artifact_repo = DeploymentArtifactRepo(cls.get_db())
         return cls._deployment_artifact_repo
+
+    @classmethod
+    def environment_variable_repo(cls) -> MCPEnvironmentVariableRepo:
+        if cls._environment_variable_repo is None:
+            cls._environment_variable_repo = MCPEnvironmentVariableRepo(cls.get_db())
+        return cls._environment_variable_repo

@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 from core.services import get_tool_loader
-from infrastructure.repositories.mcp_server import MCPToolCreate
+from infrastructure.repositories.mcp_server import MCPToolCreate, MCPEnvironmentVariableCreate
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
 
@@ -34,10 +34,7 @@ class Tool(BaseModel):
 
 class EnvVar(BaseModel):
     name: str
-    type: str
-    required: bool
     description: str
-    secret: bool
 
 
 def load_prompt(filename: str):
@@ -153,6 +150,15 @@ class WizardStepsService:
         )
         parsed: list[EnvVar] = response.choices[0].message.parsed
 
+        create_payloads = []
+        for tool in parsed:
+            create_payloads.append(MCPEnvironmentVariableCreate(
+                server_id=mcp_server_id,
+                name=tool.name,
+                description=tool.description,
+            ))
+        await Provider.environment_variable_repo().create_bulk(create_payloads)
+        return parsed
 
     async def step_2b_refine_suggested_environment_variables_for_mcp_server(
         self,
@@ -179,6 +185,7 @@ class WizardStepsService:
         """
         #TODO: create api_key_repo
         api_key = await Provider.api_key_repo().create()
+        #TODO:
 
     async def step_4_generate_code_for_tools_and_env_vars(
         self,

@@ -15,19 +15,13 @@ prompt: |
 
   For each environment variable specify:
   - name: environment variable name
-  - type: string | integer | boolean
-  - required: true | false
   - description: what this variable is for
-  - secret: true | false (true for API keys, passwords, tokens)
 
   Output ONLY valid JSON as an array, matching this exact schema:
 
   [
     {
       "name": "ENV_VAR_NAME",
-      "type": "string",
-      "required": true,
-      "secret": true,
       "description": "What this variable is used for"
     }
   ]
@@ -38,9 +32,6 @@ examples:
       [
         {
           "name": "GITHUB_TOKEN",
-          "type": "string",
-          "required": true,
-          "secret": true,
           "description": "GitHub personal access token used to authenticate API requests"
         }
       ]
@@ -50,16 +41,10 @@ examples:
       [
         {
           "name": "WEATHER_API_KEY",
-          "type": "string",
-          "required": true,
-          "secret": true,
           "description": "API key for the external weather data provider"
         },
         {
           "name": "WEATHER_API_BASE_URL",
-          "type": "string",
-          "required": false,
-          "secret": false,
           "description": "Base URL for the weather API (defaults to provider standard endpoint)"
         }
       ]
@@ -69,9 +54,6 @@ examples:
       [
         {
           "name": "DATABASE_URL",
-          "type": "string",
-          "required": true,
-          "secret": true,
           "description": "PostgreSQL connection string including credentials"
         }
       ]
@@ -81,16 +63,10 @@ examples:
       [
         {
           "name": "LOG_LEVEL",
-          "type": "string",
-          "required": false,
-          "secret": false,
           "description": "Logging level (debug, info, warning, error)"
         },
         {
           "name": "DEBUG",
-          "type": "boolean",
-          "required": false,
-          "secret": false,
           "description": "Enable debug mode for additional logging"
         }
       ]
