@@ -161,7 +161,7 @@ export function ActionsStep({
 
 					{/* Tool Cards */}
 					<div className="grid gap-4 md:grid-cols-2">
-						{suggestedTools.map((tool) => {
+						{suggestedTools && suggestedTools.map((tool) => {
 							const isSelected = selectedToolIds.has(tool.id);
 							return (
 								<Card

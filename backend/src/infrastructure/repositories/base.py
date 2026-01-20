@@ -1,5 +1,6 @@
 import datetime
 from typing import Generic, TypeVar
+from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import delete, select
@@ -70,7 +71,7 @@ class BaseCRUDRepo(BaseRepo, Generic[ModelType, CreateSchemaType, UpdateSchemaTy
                 await session.refresh(db_obj)
             return db_objs
 
-    async def get(self, id: int) -> ModelType | None:
+    async def get(self, id: UUID) -> ModelType | None:
         async with self.db.session() as session:
             result = await session.execute(
                 select(self.model).where(self.model.id == id)

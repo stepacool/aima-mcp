@@ -52,9 +52,11 @@ class EnvVarsResponse(BaseModel):
     env_vars: list[EnvVar]
 
 
-def load_prompt(filename: str):
+def load_prompt(filename: str, as_string=True):
     try:
         with open(PROMPTS_DIR / filename, 'r') as file:
+            if as_string:
+                return file.read()
             prompt_data = yaml.full_load(file)
             return prompt_data
     except (FileNotFoundError, yaml.YAMLError) as e:
@@ -142,6 +144,7 @@ class WizardStepsService:
         await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.tools_generating
         )
+        server = await Provider.mcp_server_repo().get(mcp_server_id)
 
         try:
             server_tools = await Provider.mcp_tool_repo().get_tools_for_server(
@@ -158,7 +161,7 @@ class WizardStepsService:
 
             system_prompt = load_prompt(prompt_file)
             user_content = (
-                f"Current tools:\n{tools_description}\n\nUser feedback:\n{feedback}"
+                f"Server description:\n{server.description}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}"
             )
 
             response = await openai_client.chat.completions.parse(
