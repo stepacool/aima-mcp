@@ -48,6 +48,12 @@ def load_prompt(filename: str):
 
 
 class WizardStepsService:
+    """
+    Class encapsulating steps of MCPServer creation.
+    Main logic revolves around generating tools/code with AI and moving setup_status accordingly as it gets approved.
+    Core idea is for any current state to be present in database, recoverable from point in time, no browser-session temporary state.
+    methods that include LLMs should always be background_jobs spawned, not sync, as they take time.
+    """
     def __init__(
         self,
         server_repo,
@@ -121,7 +127,7 @@ class WizardStepsService:
         selected_tool_ids: list[UUID],
     ):
         """
-        Transition selected tools to non-draft state, delete the other tools of the MCP server
+        Transition mcp server to another setup_status, delete the other tools of the MCP server(that didn't get selected)
         """
         ...
 
@@ -133,7 +139,6 @@ class WizardStepsService:
         """
         Long running background job
         Suggest state for the mcp server that is required to be filled by user to run it.
-        A flat json/pydantic model - for example db creds, API key or anything else.
         Prefer DB_URI over 5-6 vars for db connection and always prefer less creds if possible.
         """
         system_prompt = load_prompt(prompt_file)
@@ -167,13 +172,20 @@ class WizardStepsService:
     ) -> list[EnvVar]:
         """
         Long running background job
-        if 2a's suggested vars were bad for any reason, re-send them to LLM to re-fine
+        if 2a's suggested vars were bad for any reason, re-send them to LLM to refine
         """
 
     async def step_2c_submit_variables(
         self,
-        variables: dict[str, Any],
+        mcp_server_id: UUID,
+        values: dict[UUID, str],
     ):
+        """
+        Set setup-status accordingly here,
+        values are sent as pairs of variable ID(in db) and values, update each var.
+        :param variables:
+        :return:
+        """
         ...
 
     async def step_3_set_header_auth(
@@ -183,9 +195,8 @@ class WizardStepsService:
         """
         sets header auth to MCP server, generates a Bearer token and returns it.
         """
-        #TODO: create api_key_repo
+        #TODO: create api_key_repo, create an api key
         api_key = await Provider.api_key_repo().create()
-        #TODO:
 
     async def step_4_generate_code_for_tools_and_env_vars(
         self,
