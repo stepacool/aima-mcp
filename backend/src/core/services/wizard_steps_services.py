@@ -51,17 +51,9 @@ class WizardStepsService:
     """
     Class encapsulating steps of MCPServer creation.
     Main logic revolves around generating tools/code with AI and moving setup_status accordingly as it gets approved.
-    Core idea is for any current state to be present in database, recoverable from point in time, no browser-session temporary state.
+    Core idea is for any current state to be present in database, no browser-session temporary state.
     methods that include LLMs should always be background_jobs spawned, not sync, as they take time.
     """
-    def __init__(
-        self,
-        server_repo,
-        tool_repo,
-    ):
-        self.server_repo = server_repo
-        self.tool_repo = tool_repo
-        self.tool_loader = get_tool_loader()
 
     async def step_1a_suggest_tools_for_mcp_server(
         self,
