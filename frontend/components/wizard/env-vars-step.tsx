@@ -25,6 +25,7 @@ interface EnvVarsStepProps {
 	onEnvVarsSubmitted: () => void;
 	onRefine: (newEnvVars: WizardEnvVar[]) => void;
 	onRetry?: () => void;
+	onRefetchState?: () => void;
 }
 
 export function EnvVarsStep({
@@ -35,6 +36,7 @@ export function EnvVarsStep({
 	onEnvVarsSubmitted,
 	onRefine,
 	onRetry,
+	onRefetchState,
 }: EnvVarsStepProps) {
 	// Track env var values by their UUID
 	const [envVarValues, setEnvVarValues] = useState<Record<string, string>>({});
@@ -66,6 +68,9 @@ export function EnvVarsStep({
 			onRefine(result.envVars);
 			setFeedback("");
 			setEnvVarValues({});
+			// Refetch wizard state to pick up any async processing status
+			// This ensures polling continues if backend started async refinement
+			onRefetchState?.();
 			toast.success("Environment variables refined based on your feedback");
 		} catch (_error) {
 			toast.error("Failed to refine environment variables");

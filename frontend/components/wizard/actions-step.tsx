@@ -26,6 +26,7 @@ interface ActionsStepProps {
 	onToolsSubmitted: (toolIds: string[]) => void;
 	onRefine: (newTools: WizardTool[]) => void;
 	onRetry?: () => void;
+	onRefetchState?: () => void;
 }
 
 const MAX_FREE_TOOLS = 3;
@@ -38,6 +39,7 @@ export function ActionsStep({
 	onToolsSubmitted,
 	onRefine,
 	onRetry,
+	onRefetchState,
 }: ActionsStepProps) {
 	// Track selected tools by their UUID
 	const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
@@ -121,6 +123,9 @@ export function ActionsStep({
 			onRefine(result.suggestedTools);
 			setFeedback("");
 			setSelectedToolIds(new Set());
+			// Refetch wizard state to pick up any async processing status
+			// This ensures polling continues if backend started async refinement
+			onRefetchState?.();
 			toast.success("Tools refined based on your feedback");
 		} catch (_error) {
 			toast.error("Failed to refine tools");

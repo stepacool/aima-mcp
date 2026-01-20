@@ -256,6 +256,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						onToolsSubmitted={handleToolsSubmitted}
 						onRefine={handleToolsRefined}
 						onRetry={handleRetry}
+						onRefetchState={refetch}
 					/>
 				)}
 
@@ -268,6 +269,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						onEnvVarsSubmitted={handleEnvVarsSubmitted}
 						onRefine={handleEnvVarsRefined}
 						onRetry={handleRetry}
+						onRefetchState={refetch}
 					/>
 				)}
 
