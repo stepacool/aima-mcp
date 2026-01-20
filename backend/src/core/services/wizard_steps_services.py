@@ -177,11 +177,18 @@ class WizardStepsService:
         """
         sets header auth to MCP server, generates a Bearer token and returns it.
         """
+        #TODO: create api_key_repo
+        api_key = await Provider.api_key_repo().create()
 
     async def step_4_generate_code_for_tools_and_env_vars(
         self,
         mcp_server_id: UUID,
     ):
+        """
+        Using the description of the server, all the function definitions and env vars provided,
+        generate code, envs should be utilized and hardcoded into functions.
+        If there's DB_URL in envs, write it in the connector code etc.
+        """
         ...
 
     async def step_5_deploy_to_shared(

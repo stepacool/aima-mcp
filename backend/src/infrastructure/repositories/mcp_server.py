@@ -40,8 +40,6 @@ class MCPToolCreate(BaseModel):
     description: str
     parameters_schema: dict[str, Any]
     code: str = ""
-    is_validated: bool = False
-    validation_errors: list[str] | None = None
 
 
 class MCPToolUpdate(BaseModel):
@@ -49,8 +47,6 @@ class MCPToolUpdate(BaseModel):
     description: str | None = None
     parameters_schema: dict[str, Any] | None = None
     code: str | None = None
-    is_validated: bool | None = None
-    validation_errors: list[str] | None = None
 
 
 class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
