@@ -198,6 +198,8 @@ class WizardStepsService:
         self,
         mcp_server_id: UUID,
         selected_tool_ids: list[UUID],
+        #TODO: remove this override when suggest is called normally.
+        setup_status_override: MCPServerSetupStatus | None = None,
     ) -> None:
         """
         Transition mcp server to another setup_status, delete the other tools
@@ -206,8 +208,14 @@ class WizardStepsService:
         await Provider.mcp_tool_repo().delete_tools_not_in_list(
             mcp_server_id, selected_tool_ids
         )
+        if setup_status_override:
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id,
+                setup_status_override,
+            )
         await Provider.mcp_server_repo().update_setup_status(
-            mcp_server_id, MCPServerSetupStatus.env_vars_setup
+            mcp_server_id,
+            MCPServerSetupStatus.env_vars_setup,
         )
 
     async def step_2a_suggest_environment_variables_for_mcp_server(

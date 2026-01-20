@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from core.services.tier_service import FREE_TIER_MAX_TOOLS
 from core.services.wizard_steps_services import WizardStepsService
+from infrastructure.models.mcp_server import MCPServerSetupStatus
 from infrastructure.repositories.repo_provider import Provider
 
 router = APIRouter()
@@ -211,6 +212,7 @@ async def submit_tools(
         await service.step_1c_submit_selected_tools(
             mcp_server_id=server_id,
             selected_tool_ids=request.selected_tool_ids,
+            setup_status_override=MCPServerSetupStatus.env_vars_generating,
         )
         background_tasks.add_task(
             service.step_2a_suggest_environment_variables_for_mcp_server,
