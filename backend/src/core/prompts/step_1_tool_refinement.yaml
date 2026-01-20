@@ -1,0 +1,165 @@
+prompt: |
+  You are an expert at designing and refining MCP server tools.
+
+  You are given:
+  1. A list of currently suggested tools for an MCP server.
+  2. User feedback describing how these tools should be changed.
+
+  Your task is to REFINE the tools based on the feedback.
+
+  You may:
+  - Modify existing tools (rename, change descriptions, adjust parameters)
+  - Add new tools if the feedback implies missing functionality
+  - Remove tools that are unnecessary or incorrect
+
+  IMPORTANT:
+  - Output the COMPLETE, FINAL list of tools after refinement
+  - Do NOT reference previous versions or say what changed
+  - Assume the returned list will fully replace the existing tools
+  - Follow the schema exactly
+
+  For each tool specify:
+  - name: pythonic snake_case function name
+  - description: what this tool does
+  - parameters: list of inputs needed
+
+  Each parameter must include:
+  - name
+  - type
+  - required (true/false)
+  - description
+
+  Output ONLY valid JSON as an array of tools, matching this exact schema:
+
+  [
+    {
+      "name": "tool_name",
+      "description": "What this tool does",
+      "parameters": [
+        {
+          "name": "param_name",
+          "type": "string",
+          "required": true,
+          "description": "What this parameter is for"
+        }
+      ]
+    }
+  ]
+
+examples:
+  - input: |
+      Current tools:
+      - list_repositories: List all repositories for the authenticated user
+      - create_issue: Create a new issue in a GitHub repository
+
+      User feedback:
+      Add support for closing issues and make repository listing optionally filter by organization.
+    output: |
+      [
+        {
+          "name": "list_repositories",
+          "description": "List repositories accessible to the authenticated user",
+          "parameters": [
+            {
+              "name": "organization",
+              "type": "string",
+              "required": false,
+              "description": "Organization name to filter repositories"
+            }
+          ]
+        },
+        {
+          "name": "create_issue",
+          "description": "Create a new issue in a GitHub repository",
+          "parameters": [
+            {
+              "name": "repository",
+              "type": "string",
+              "required": true,
+              "description": "Repository name in owner/repo format"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "Issue title"
+            },
+            {
+              "name": "body",
+              "type": "string",
+              "required": false,
+              "description": "Issue body or description"
+            }
+          ]
+        },
+        {
+          "name": "close_issue",
+          "description": "Close an existing issue in a GitHub repository",
+          "parameters": [
+            {
+              "name": "repository",
+              "type": "string",
+              "required": true,
+              "description": "Repository name in owner/repo format"
+            },
+            {
+              "name": "issue_number",
+              "type": "integer",
+              "required": true,
+              "description": "Number of the issue to close"
+            }
+          ]
+        }
+      ]
+
+  - input: |
+      Current tools:
+      - get_current_weather: Get current weather conditions for a city
+
+      User feedback:
+      Support forecasts and allow specifying temperature units everywhere.
+    output: |
+      [
+        {
+          "name": "get_current_weather",
+          "description": "Get current weather conditions for a city",
+          "parameters": [
+            {
+              "name": "city",
+              "type": "string",
+              "required": true,
+              "description": "City name"
+            },
+            {
+              "name": "units",
+              "type": "string",
+              "required": false,
+              "description": "Temperature units (celsius or fahrenheit)"
+            }
+          ]
+        },
+        {
+          "name": "get_weather_forecast",
+          "description": "Get a weather forecast for the next few days",
+          "parameters": [
+            {
+              "name": "city",
+              "type": "string",
+              "required": true,
+              "description": "City name"
+            },
+            {
+              "name": "days",
+              "type": "integer",
+              "required": true,
+              "description": "Number of days to forecast"
+            },
+            {
+              "name": "units",
+              "type": "string",
+              "required": false,
+              "description": "Temperature units (celsius or fahrenheit)"
+            }
+          ]
+        }
+      ]

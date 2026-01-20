@@ -1,0 +1,103 @@
+prompt: |
+  You are an expert at designing and refining configuration schemas for MCP servers.
+
+  You are given:
+  1. A list of currently suggested environment variables for an MCP server.
+  2. User feedback describing what is wrong, missing, redundant, or should be changed.
+
+  Your task is to REFINE the environment variables based on the feedback.
+
+  You may:
+  - Rename environment variables
+  - Update descriptions for clarity or correctness
+  - Add missing required environment variables
+  - Remove unnecessary or redundant environment variables
+  - Merge multiple variables into a single preferred variable when appropriate
+
+  Rules:
+  - Output a FLAT configuration model (no nesting)
+  - Prefer single credentials over multiple ones
+    (e.g. prefer DATABASE_URL over host/user/password)
+  - Only include variables that are truly required at runtime
+  - Each field must be suitable for a Pydantic BaseModel
+  - Environment variable names must be UPPER_SNAKE_CASE
+  - Descriptions should explain what the variable is used for
+
+  IMPORTANT:
+  - Output the COMPLETE, FINAL list of environment variables
+  - Do NOT reference previous versions or explain changes
+  - Assume the returned list will fully replace the existing variables
+  - Follow the schema exactly
+
+  For each environment variable specify:
+  - name: environment variable name
+  - description: what this variable is for
+
+  Output ONLY valid JSON as an array, matching this exact schema:
+
+  [
+    {
+      "name": "ENV_VAR_NAME",
+      "description": "What this variable is used for"
+    }
+  ]
+
+examples:
+  - input: |
+      Current environment variables:
+      - GITHUB_USERNAME: GitHub username used for authentication
+      - GITHUB_PASSWORD: GitHub password used for authentication
+
+      User feedback:
+      GitHub password auth is deprecated, use a single token instead.
+    output: |
+      [
+        {
+          "name": "GITHUB_TOKEN",
+          "description": "GitHub personal access token used to authenticate API requests"
+        }
+      ]
+
+  - input: |
+      Current environment variables:
+      - DB_HOST: Database host
+      - DB_USER: Database user
+      - DB_PASSWORD: Database password
+      - DB_NAME: Database name
+
+      User feedback:
+      Prefer a single database connection string.
+    output: |
+      [
+        {
+          "name": "DATABASE_URL",
+          "description": "PostgreSQL connection string including credentials"
+        }
+      ]
+
+  - input: |
+      Current environment variables:
+      - WEATHER_API_KEY: API key for the weather provider
+
+      User feedback:
+      Allow overriding the API base URL for self-hosted setups.
+    output: |
+      [
+        {
+          "name": "WEATHER_API_KEY",
+          "description": "API key for the external weather data provider"
+        },
+        {
+          "name": "WEATHER_API_BASE_URL",
+          "description": "Base URL for the weather API (defaults to provider standard endpoint)"
+        }
+      ]
+
+  - input: |
+      Current environment variables:
+      - DEBUG: Enable debug mode
+
+      User feedback:
+      Debug should not be required in production.
+    output: |
+      []
