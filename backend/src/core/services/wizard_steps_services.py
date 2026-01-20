@@ -19,7 +19,7 @@ openai_client = AsyncOpenAI(
     api_key=settings.OPENROUTER_API_KEY,
 )
 
-PROMPTS_DIR = Path(__name__).parent.parent / "prompts"
+PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 
 class ToolParameter(BaseModel):
@@ -38,6 +38,18 @@ class Tool(BaseModel):
 class EnvVar(BaseModel):
     name: str
     description: str
+
+
+class ToolsResponse(BaseModel):
+    """Wrapper for list[Tool] to support structured outputs."""
+
+    tools: list[Tool]
+
+
+class EnvVarsResponse(BaseModel):
+    """Wrapper for list[EnvVar] to support structured outputs."""
+
+    env_vars: list[EnvVar]
 
 
 def load_prompt(filename: str):
@@ -84,7 +96,7 @@ class WizardStepsService:
                 model="google/gemini-3-pro-preview",
                 messages=[
                     {
-                        "role": "developer",
+                        "role": "system",
                         "content": system_prompt,
                     },
                     {
@@ -92,9 +104,9 @@ class WizardStepsService:
                         "content": description,
                     },
                 ],
-                response_format=list[Tool],
+                response_format=ToolsResponse,
             )
-            parsed: list[Tool] = response.choices[0].message.parsed
+            parsed: list[Tool] = response.choices[0].message.parsed.tools
 
             create_payloads = []
             for tool in parsed:
@@ -103,7 +115,7 @@ class WizardStepsService:
                         server_id=mcp_server_id,
                         name=tool.name,
                         description=tool.description,
-                        parameters_schema=tool.parameters,
+                        parameters_schema=[p.dict() for p in tool.parameters],
                     )
                 )
             await Provider.mcp_tool_repo().create_bulk(create_payloads)
@@ -152,12 +164,12 @@ class WizardStepsService:
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
                 messages=[
-                    {"role": "developer", "content": system_prompt},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                response_format=list[Tool],
+                response_format=ToolsResponse,
             )
-            parsed: list[Tool] = response.choices[0].message.parsed
+            parsed: list[Tool] = response.choices[0].message.parsed.tools
 
             await Provider.mcp_tool_repo().delete_tools_for_server(mcp_server_id)
 
@@ -168,7 +180,7 @@ class WizardStepsService:
                         server_id=mcp_server_id,
                         name=tool.name,
                         description=tool.description,
-                        parameters_schema=tool.parameters,
+                        parameters_schema=[p.dict() for p in tool.parameters],
                     )
                 )
             await Provider.mcp_tool_repo().create_bulk(create_payloads)
@@ -217,13 +229,13 @@ class WizardStepsService:
                 model="google/gemini-3-pro-preview",
                 messages=[
                     {
-                        "role": "developer",
+                        "role": "system",
                         "content": system_prompt,
                     },
                 ],
-                response_format=list[EnvVar],
+                response_format=EnvVarsResponse,
             )
-            parsed: list[EnvVar] = response.choices[0].message.parsed
+            parsed: list[EnvVar] = response.choices[0].message.parsed.env_vars
 
             create_payloads = []
             for var in parsed:
@@ -276,12 +288,12 @@ class WizardStepsService:
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
                 messages=[
-                    {"role": "developer", "content": system_prompt},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                response_format=list[EnvVar],
+                response_format=EnvVarsResponse,
             )
-            parsed: list[EnvVar] = response.choices[0].message.parsed
+            parsed: list[EnvVar] = response.choices[0].message.parsed.env_vars
 
             await Provider.environment_variable_repo().delete_vars_for_server(
                 mcp_server_id

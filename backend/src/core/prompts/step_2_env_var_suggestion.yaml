@@ -17,56 +17,66 @@ prompt: |
   - name: environment variable name
   - description: what this variable is for
 
-  Output ONLY valid JSON as an array, matching this exact schema:
+  Output ONLY valid JSON matching this exact schema:
 
-  [
-    {
-      "name": "ENV_VAR_NAME",
-      "description": "What this variable is used for"
-    }
-  ]
+  {
+    "env_vars": [
+      {
+        "name": "ENV_VAR_NAME",
+        "description": "What this variable is used for"
+      }
+    ]
+  }
 
 examples:
   - input: "GitHub repository management MCP server"
     output: |
-      [
-        {
-          "name": "GITHUB_TOKEN",
-          "description": "GitHub personal access token used to authenticate API requests"
-        }
-      ]
+      {
+        "env_vars": [
+          {
+            "name": "GITHUB_TOKEN",
+            "description": "GitHub personal access token used to authenticate API requests"
+          }
+        ]
+      }
 
   - input: "Weather information service using a third-party API"
     output: |
-      [
-        {
-          "name": "WEATHER_API_KEY",
-          "description": "API key for the external weather data provider"
-        },
-        {
-          "name": "WEATHER_API_BASE_URL",
-          "description": "Base URL for the weather API (defaults to provider standard endpoint)"
-        }
-      ]
+      {
+        "env_vars": [
+          {
+            "name": "WEATHER_API_KEY",
+            "description": "API key for the external weather data provider"
+          },
+          {
+            "name": "WEATHER_API_BASE_URL",
+            "description": "Base URL for the weather API (defaults to provider standard endpoint)"
+          }
+        ]
+      }
 
   - input: "MCP server that stores data in a PostgreSQL database"
     output: |
-      [
-        {
-          "name": "DATABASE_URL",
-          "description": "PostgreSQL connection string including credentials"
-        }
-      ]
+      {
+        "env_vars": [
+          {
+            "name": "DATABASE_URL",
+            "description": "PostgreSQL connection string including credentials"
+          }
+        ]
+      }
 
   - input: "Internal MCP server with optional logging and debug mode"
     output: |
-      [
-        {
-          "name": "LOG_LEVEL",
-          "description": "Logging level (debug, info, warning, error)"
-        },
-        {
-          "name": "DEBUG",
-          "description": "Enable debug mode for additional logging"
-        }
-      ]
+      {
+        "env_vars": [
+          {
+            "name": "LOG_LEVEL",
+            "description": "Logging level (debug, info, warning, error)"
+          },
+          {
+            "name": "DEBUG",
+            "description": "Enable debug mode for additional logging"
+          }
+        ]
+      }

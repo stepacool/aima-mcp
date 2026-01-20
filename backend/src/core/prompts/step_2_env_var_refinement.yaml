@@ -33,14 +33,16 @@ prompt: |
   - name: environment variable name
   - description: what this variable is for
 
-  Output ONLY valid JSON as an array, matching this exact schema:
+  Output ONLY valid JSON matching this exact schema:
 
-  [
-    {
-      "name": "ENV_VAR_NAME",
-      "description": "What this variable is used for"
-    }
-  ]
+  {
+    "env_vars": [
+      {
+        "name": "ENV_VAR_NAME",
+        "description": "What this variable is used for"
+      }
+    ]
+  }
 
 examples:
   - input: |
@@ -51,12 +53,14 @@ examples:
       User feedback:
       GitHub password auth is deprecated, use a single token instead.
     output: |
-      [
-        {
-          "name": "GITHUB_TOKEN",
-          "description": "GitHub personal access token used to authenticate API requests"
-        }
-      ]
+      {
+        "env_vars": [
+          {
+            "name": "GITHUB_TOKEN",
+            "description": "GitHub personal access token used to authenticate API requests"
+          }
+        ]
+      }
 
   - input: |
       Current environment variables:
@@ -68,12 +72,14 @@ examples:
       User feedback:
       Prefer a single database connection string.
     output: |
-      [
-        {
-          "name": "DATABASE_URL",
-          "description": "PostgreSQL connection string including credentials"
-        }
-      ]
+      {
+        "env_vars": [
+          {
+            "name": "DATABASE_URL",
+            "description": "PostgreSQL connection string including credentials"
+          }
+        ]
+      }
 
   - input: |
       Current environment variables:
@@ -82,16 +88,18 @@ examples:
       User feedback:
       Allow overriding the API base URL for self-hosted setups.
     output: |
-      [
-        {
-          "name": "WEATHER_API_KEY",
-          "description": "API key for the external weather data provider"
-        },
-        {
-          "name": "WEATHER_API_BASE_URL",
-          "description": "Base URL for the weather API (defaults to provider standard endpoint)"
-        }
-      ]
+      {
+        "env_vars": [
+          {
+            "name": "WEATHER_API_KEY",
+            "description": "API key for the external weather data provider"
+          },
+          {
+            "name": "WEATHER_API_BASE_URL",
+            "description": "Base URL for the weather API (defaults to provider standard endpoint)"
+          }
+        ]
+      }
 
   - input: |
       Current environment variables:
@@ -100,4 +108,6 @@ examples:
       User feedback:
       Debug should not be required in production.
     output: |
-      []
+      {
+        "env_vars": []
+      }

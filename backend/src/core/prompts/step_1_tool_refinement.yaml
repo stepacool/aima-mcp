@@ -29,22 +29,24 @@ prompt: |
   - required (true/false)
   - description
 
-  Output ONLY valid JSON as an array of tools, matching this exact schema:
+  Output ONLY valid JSON matching this exact schema:
 
-  [
-    {
-      "name": "tool_name",
-      "description": "What this tool does",
-      "parameters": [
-        {
-          "name": "param_name",
-          "type": "string",
-          "required": true,
-          "description": "What this parameter is for"
-        }
-      ]
-    }
-  ]
+  {
+    "tools": [
+      {
+        "name": "tool_name",
+        "description": "What this tool does",
+        "parameters": [
+          {
+            "name": "param_name",
+            "type": "string",
+            "required": true,
+            "description": "What this parameter is for"
+          }
+        ]
+      }
+    ]
+  }
 
 examples:
   - input: |
@@ -55,62 +57,64 @@ examples:
       User feedback:
       Add support for closing issues and make repository listing optionally filter by organization.
     output: |
-      [
-        {
-          "name": "list_repositories",
-          "description": "List repositories accessible to the authenticated user",
-          "parameters": [
-            {
-              "name": "organization",
-              "type": "string",
-              "required": false,
-              "description": "Organization name to filter repositories"
-            }
-          ]
-        },
-        {
-          "name": "create_issue",
-          "description": "Create a new issue in a GitHub repository",
-          "parameters": [
-            {
-              "name": "repository",
-              "type": "string",
-              "required": true,
-              "description": "Repository name in owner/repo format"
-            },
-            {
-              "name": "title",
-              "type": "string",
-              "required": true,
-              "description": "Issue title"
-            },
-            {
-              "name": "body",
-              "type": "string",
-              "required": false,
-              "description": "Issue body or description"
-            }
-          ]
-        },
-        {
-          "name": "close_issue",
-          "description": "Close an existing issue in a GitHub repository",
-          "parameters": [
-            {
-              "name": "repository",
-              "type": "string",
-              "required": true,
-              "description": "Repository name in owner/repo format"
-            },
-            {
-              "name": "issue_number",
-              "type": "integer",
-              "required": true,
-              "description": "Number of the issue to close"
-            }
-          ]
-        }
-      ]
+      {
+        "tools": [
+          {
+            "name": "list_repositories",
+            "description": "List repositories accessible to the authenticated user",
+            "parameters": [
+              {
+                "name": "organization",
+                "type": "string",
+                "required": false,
+                "description": "Organization name to filter repositories"
+              }
+            ]
+          },
+          {
+            "name": "create_issue",
+            "description": "Create a new issue in a GitHub repository",
+            "parameters": [
+              {
+                "name": "repository",
+                "type": "string",
+                "required": true,
+                "description": "Repository name in owner/repo format"
+              },
+              {
+                "name": "title",
+                "type": "string",
+                "required": true,
+                "description": "Issue title"
+              },
+              {
+                "name": "body",
+                "type": "string",
+                "required": false,
+                "description": "Issue body or description"
+              }
+            ]
+          },
+          {
+            "name": "close_issue",
+            "description": "Close an existing issue in a GitHub repository",
+            "parameters": [
+              {
+                "name": "repository",
+                "type": "string",
+                "required": true,
+                "description": "Repository name in owner/repo format"
+              },
+              {
+                "name": "issue_number",
+                "type": "integer",
+                "required": true,
+                "description": "Number of the issue to close"
+              }
+            ]
+          }
+        ]
+      }
 
   - input: |
       Current tools:
@@ -119,47 +123,49 @@ examples:
       User feedback:
       Support forecasts and allow specifying temperature units everywhere.
     output: |
-      [
-        {
-          "name": "get_current_weather",
-          "description": "Get current weather conditions for a city",
-          "parameters": [
-            {
-              "name": "city",
-              "type": "string",
-              "required": true,
-              "description": "City name"
-            },
-            {
-              "name": "units",
-              "type": "string",
-              "required": false,
-              "description": "Temperature units (celsius or fahrenheit)"
-            }
-          ]
-        },
-        {
-          "name": "get_weather_forecast",
-          "description": "Get a weather forecast for the next few days",
-          "parameters": [
-            {
-              "name": "city",
-              "type": "string",
-              "required": true,
-              "description": "City name"
-            },
-            {
-              "name": "days",
-              "type": "integer",
-              "required": true,
-              "description": "Number of days to forecast"
-            },
-            {
-              "name": "units",
-              "type": "string",
-              "required": false,
-              "description": "Temperature units (celsius or fahrenheit)"
-            }
-          ]
-        }
-      ]
+      {
+        "tools": [
+          {
+            "name": "get_current_weather",
+            "description": "Get current weather conditions for a city",
+            "parameters": [
+              {
+                "name": "city",
+                "type": "string",
+                "required": true,
+                "description": "City name"
+              },
+              {
+                "name": "units",
+                "type": "string",
+                "required": false,
+                "description": "Temperature units (celsius or fahrenheit)"
+              }
+            ]
+          },
+          {
+            "name": "get_weather_forecast",
+            "description": "Get a weather forecast for the next few days",
+            "parameters": [
+              {
+                "name": "city",
+                "type": "string",
+                "required": true,
+                "description": "City name"
+              },
+              {
+                "name": "days",
+                "type": "integer",
+                "required": true,
+                "description": "Number of days to forecast"
+              },
+              {
+                "name": "units",
+                "type": "string",
+                "required": false,
+                "description": "Temperature units (celsius or fahrenheit)"
+              }
+            ]
+          }
+        ]
+      }
