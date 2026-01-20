@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from entrypoints.api.main import get_app
 from infrastructure.models import Customer
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
-from infrastructure.models.mcp_server import MCPServer, MCPServerStatus, MCPTool
+from infrastructure.models.mcp_server import MCPServer, MCPServerSetupStatus, MCPTool
 from infrastructure.repositories.customer import CustomerCreate
 from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.mcp_server import MCPServerCreate, MCPToolCreate
@@ -76,8 +76,10 @@ async def active_mcp_server(provider: Type[Provider], customer: Customer) -> MCP
             endpoint_url=f"/mcp/{server.id}",
         )
     )
-    # Update server status to READY
-    await Provider.mcp_server_repo().update_status(server.id, MCPServerStatus.READY)
+    # Update server setup status to ready
+    await Provider.mcp_server_repo().update_setup_status(
+        server.id, MCPServerSetupStatus.ready
+    )
     # Refresh to get updated status
     server = await Provider.mcp_server_repo().get_by_uuid(server.id)
     return server
@@ -98,7 +100,6 @@ async def mcp_tool(provider: Type[Provider], mcp_server: MCPServer) -> MCPTool:
             description="A test tool that returns a greeting",
             parameters_schema={"parameters": []},
             code=make_simple_tool_code("Hello from test tool!"),
-            is_validated=True,
         )
     )
     return tool
@@ -116,7 +117,6 @@ async def active_mcp_tool(
             description="A tool that returns a greeting",
             parameters_schema={"parameters": []},
             code=make_simple_tool_code("Hello from active tool!"),
-            is_validated=True,
         )
     )
     return tool
@@ -133,7 +133,6 @@ async def create_mcp_tool_for_server(
             description=f"Tool {name} that returns {return_value}",
             parameters_schema={"parameters": []},
             code=make_simple_tool_code(return_value),
-            is_validated=True,
         )
     )
     return tool

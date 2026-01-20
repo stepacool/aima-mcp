@@ -55,7 +55,7 @@ class MCPServer(CustomBase):
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
-    env_vars: Mapped[list["MCPEnvironmentVariable"]] = relationship(
+    environment_variables: Mapped[list["MCPEnvironmentVariable"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
 
@@ -136,3 +136,5 @@ class MCPEnvironmentVariable(CustomBase):
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
     value: Mapped[str] = mapped_column(Text, nullable=True)
+
+    server: Mapped["MCPServer"] = relationship(back_populates="environment_variables")

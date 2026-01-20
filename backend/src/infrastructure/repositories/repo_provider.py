@@ -1,10 +1,14 @@
 from infrastructure.db import create_database, Database
-from infrastructure.repositories.customer import CustomerRepo
+from infrastructure.repositories.customer import APIKeyRepo, CustomerRepo
 from infrastructure.repositories.deployment import (
     DeploymentArtifactRepo,
     DeploymentRepo,
 )
-from infrastructure.repositories.mcp_server import MCPServerRepo, MCPToolRepo, MCPEnvironmentVariableRepo
+from infrastructure.repositories.mcp_server import (
+    MCPEnvironmentVariableRepo,
+    MCPServerRepo,
+    MCPToolRepo,
+)
 
 
 class Provider:
@@ -15,6 +19,7 @@ class Provider:
     _deployment_repo: None | DeploymentRepo = None
     _deployment_artifact_repo: None | DeploymentArtifactRepo = None
     _environment_variable_repo: None | MCPEnvironmentVariableRepo = None
+    _api_key_repo: None | APIKeyRepo = None
 
     @classmethod
     def get_db(cls, **overrides):
@@ -63,3 +68,9 @@ class Provider:
         if cls._environment_variable_repo is None:
             cls._environment_variable_repo = MCPEnvironmentVariableRepo(cls.get_db())
         return cls._environment_variable_repo
+
+    @classmethod
+    def api_key_repo(cls) -> APIKeyRepo:
+        if cls._api_key_repo is None:
+            cls._api_key_repo = APIKeyRepo(cls.get_db())
+        return cls._api_key_repo

@@ -16,7 +16,7 @@ from core.services.tier_service import (
 from core.services.tool_loader import get_tool_loader
 from entrypoints.mcp.shared_runtime import register_new_customer_app, unregister_mcp_app
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
-from infrastructure.models.mcp_server import MCPServerStatus, WizardStep
+from infrastructure.models.mcp_server import MCPServerSetupStatus
 from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.repo_provider import Provider
 
@@ -180,9 +180,8 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
         # Set deployed_at
         await deployment_repo.activate(deployment.id, endpoint_url)
 
-    # Update server status to READY and wizard step to COMPLETE
-    await server_repo.update_status(server_id, MCPServerStatus.READY)
-    await server_repo.update_wizard_step(server_id, WizardStep.COMPLETE)
+    # Update server setup status to READY
+    await server_repo.update_setup_status(server_id, MCPServerSetupStatus.ready)
 
     return ActivateResponse(
         server_id=server_id,
@@ -231,8 +230,8 @@ async def deploy_server(server_id: UUID, request: DeployRequest) -> DeployRespon
         )
     )
 
-    # Update server status to READY
-    await server_repo.update_status(server_id, MCPServerStatus.READY)
+    # Update server setup status to READY
+    await server_repo.update_setup_status(server_id, MCPServerSetupStatus.ready)
 
     return DeployResponse(
         server_id=server_id,

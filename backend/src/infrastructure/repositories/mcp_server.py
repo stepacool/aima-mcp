@@ -8,10 +8,9 @@ from sqlalchemy.orm import selectinload
 from infrastructure.db import Database
 from infrastructure.models.mcp_server import (
     MCPServer,
-    MCPServerStatus,
+    MCPServerSetupStatus,
     MCPTool,
-    ProcessingStatus,
-    WizardStep, MCPEnvironmentVariable,
+    MCPEnvironmentVariable,
 )
 from infrastructure.repositories.base import BaseCRUDRepo
 
@@ -38,14 +37,14 @@ class MCPToolCreate(BaseModel):
     server_id: UUID
     name: str
     description: str
-    parameters_schema: dict[str, Any]
+    parameters_schema: list[dict]
     code: str = ""
 
 
 class MCPToolUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
-    parameters_schema: dict[str, Any] | None = None
+    parameters_schema: list[dict] | None = None
     code: str | None = None
 
 
@@ -107,86 +106,30 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
             )
             return list(result.scalars().all())
 
-    async def update_status(self, server_id: UUID, status: MCPServerStatus) -> bool:
-        """Update server status."""
-        async with self.db.session() as session:
-            result = await session.execute(
-                select(self.model).where(self.model.id == server_id)
-            )
-            server = result.scalars().first()
-            if server:
-                server.status = status.value
-                await session.commit()
-                return True
-            return False
-
-    async def update_wizard_step(self, server_id: UUID, step: WizardStep) -> bool:
-        """Update wizard step in server meta."""
-        async with self.db.session() as session:
-            result = await session.execute(
-                select(self.model).where(self.model.id == server_id)
-            )
-            server = result.scalars().first()
-            if server:
-                # Update meta with wizard_step
-                new_meta = {**(server.meta or {}), "wizard_step": step.value}
-                server.meta = new_meta
-                await session.commit()
-                return True
-            return False
-
-    async def update_processing_status(
-        self,
-        server_id: UUID,
-        status: ProcessingStatus,
-        error: str | None = None,
+    async def update_setup_status(
+        self, server_id: UUID, status: MCPServerSetupStatus
     ) -> bool:
-        """Update processing status in server meta."""
+        """Update server setup status."""
         async with self.db.session() as session:
             result = await session.execute(
                 select(self.model).where(self.model.id == server_id)
             )
             server = result.scalars().first()
             if server:
-                new_meta = {
-                    **(server.meta or {}),
-                    "processing_status": status.value,
-                }
-                # Clear error if not failed, set error if failed
-                if status == ProcessingStatus.FAILED and error:
-                    new_meta["processing_error"] = error
-                elif status != ProcessingStatus.FAILED:
-                    new_meta.pop("processing_error", None)
-                server.meta = new_meta
+                server.setup_status = status
                 await session.commit()
                 return True
             return False
 
-    async def update_wizard_step_with_status(
-        self,
-        server_id: UUID,
-        step: WizardStep,
-        status: ProcessingStatus,
-        error: str | None = None,
-    ) -> bool:
-        """Update both wizard step and processing status atomically."""
+    async def update_auth_type(self, server_id: UUID, auth_type: str) -> bool:
+        """Update server auth type."""
         async with self.db.session() as session:
             result = await session.execute(
                 select(self.model).where(self.model.id == server_id)
             )
             server = result.scalars().first()
             if server:
-                new_meta = {
-                    **(server.meta or {}),
-                    "wizard_step": step.value,
-                    "processing_status": status.value,
-                }
-                # Clear error if not failed, set error if failed
-                if status == ProcessingStatus.FAILED and error:
-                    new_meta["processing_error"] = error
-                elif status != ProcessingStatus.FAILED:
-                    new_meta.pop("processing_error", None)
-                server.meta = new_meta
+                server.auth_type = auth_type
                 await session.commit()
                 return True
             return False
@@ -239,9 +182,7 @@ class MCPToolRepo(BaseCRUDRepo[MCPTool, MCPToolCreate, MCPToolUpdate]):
             await session.commit()
             return count
 
-    async def update_tool_code(
-        self, tool_id: UUID, code: str, is_validated: bool = True
-    ) -> bool:
+    async def update_tool_code(self, tool_id: UUID, code: str) -> bool:
         """Update tool with generated code."""
         async with self.db.session() as session:
             result = await session.execute(
@@ -250,11 +191,25 @@ class MCPToolRepo(BaseCRUDRepo[MCPTool, MCPToolCreate, MCPToolUpdate]):
             tool = result.scalars().first()
             if tool:
                 tool.code = code
-                tool.is_validated = is_validated
-                tool.validation_errors = None
                 await session.commit()
                 return True
             return False
+
+    async def delete_tools_not_in_list(
+        self, server_id: UUID, keep_tool_ids: list[UUID]
+    ) -> int:
+        """Delete all tools for server that are NOT in the keep list."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.server_id == server_id)
+            )
+            count = 0
+            for tool in result.scalars().all():
+                if tool.id not in keep_tool_ids:
+                    await session.delete(tool)
+                    count += 1
+            await session.commit()
+            return count
 
 
 class MCPEnvironmentVariableCreate(BaseModel):
@@ -271,7 +226,47 @@ class MCPEnvironmentVariableUpdate(BaseModel):
 
 
 class MCPEnvironmentVariableRepo(
-    BaseCRUDRepo[MCPEnvironmentVariable, MCPEnvironmentVariableCreate, MCPEnvironmentVariableUpdate]
+    BaseCRUDRepo[
+        MCPEnvironmentVariable,
+        MCPEnvironmentVariableCreate,
+        MCPEnvironmentVariableUpdate,
+    ]
 ):
     def __init__(self, db: Database):
         super().__init__(db, MCPEnvironmentVariable)
+
+    async def get_vars_for_server(
+        self, server_id: UUID
+    ) -> list[MCPEnvironmentVariable]:
+        """Get all environment variables for a server."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.server_id == server_id)
+            )
+            return list(result.scalars().all())
+
+    async def update_value(self, var_id: UUID, value: str) -> bool:
+        """Update the value of an environment variable."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.id == var_id)
+            )
+            var = result.scalars().first()
+            if var:
+                var.value = value
+                await session.commit()
+                return True
+            return False
+
+    async def delete_vars_for_server(self, server_id: UUID) -> int:
+        """Delete all environment variables for a server."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.server_id == server_id)
+            )
+            count = 0
+            for var in result.scalars().all():
+                await session.delete(var)
+                count += 1
+            await session.commit()
+            return count

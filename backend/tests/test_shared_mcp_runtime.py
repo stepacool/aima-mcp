@@ -15,7 +15,7 @@ from entrypoints.mcp.shared_runtime import (
 from fixtures import make_simple_tool_code
 from infrastructure.models import Customer
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
-from infrastructure.models.mcp_server import MCPServer, MCPServerStatus, MCPTool
+from infrastructure.models.mcp_server import MCPServer, MCPTool
 from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.mcp_server import MCPServerCreate, MCPToolCreate
 from infrastructure.repositories.repo_provider import Provider

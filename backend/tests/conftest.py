@@ -31,16 +31,6 @@ from fixtures import (  # noqa: E402, F401
     active_mcp_tool,
 )
 
-# Import wizard step fixtures
-from wizard_fixtures import (  # noqa: E402, F401
-    server_at_describe_step,
-    server_at_actions_step,
-    server_at_auth_step,
-    server_at_deploy_step,
-    server_at_deploy_step_with_oauth,
-    server_at_complete_step,
-)
-
 
 def _validate_test_database():
     """Safety check that runs at import time."""

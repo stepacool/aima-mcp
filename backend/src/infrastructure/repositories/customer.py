@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from infrastructure.db import Database
-from infrastructure.models.customer import Customer
+from infrastructure.models.customer import APIKey, Customer
 from infrastructure.repositories.base import BaseCRUDRepo
 
 
@@ -39,3 +39,52 @@ class CustomerRepo(BaseCRUDRepo[Customer, CustomerCreate, CustomerUpdate]):
                 select(self.model).where(self.model.email == email)
             )
             return result.scalars().first()
+
+
+class APIKeyCreate(BaseModel):
+    key: str
+    server_id: UUID
+    meta: dict[str, Any] | None = None
+
+
+class APIKeyUpdate(BaseModel):
+    key: str | None = None
+    meta: dict[str, Any] | None = None
+
+
+class APIKeyRepo(BaseCRUDRepo[APIKey, APIKeyCreate, APIKeyUpdate]):
+    def __init__(self, db: Database):
+        super().__init__(db, APIKey)
+
+    async def create_for_server(self, server_id: UUID, key: str) -> APIKey:
+        """Create an API key for a server."""
+        return await self.create(APIKeyCreate(key=key, server_id=server_id))
+
+    async def get_by_server_id(self, server_id: UUID) -> APIKey | None:
+        """Get API key by server ID."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.server_id == server_id)
+            )
+            return result.scalars().first()
+
+    async def get_by_key(self, key: str) -> APIKey | None:
+        """Get API key by key string."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.key == key)
+            )
+            return result.scalars().first()
+
+    async def delete_for_server(self, server_id: UUID) -> bool:
+        """Delete API key for a server."""
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.server_id == server_id)
+            )
+            api_key = result.scalars().first()
+            if api_key:
+                await session.delete(api_key)
+                await session.commit()
+                return True
+            return False

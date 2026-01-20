@@ -18,16 +18,13 @@ class Customer(CustomBase):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
 
-    api_keys: Mapped[list["APIKey"]] = relationship(back_populates="customer")
-
     def __str__(self) -> str:
         return f"Customer(id={self.id}, name={self.name})"
 
 
 class APIKey(CustomBase):
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid4
-    )
+    __tablename__ = "api_keys"
+
     key: Mapped[str] = mapped_column(String, index=True, nullable=False)
     server_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
