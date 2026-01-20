@@ -225,9 +225,13 @@ class WizardStepsService:
         await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.env_vars_generating
         )
+        server = await Provider.mcp_server_repo().get(mcp_server_id)
 
         try:
             system_prompt = load_prompt(prompt_file)
+            user_content = (
+                f"Server description:\n{server.description}\n"
+            )
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
                 messages=[
@@ -235,6 +239,7 @@ class WizardStepsService:
                         "role": "system",
                         "content": system_prompt,
                     },
+                    {"role": "user", "content": user_content},
                 ],
                 response_format=EnvVarsResponse,
             )
@@ -272,6 +277,7 @@ class WizardStepsService:
         await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.env_vars_generating
         )
+        server = await Provider.mcp_server_repo().get(mcp_server_id)
 
         try:
             env_vars = await Provider.environment_variable_repo().get_vars_for_server(
@@ -284,6 +290,7 @@ class WizardStepsService:
 
             system_prompt = load_prompt(prompt_file)
             user_content = (
+                f"MCP description: \n{server.description}\n\n"
                 f"Current environment variables:\n{vars_description}\n\n"
                 f"User feedback:\n{feedback}"
             )

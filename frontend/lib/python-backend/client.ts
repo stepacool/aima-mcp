@@ -12,9 +12,14 @@ type JsonValue =
 	| JsonValue[]
 	| { [key: string]: JsonValue };
 
+// UUID regex pattern to detect keys that should not be transformed
+const UUID_PATTERN =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Generic key conversion utility that recursively transforms all object keys
  * using the provided conversion function.
+ * Keys that are UUIDs are preserved as-is to avoid malformation.
  */
 function keysToAnyCase(
 	data: JsonValue,
@@ -27,7 +32,7 @@ function keysToAnyCase(
 	if (data !== null && typeof data === "object") {
 		return Object.fromEntries(
 			Object.entries(data).map(([key, value]) => [
-				convertFn(key),
+				UUID_PATTERN.test(key) ? key : convertFn(key),
 				keysToAnyCase(value, convertFn),
 			])
 		);

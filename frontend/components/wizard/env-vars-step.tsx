@@ -140,7 +140,7 @@ export function EnvVarsStep({
 	}
 
 	// If no env vars are needed, show a simple message and continue button
-	if (suggestedEnvVars.length === 0) {
+	if (suggestedEnvVars && suggestedEnvVars.length === 0) {
 		return (
 			<div className="flex h-full flex-col">
 				<div className="flex flex-1 items-center justify-center p-6">

@@ -184,6 +184,7 @@ async def refine_tools(
 async def submit_tools(
     server_id: UUID,
     request: SubmitToolsRequest,
+    background_tasks: BackgroundTasks,
 ) -> dict[str, Any]:
     """
     Step 1c: Submit selected tools.
@@ -210,6 +211,10 @@ async def submit_tools(
         await service.step_1c_submit_selected_tools(
             mcp_server_id=server_id,
             selected_tool_ids=request.selected_tool_ids,
+        )
+        background_tasks.add_task(
+            service.step_2a_suggest_environment_variables_for_mcp_server,
+            mcp_server_id=server_id,
         )
 
         return {
@@ -241,6 +246,7 @@ async def get_tools(server_id: UUID) -> list[ToolResponse]:
     ]
 
 
+#TODO: right now suggest is never called on FE, I'll put it into submit tools
 @router.post("/{server_id}/env-vars/suggest")
 async def suggest_env_vars(
     server_id: UUID,
