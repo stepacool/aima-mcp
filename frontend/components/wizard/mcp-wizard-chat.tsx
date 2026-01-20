@@ -175,14 +175,6 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		}
 	}, [serverId, refetch, retryMutation]);
 
-	// Handle step click navigation (for going back to previous steps)
-	const handleStepClick = useCallback((step: WizardStep) => {
-		// Only allow navigating to steps that have been completed or are current
-		// The WizardStepIndicator already enforces this, but we double-check here
-		if (step === currentStep) return; // No action needed if clicking current step
-		setCurrentStep(step);
-	}, [currentStep]);
-
 	// Show loading state when restoring from URL (brief initial load)
 	if (urlServerId && isLoadingState && !wizardState) {
 		return <CenteredSpinner />;
@@ -222,7 +214,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		<div className="flex h-full flex-col">
 			{/* Step Indicator */}
 			<div className="shrink-0 border-b bg-background/80 px-4 py-3 backdrop-blur-sm">
-				<WizardStepIndicator currentStep={currentStep} onStepClick={handleStepClick} />
+				<WizardStepIndicator currentStep={currentStep} />
 			</div>
 
 			{/* Processing Banner - Non-blocking indicator during async processing */}
