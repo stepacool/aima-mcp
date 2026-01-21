@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   backend-db:
     image: postgres:17
@@ -5,41 +7,80 @@ services:
     environment:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydatabase
+      POSTGRES_DB: test_aimalabs_database
+    ports:
+      - "5433:5432"  # expose locally to match backend default
     volumes:
       - backend_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser"]
+      interval: 2s
+      retries: 10
+      timeout: 2s
+
+  backend-db-migrate:
+    image: postgres:17
+    depends_on:
+      backend-db:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "echo Backend DB ready"]  # placeholder
+    # You can replace this with a script that runs alembic, see below
+    # It just ensures backend waits for DB to be ready before running
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     depends_on:
-      - backend-db
+      backend-db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgres://myuser:mypassword@backend-db:5432/mydatabase
+      POSTGRES_HOST: backend-db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: test_aimalabs_database
+    command: >
+      sh -c "
+      alembic upgrade head &&
+      uvicorn main:app --host 0.0.0.0 --port 8000
+      "
 
   frontend-db:
     image: postgres:17-alpine
     restart: always
     environment:
-      POSTGRES_USER: frontend
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aima_mcp_frontend_db
+    ports:
+      - "5434:5432"  # frontend exposed locally
     volumes:
       - frontend_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      retries: 10
+      timeout: 2s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     depends_on:
-      - frontend-db
+      frontend-db:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://frontend:password@frontend-db:5432/database
+      DATABASE_URL: postgresql://postgres:postgres@frontend-db:5432/aima_mcp_frontend_db
+    command: >
+      sh -c "
+      npm run db:migrate &&
+      npm run dev
+      "
 
 volumes:
   backend_postgres_data:

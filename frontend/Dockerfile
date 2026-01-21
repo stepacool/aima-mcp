@@ -13,10 +13,8 @@ RUN apk add --no-cache libc6-compat
 FROM base AS deps
 RUN corepack enable
 
-# Copy package files AND files needed by fumadocs postinstall
 COPY package.json pnpm-lock.yaml .npmrc* ./
 COPY source.config.ts tsconfig.json ./
-# Create the content directory that fumadocs expects
 RUN mkdir -p content/docs
 
 RUN pnpm install --frozen-lockfile
@@ -27,10 +25,16 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 RUN corepack enable
 
+# Make build-time env vars available
+ARG DATABASE_URL
+ARG BETTER_AUTH_SECRET
+ENV DATABASE_URL=$DATABASE_URL
+ENV BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
+ENV CI=true
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV CI=true
 RUN pnpm run build
 
 ############################
@@ -42,6 +46,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+
+# Runtime env vars (can come from your DigitalOcean App Platform panel)
+ENV DATABASE_URL=$DATABASE_URL
+ENV BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
