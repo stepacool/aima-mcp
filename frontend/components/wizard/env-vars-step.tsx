@@ -24,7 +24,6 @@ interface EnvVarsStepProps {
 	isProcessing: boolean;
 	processingError?: string | null;
 	onEnvVarsSubmitted: () => void;
-	onRefine: (newEnvVars: WizardEnvVar[]) => void;
 	onRetry?: () => void;
 	onRefetchState?: () => void;
 }
@@ -35,7 +34,6 @@ export function EnvVarsStep({
 	isProcessing,
 	processingError = null,
 	onEnvVarsSubmitted,
-	onRefine,
 	onRetry,
 	onRefetchState,
 }: EnvVarsStepProps) {
@@ -68,13 +66,20 @@ export function EnvVarsStep({
 				serverId,
 				feedback: feedback.trim(),
 			});
-			onRefine(result.envVars);
-			setFeedback("");
-			setEnvVarValues({});
-			// Refetch wizard state to pick up any async processing status
-			// This ensures polling continues if backend started async refinement
-			onRefetchState?.();
-			toast.success("Environment variables refined based on your feedback");
+			// Backend returns { serverId, status: "refining" } for async processing
+			// The polling will pick up the new env vars when ready
+			if (result?.status === "refining") {
+				setFeedback("");
+				setEnvVarValues({});
+				// Refetch wizard state to pick up async processing status
+				// This ensures polling continues and will update suggestedEnvVars when ready
+				onRefetchState?.();
+				toast.success(
+					"Refining environment variables based on your feedback...",
+				);
+			} else {
+				toast.error("Unexpected response from server");
+			}
 		} catch (_error) {
 			toast.error("Failed to refine environment variables");
 		} finally {
@@ -85,8 +90,10 @@ export function EnvVarsStep({
 	const handleContinue = async () => {
 		// Build values map with all env vars (use empty string if not filled)
 		const values: Record<string, string> = {};
-		for (const envVar of suggestedEnvVars) {
-			values[envVar.id] = envVarValues[envVar.id] || envVar.value || "";
+		if (suggestedEnvVars) {
+			for (const envVar of suggestedEnvVars) {
+				values[envVar.id] = envVarValues[envVar.id] || envVar.value || "";
+			}
 		}
 
 		try {
@@ -181,6 +188,20 @@ export function EnvVarsStep({
 		);
 	}
 
+	// If suggestedEnvVars is undefined, show loading state
+	if (!suggestedEnvVars) {
+		return (
+			<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+				<CenteredSpinner />
+				<div className="max-w-md space-y-2">
+					<p className="animate-pulse text-muted-foreground">
+						Loading environment variables...
+					</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex h-full flex-col">
 			<div className="flex-1 overflow-auto p-6">
@@ -198,7 +219,7 @@ export function EnvVarsStep({
 
 					{/* Env Var Cards */}
 					<div className="space-y-4">
-						{suggestedEnvVars.map((envVar) => (
+						{suggestedEnvVars?.map((envVar) => (
 							<Card key={envVar.id}>
 								<CardHeader className="pb-2">
 									<div className="flex items-center gap-2">
@@ -225,7 +246,7 @@ export function EnvVarsStep({
 									</div>
 								</CardContent>
 							</Card>
-						))}
+						)) ?? null}
 					</div>
 
 					{/* Refine Section */}

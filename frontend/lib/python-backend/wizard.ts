@@ -66,7 +66,8 @@ export interface RefineWizardActionsParams {
 }
 
 export interface RefineWizardActionsResponse {
-	suggestedTools: WizardTool[];
+	serverId: string;
+	status: "refining";
 }
 
 export interface SubmitWizardToolsParams {
@@ -106,7 +107,8 @@ export interface RefineEnvVarsParams {
 }
 
 export interface RefineEnvVarsResponse {
-	envVars: WizardEnvVar[];
+	serverId: string;
+	status: "refining";
 }
 
 export interface SubmitEnvVarsParams {

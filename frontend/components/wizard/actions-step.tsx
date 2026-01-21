@@ -11,9 +11,9 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { cn } from "@/lib/utils";
 import type { WizardTool } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
@@ -24,7 +24,6 @@ interface ActionsStepProps {
 	isProcessing?: boolean;
 	processingError?: string | null;
 	onToolsSubmitted: (toolIds: string[]) => void;
-	onRefine: (newTools: WizardTool[]) => void;
 	onRetry?: () => void;
 	onRefetchState?: () => void;
 }
@@ -37,7 +36,6 @@ export function ActionsStep({
 	isProcessing = false,
 	processingError = null,
 	onToolsSubmitted,
-	onRefine,
 	onRetry,
 	onRefetchState,
 }: ActionsStepProps) {
@@ -126,13 +124,18 @@ export function ActionsStep({
 				toolIds:
 					selectedToolIds.size > 0 ? Array.from(selectedToolIds) : undefined,
 			});
-			onRefine(result.suggestedTools);
-			setFeedback("");
-			setSelectedToolIds(new Set());
-			// Refetch wizard state to pick up any async processing status
-			// This ensures polling continues if backend started async refinement
-			onRefetchState?.();
-			toast.success("Tools refined based on your feedback");
+			// Backend returns { serverId, status: "refining" } for async processing
+			// The polling will pick up the new tools when ready
+			if (result?.status === "refining") {
+				setFeedback("");
+				setSelectedToolIds(new Set());
+				// Refetch wizard state to pick up async processing status
+				// This ensures polling continues and will update suggestedTools when ready
+				onRefetchState?.();
+				toast.success("Refining tools based on your feedback...");
+			} else {
+				toast.error("Unexpected response from server");
+			}
 		} catch (_error) {
 			toast.error("Failed to refine tools");
 		} finally {
@@ -172,48 +175,45 @@ export function ActionsStep({
 
 					{/* Tool Cards */}
 					<div className="grid gap-4 md:grid-cols-2">
-						{suggestedTools &&
-							suggestedTools.map((tool) => {
-								const isSelected = selectedToolIds.has(tool.id);
-								return (
-									<Card
-										key={tool.id}
-										className={cn(
-											"cursor-pointer transition-all hover:shadow-md",
-											isSelected && "border-primary ring-2 ring-primary/20",
-										)}
-										onClick={() => toggleTool(tool.id)}
-									>
-										<CardHeader className="pb-2">
-											<div className="flex items-start justify-between">
-												<div className="flex items-center gap-2">
-													<div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
-														<WrenchIcon className="size-4 text-primary" />
-													</div>
-													<CardTitle className="text-base">
-														{tool.name}
-													</CardTitle>
+						{suggestedTools?.map((tool) => {
+							const isSelected = selectedToolIds.has(tool.id);
+							return (
+								<Card
+									key={tool.id}
+									className={cn(
+										"cursor-pointer transition-all hover:shadow-md",
+										isSelected && "border-primary ring-2 ring-primary/20",
+									)}
+									onClick={() => toggleTool(tool.id)}
+								>
+									<CardHeader className="pb-2">
+										<div className="flex items-start justify-between">
+											<div className="flex items-center gap-2">
+												<div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+													<WrenchIcon className="size-4 text-primary" />
 												</div>
-												<div
-													className={cn(
-														"flex size-6 items-center justify-center rounded-full border-2 transition-colors",
-														isSelected
-															? "border-primary bg-primary text-primary-foreground"
-															: "border-muted-foreground/30",
-													)}
-												>
-													{isSelected && <CheckIcon className="size-4" />}
-												</div>
+												<CardTitle className="text-base">{tool.name}</CardTitle>
 											</div>
-										</CardHeader>
-										<CardContent>
-											<CardDescription className="text-sm">
-												{tool.description}
-											</CardDescription>
-										</CardContent>
-									</Card>
-								);
-							})}
+											<div
+												className={cn(
+													"flex size-6 items-center justify-center rounded-full border-2 transition-colors",
+													isSelected
+														? "border-primary bg-primary text-primary-foreground"
+														: "border-muted-foreground/30",
+												)}
+											>
+												{isSelected && <CheckIcon className="size-4" />}
+											</div>
+										</div>
+									</CardHeader>
+									<CardContent>
+										<CardDescription className="text-sm">
+											{tool.description}
+										</CardDescription>
+									</CardContent>
+								</Card>
+							);
+						})}
 					</div>
 
 					{/* Selection Counter */}

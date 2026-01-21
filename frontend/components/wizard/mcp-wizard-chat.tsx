@@ -151,22 +151,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		setCurrentStep(WizardStep.envVars);
 	}, []);
 
-	// Handle tools refined
-	const handleToolsRefined = useCallback((newTools: WizardTool[]) => {
-		setSuggestedTools(newTools);
-		refetch();
-	}, []);
-
 	// Handle env vars submitted - transition to AUTH
 	const handleEnvVarsSubmitted = useCallback(() => {
 		refetch();
 		setCurrentStep(WizardStep.auth);
-	}, []);
-
-	// Handle env vars refined
-	const handleEnvVarsRefined = useCallback((newEnvVars: WizardEnvVar[]) => {
-		setSuggestedEnvVars(newEnvVars);
-		refetch();
 	}, []);
 
 	// Handle auth configured - transition to DEPLOY
@@ -268,7 +256,6 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						isProcessing={isProcessing}
 						processingError={hasFailed ? processingError : null}
 						onToolsSubmitted={handleToolsSubmitted}
-						onRefine={handleToolsRefined}
 						onRetry={handleRetry}
 						onRefetchState={refetch}
 					/>
@@ -281,7 +268,6 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						isProcessing={isProcessing}
 						processingError={hasFailed ? processingError : null}
 						onEnvVarsSubmitted={handleEnvVarsSubmitted}
-						onRefine={handleEnvVarsRefined}
 						onRetry={handleRetry}
 						onRefetchState={refetch}
 					/>
