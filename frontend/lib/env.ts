@@ -17,13 +17,14 @@ export const env = createEnv({
 		GOOGLE_CLIENT_ID: z.string().optional(),
 		GOOGLE_CLIENT_SECRET: z.string().optional(),
 
-		// Database
+		// Database (granular)
 		POSTGRES_USER: z.string().default("postgres"),
 		POSTGRES_PASSWORD: z.string().default("password"),
 		POSTGRES_DB: z.string().default("database"),
 		POSTGRES_HOST: z.string().default("localhost"),
 		POSTGRES_PORT: z.string().default("5432"),
-		DATABASE_URL: z.string().url(),
+		// DATABASE_URL is optional - if not provided, it will be constructed from POSTGRES_* vars
+		DATABASE_URL: z.string().url().optional(),
 
 		// Email
 		EMAIL_FROM: z.string().optional(),
@@ -178,3 +179,14 @@ export const env = createEnv({
 	 */
 	emptyStringAsUndefined: true,
 });
+
+/**
+ * Get DATABASE_URL - uses provided value or constructs from POSTGRES_* vars.
+ * Backwards compatible: works with either DATABASE_URL or granular POSTGRES_* variables.
+ */
+export function getDatabaseUrl(): string {
+	if (env.DATABASE_URL) {
+		return env.DATABASE_URL;
+	}
+	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}`;
+}
