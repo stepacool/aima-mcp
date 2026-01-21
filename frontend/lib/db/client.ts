@@ -1,10 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import { getDatabaseUrl } from "@/lib/env";
 import * as schema from "./schema";
 
-// Check the drizzle documentation for more information on how to connect to your preferred database provider
-// https://orm.drizzle.team/docs/get-started-postgresql
+const pool = new Pool({
+    connectionString: getDatabaseUrl(),
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
 
-export const db = drizzle(getDatabaseUrl(), {
-	schema,
+export const db = drizzle(pool, {
+    schema,
 });
