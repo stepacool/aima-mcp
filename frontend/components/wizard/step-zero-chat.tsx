@@ -24,10 +24,16 @@ import {
 } from "@/components/ai/prompt-input";
 import { Suggestion, Suggestions } from "@/components/ai/suggestion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
-import { extractReadyDescription, isReadyToStart } from "@/lib/wizard/prompts";
+import {
+	END_READY_MARKER,
+	extractReadyDescription,
+	isReadyToStart,
+	READY_TO_START_MARKER,
+} from "@/lib/wizard/prompts";
 import type { WizardMessage } from "@/schemas/wizard-schemas";
 
 interface StepZeroChatProps {
@@ -63,12 +69,12 @@ export function StepZeroChat({
 	const { user } = useSession();
 	const [input, setInput] = useState("");
 
-	// Track if we've already detected readiness to prevent double-firing
-	const readinessDetectedRef = useRef(false);
 	// Track if we've already initialized from props to prevent re-initialization loop
 	const initializedRef = useRef(false);
 	// Track streaming errors to display in UI
 	const [streamError, setStreamError] = useState<string | null>(null);
+	// Track when chat is ready and store the description for confirmation
+	const [readyDescription, setReadyDescription] = useState<string | null>(null);
 
 	const { messages, setMessages, sendMessage, status } = useChat({
 		id: sessionId,
@@ -85,21 +91,6 @@ export function StepZeroChat({
 		onFinish: () => {
 			// Clear any previous errors on successful completion
 			setStreamError(null);
-			// Check the last assistant message for readiness marker
-			// We need to do this on next tick to ensure messages are updated
-			setTimeout(() => {
-				const lastMessage = messages[messages.length - 1];
-				if (lastMessage && lastMessage.role === "assistant") {
-					const text = getMessageText(lastMessage);
-					if (!readinessDetectedRef.current && isReadyToStart(text)) {
-						const description = extractReadyDescription(text);
-						if (description) {
-							readinessDetectedRef.current = true;
-							onReady(description);
-						}
-					}
-				}
-			}, 0);
 		},
 	});
 
@@ -116,21 +107,16 @@ export function StepZeroChat({
 			}));
 			setMessages(parsedMessages as ReturnType<typeof useChat>["messages"]);
 
-			// Check if any initial message already contains the ready marker
-			const lastAssistantMessage = initialMessages
-				.filter((m) => m.role === "assistant")
-				.pop();
+			// Check if the last message is an assistant message with ready marker
+			const lastMessage = initialMessages[initialMessages.length - 1];
 			if (
-				lastAssistantMessage &&
-				!readinessDetectedRef.current &&
-				isReadyToStart(lastAssistantMessage.content)
+				lastMessage &&
+				lastMessage.role === "assistant" &&
+				isReadyToStart(lastMessage.content)
 			) {
-				const description = extractReadyDescription(
-					lastAssistantMessage.content,
-				);
+				const description = extractReadyDescription(lastMessage.content);
 				if (description) {
-					readinessDetectedRef.current = true;
-					onReady(description);
+					setReadyDescription(description);
 				}
 			}
 		}
@@ -138,21 +124,25 @@ export function StepZeroChat({
 	}, []);
 
 	// Check for readiness marker when messages change
+	// Only show ready button if last message is assistant and contains marker
 	useEffect(() => {
-		if (messages.length > 0 && !readinessDetectedRef.current) {
-			const lastMessage = messages[messages.length - 1];
-			if (lastMessage && lastMessage.role === "assistant") {
-				const text = getMessageText(lastMessage);
-				if (isReadyToStart(text)) {
-					const description = extractReadyDescription(text);
-					if (description) {
-						readinessDetectedRef.current = true;
-						onReady(description);
-					}
-				}
-			}
+		if (messages.length === 0) {
+			setReadyDescription(null);
+			return;
 		}
-	}, [messages, onReady]);
+		const lastMessage = messages[messages.length - 1];
+		if (!lastMessage || lastMessage.role !== "assistant") {
+			setReadyDescription(null);
+			return;
+		}
+		const text = getMessageText(lastMessage);
+		if (!isReadyToStart(text)) {
+			setReadyDescription(null);
+			return;
+		}
+		const description = extractReadyDescription(text);
+		setReadyDescription(description ? description : null);
+	}, [messages]);
 
 	// Update parent when messages change (but not during initialization)
 	const lastMessageCountRef = useRef(0);
@@ -193,6 +183,8 @@ export function StepZeroChat({
 
 			// Clear any previous errors when sending a new message
 			setStreamError(null);
+			// Clear ready description when user sends a new message
+			setReadyDescription(null);
 
 			sendMessage({
 				role: "user",
@@ -208,6 +200,12 @@ export function StepZeroChat({
 
 		handleSendMessage(text);
 		setInput("");
+	};
+
+	const handleConfirmReady = () => {
+		if (readyDescription) {
+			onReady(readyDescription);
+		}
 	};
 
 	return (
@@ -281,7 +279,9 @@ export function StepZeroChat({
 											>
 												{message.role === "assistant" ? (
 													<MessageResponse>
-														{getMessageText(message)}
+														{getMessageText(message)
+															.replace(READY_TO_START_MARKER, "")
+															.replace(END_READY_MARKER, "")}
 													</MessageResponse>
 												) : (
 													<span className="whitespace-pre-wrap">
@@ -308,6 +308,45 @@ export function StepZeroChat({
 									</div>
 								</div>
 							)}
+
+							{/* Ready confirmation button - only show if last message is assistant with ready marker */}
+							{(() => {
+								const lastMessage =
+									messages.length > 0 ? messages[messages.length - 1] : null;
+								if (
+									readyDescription &&
+									lastMessage &&
+									lastMessage.role === "assistant" &&
+									isReadyToStart(getMessageText(lastMessage)) &&
+									!isStreaming
+								) {
+									return (
+										<div className="flex w-full gap-4">
+											<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+												<SparklesIcon className="size-4 text-primary" />
+											</div>
+											<div className="flex min-w-0 flex-1 flex-col gap-3">
+												<div className="rounded-2xl bg-primary/10 px-4 py-3">
+													<p className="font-medium text-primary">
+														Ready to proceed?
+													</p>
+													<p className="text-sm text-primary/80">
+														The chat has determined that we have enough
+														information to start building your MCP server.
+													</p>
+												</div>
+												<Button
+													onClick={handleConfirmReady}
+													className="w-fit rounded-xl"
+												>
+													Continue to Next Step
+												</Button>
+											</div>
+										</div>
+									);
+								}
+								return null;
+							})()}
 						</>
 					)}
 
