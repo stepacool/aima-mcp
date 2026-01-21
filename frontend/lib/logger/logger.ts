@@ -125,54 +125,62 @@ export class Logger {
 		const isTest = env.NEXT_PUBLIC_NODE_ENV === "test";
 		const usePrettyLogs = isDevelopment || isTest;
 
-		// Create custom destination for pretty logs
-		const destination =
-			usePrettyLogs && typeof window === "undefined"
-				? {
-						write: (chunk: string) => {
-							try {
-								const logObj = JSON.parse(chunk);
-								const { level, msg, group: logGroup, ...rest } = logObj;
+		// Create custom destination for logs
+		// In production, use synchronous stdout writes to ensure logs are captured
+		// In development/test, use pretty formatting
+		let destination: pino.DestinationStream | undefined;
 
-								const levelUppercased = (level || "info").toUpperCase();
-								const LEVEL_COLOR =
-									LEVEL_COLORS[levelUppercased] || COLOR.WHITE;
-								const GROUP_COLOR = getGroupColor(logGroup || "default");
+		if (typeof window === "undefined") {
+			if (usePrettyLogs) {
+				destination = {
+					write: (chunk: string) => {
+						try {
+							const logObj = JSON.parse(chunk);
+							const { level, msg, group: logGroup, ...rest } = logObj;
 
-								// Simple format: [LEVEL] group: message
-								let output = `[${LEVEL_COLOR}${levelUppercased}${COLOR.RESET}] ${GROUP_COLOR}${logGroup}${COLOR.RESET}: ${msg}`;
+							const levelUppercased = (level || "info").toUpperCase();
+							const LEVEL_COLOR =
+								LEVEL_COLORS[levelUppercased] || COLOR.WHITE;
+							const GROUP_COLOR = getGroupColor(logGroup || "default");
 
-								// Add context if present
-								const contextKeys = Object.keys(rest).filter(
-									(key) =>
-										!["pid", "hostname", "levelValue", "time"].includes(key),
-								);
-								if (contextKeys.length > 0) {
-									const contextStr = Object.entries(rest)
-										.filter(
-											([key]) =>
-												!["pid", "hostname", "levelValue", "time"].includes(
-													key,
-												),
-										)
-										.map(([key, value]) => {
-											const serializedValue =
-												typeof value === "object" && value !== null
-													? JSON.stringify(value)
-													: value;
-											return `${key}=${serializedValue}`;
-										})
-										.join(" ");
-									output += ` ${COLOR.DIM}(${contextStr})${COLOR.RESET}`;
-								}
+							// Simple format: [LEVEL] group: message
+							let output = `[${LEVEL_COLOR}${levelUppercased}${COLOR.RESET}] ${GROUP_COLOR}${logGroup}${COLOR.RESET}: ${msg}`;
 
-								console.log(output);
-							} catch {
-								process.stdout.write(chunk);
+							// Add context if present
+							const contextKeys = Object.keys(rest).filter(
+								(key) =>
+									!["pid", "hostname", "levelValue", "time"].includes(key),
+							);
+							if (contextKeys.length > 0) {
+								const contextStr = Object.entries(rest)
+									.filter(
+										([key]) =>
+											!["pid", "hostname", "levelValue", "time"].includes(
+												key,
+											),
+									)
+									.map(([key, value]) => {
+										const serializedValue =
+											typeof value === "object" && value !== null
+												? JSON.stringify(value)
+												: value;
+										return `${key}=${serializedValue}`;
+									})
+									.join(" ");
+								output += ` ${COLOR.DIM}(${contextStr})${COLOR.RESET}`;
 							}
-						},
-					}
-				: undefined;
+
+							console.log(output);
+						} catch {
+							process.stdout.write(chunk);
+						}
+					},
+				};
+			} else {
+				// Production: use synchronous stdout destination to ensure logs are captured
+				destination = pino.destination({ dest: 1, sync: true });
+			}
+		}
 
 		this.logger = pino(
 			{

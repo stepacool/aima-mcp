@@ -102,6 +102,22 @@ const loggingMiddleware = t.middleware(
 
 		try {
 			const result = await next();
+			const duration = Date.now() - startTime;
+
+			// Log successful procedure calls
+			logger.info(
+				{
+					procedure: path,
+					type,
+					duration,
+					success: true,
+					userId,
+					organizationId,
+					requestId: ctx.requestId,
+				},
+				"tRPC procedure completed",
+			);
+
 			return result;
 		} catch (error) {
 			const duration = Date.now() - startTime;
