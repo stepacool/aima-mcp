@@ -102,8 +102,8 @@ await sendPasswordResetEmail({
 // Send an organization invitation
 await sendOrganizationInvitationEmail({
   recipient: "newmember@example.com",
-  appName: "My App",
-  organizationName: "Acme Inc",
+  appName: "MCP Hero",
+  organizationName: "MCP Hero",
   invitedByName: "Jane Smith",
   invitedByEmail: "jane@acme.com",
   inviteLink: "https://myapp.com/auth/sign-up?invitationId=xxx",

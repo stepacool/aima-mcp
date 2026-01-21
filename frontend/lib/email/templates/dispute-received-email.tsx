@@ -102,7 +102,7 @@ function DisputeReceivedEmail({
 }
 
 DisputeReceivedEmail.PreviewProps = {
-	appName: "Acme",
+	appName: "MCP Hero",
 	organizationName: "Evil Corp",
 	recipientName: "Jane Doe",
 	amount: "49.00",

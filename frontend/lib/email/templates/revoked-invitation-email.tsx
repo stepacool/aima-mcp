@@ -53,7 +53,7 @@ function RevokedInvitationEmail({
 }
 
 RevokedInvitationEmail.PreviewProps = {
-	appName: "Acme",
+	appName: "MCP Hero",
 	organizationName: "Evil Corp",
 } satisfies RevokedInvitationEmailProps;
 

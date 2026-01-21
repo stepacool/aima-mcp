@@ -96,7 +96,7 @@ function PaymentFailedEmail({
 }
 
 PaymentFailedEmail.PreviewProps = {
-	appName: "Acme",
+	appName: "MCP Hero",
 	organizationName: "Evil Corp",
 	userName: "John Doe",
 	amount: "29.00",

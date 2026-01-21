@@ -107,7 +107,7 @@ function TrialEndingSoonEmail({
 }
 
 TrialEndingSoonEmail.PreviewProps = {
-	appName: "Acme",
+	appName: "MCP Hero",
 	organizationName: "Evil Corp",
 	userName: "John Doe",
 	planName: "Pro",

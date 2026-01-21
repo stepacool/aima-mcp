@@ -92,7 +92,7 @@ function SubscriptionCanceledEmail({
 }
 
 SubscriptionCanceledEmail.PreviewProps = {
-	appName: "Acme",
+	appName: "MCP Hero",
 	organizationName: "Evil Corp",
 	userName: "John Doe",
 	planName: "Pro",

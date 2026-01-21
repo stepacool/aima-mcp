@@ -251,7 +251,7 @@ export const LeadsModal = NiceModal.create<LeadsModalProps>(({ lead }) => {
 													<FormLabel>Company</FormLabel>
 													<FormControl>
 														<Input
-															placeholder="Acme Inc."
+															placeholder="MCP Hero."
 															autoComplete="off"
 															{...field}
 															value={field.value ?? ""}

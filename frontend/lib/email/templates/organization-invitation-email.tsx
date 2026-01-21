@@ -86,7 +86,7 @@ function OrganizationInvitationEmail({
 }
 
 OrganizationInvitationEmail.PreviewProps = {
-	appName: "Acme",
+	appName: "MCP Hero",
 	invitedByName: "Jane Doe",
 	invitedByEmail: "jane.doe@gmail.com",
 	organizationName: "Evil Corp",

@@ -68,7 +68,7 @@ function ContactFormEmail({
 }
 
 ContactFormEmail.PreviewProps = {
-	appName: "Acme",
+	appName: "MCP Hero",
 	firstName: "John",
 	lastName: "Doe",
 	email: "john.doe@example.com",
