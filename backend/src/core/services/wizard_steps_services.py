@@ -403,9 +403,8 @@ class WizardStepsService:
             prompt_template: str, tool: MCPTool, enable_logging: bool = False
         ):
             logger_instance = logger.bind(tool_name=tool.name)
-            if not enable_logging:
-                logger_instance.disable()
-            logger_instance.info(f"[{tool.name}] Generating code for tool")
+            if enable_logging:
+                logger_instance.info(f"[{tool.name}] Generating code for tool")
 
             available_libraries = []
             for package, imports in CURATED_LIBRARIES.items():
@@ -436,7 +435,8 @@ class WizardStepsService:
                     for param in tool.parameters_schema
                 ),
             )
-            logger_instance.info(f"[{tool.name}] Prompt: {prompt}")
+            if enable_logging:
+                logger_instance.info(f"[{tool.name}] Prompt: {prompt}")
 
             messages = [
                 {"role": "user", "content": prompt},
@@ -448,13 +448,15 @@ class WizardStepsService:
                     messages=messages,
                 )
                 code = response.choices[0].message.content
-                logger_instance.info(f"[{tool.name}] Code: {code}")
+                if enable_logging:
+                    logger_instance.info(f"[{tool.name}] Code: {code}")
                 errors = code_validator.validate(code)
                 if not errors:
                     break
-                logger_instance.info(
-                    f"[{tool.name}] Code is not valid. Errors: {errors}"
-                )
+                if enable_logging:
+                    logger_instance.info(
+                        f"[{tool.name}] Code is not valid. Errors: {errors}"
+                    )
                 messages.append({"role": "assistant", "content": code})
                 messages.append(
                     {
@@ -463,7 +465,8 @@ class WizardStepsService:
                     }
                 )
 
-            logger_instance.info(f"[{tool.name}] Code: {code}")
+            if enable_logging:
+                logger_instance.info(f"[{tool.name}] Code: {code}")
 
         tasks = [
             generate_code_for_tool(system_prompt["prompt"], tool)
