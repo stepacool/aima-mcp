@@ -9,17 +9,18 @@ export const billingConfig = {
 	// Each plan has a unique ID and can have multiple prices (monthly/yearly)
 	// The price IDs come from Stripe Dashboard > Products > Prices
 	plans: {
-		// Free tier - no Stripe price needed
-		free: {
-			id: "free",
-			name: "Free",
-			description: "Get started with basic features",
+		// Basic tier - no Stripe price needed
+		basic: {
+			id: "basic",
+			name: "Basic",
+			description: "Get started with shared MCP infrastructure",
 			isFree: true,
 			features: [
-				"Up to 3 team members",
-				"Basic analytics",
+				"Shared MCP servers",
+				"Static environment variables",
+				"Up to 3 MCP connections",
 				"Community support",
-				"1 GB storage",
+				"Basic analytics",
 			],
 			limits: {
 				maxMembers: 3,
@@ -30,13 +31,15 @@ export const billingConfig = {
 		pro: {
 			id: "pro",
 			name: "Pro",
-			description: "For growing teams",
+			description: "Dedicated infrastructure for production MCPs",
 			recommended: true,
 			features: [
-				"Unlimited team members",
-				"Advanced analytics",
+				"Dedicated MCP servers",
+				"Ephemeral variables (send-per-request)",
+				"Social authentication (OAuth)",
+				"Unlimited MCP connections",
 				"Priority support",
-				"100 GB storage",
+				"Advanced analytics",
 				"Custom integrations",
 				"API access",
 			],
@@ -72,49 +75,25 @@ export const billingConfig = {
 			],
 		},
 		// Enterprise plan - contact sales
-		// enterprise: {
-		// 	id: "enterprise",
-		// 	name: "Enterprise",
-		// 	description: "For large organizations with custom needs",
-		// 	isEnterprise: true,
-		// 	features: [
-		// 		"Everything in Pro",
-		// 		"Dedicated account manager",
-		// 		"Custom SLA",
-		// 		"Unlimited storage",
-		// 		"SSO / SAML",
-		// 		"Audit logs",
-		// 		"Custom contracts",
-		// 	],
-		// 	limits: {
-		// 		maxMembers: -1,
-		// 		maxStorage: -1,
-		// 	},
-		// },
-		// Lifetime deal - one-time order
-		lifetime: {
-			id: "lifetime",
-			name: "Lifetime",
-			description: "Pay once, use forever",
+		enterprise: {
+			id: "enterprise",
+			name: "Enterprise",
+			description: "Custom MCP solutions for large organizations",
+			isEnterprise: true,
 			features: [
-				"All Pro features",
-				"Lifetime updates",
-				"Priority support for 1 year",
-				"100 GB storage",
+				"Everything in Pro",
+				"Dedicated account manager",
+				"Custom SLA",
+				"Unlimited storage",
+				"SSO / SAML authentication",
+				"Audit logs",
+				"On-premise deployment options",
+				"Custom contracts",
 			],
 			limits: {
 				maxMembers: -1,
-				maxStorage: 100,
+				maxStorage: -1,
 			},
-			prices: [
-				{
-					id: "lifetime_once",
-					stripePriceId: env.NEXT_PUBLIC_STRIPE_PRICE_LIFETIME ?? "",
-					type: "one_time",
-					amount: 49900, // $499.00 in cents
-					currency: "usd",
-				},
-			],
 		},
 	},
 } satisfies BillingConfig;

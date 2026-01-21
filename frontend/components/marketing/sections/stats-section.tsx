@@ -11,24 +11,19 @@ interface Stat {
 export function StatsSection() {
 	const stats: Stat[] = [
 		{
-			value: "10K+",
-			label: "Active Users",
-			description: "Growing community worldwide",
+			value: "1-Click",
+			label: "Deployment",
+			description: "Deploy MCP servers instantly",
 		},
 		{
-			value: "99.9%",
-			label: "Uptime",
-			description: "Reliable infrastructure you can trust",
+			value: "Zero",
+			label: "Configuration",
+			description: "Natural language to production",
 		},
 		{
-			value: "50+",
+			value: "100+",
 			label: "Integrations",
-			description: "Connect with your favorite tools",
-		},
-		{
-			value: "24/7",
-			label: "Support",
-			description: "Help when you need it most",
+			description: "Databases, APIs, spreadsheets",
 		},
 	];
 
@@ -48,19 +43,19 @@ export function StatsSection() {
 								"sm:text-5xl sm:leading-14",
 							)}
 						>
-							Trusted by teams worldwide
+							Built for MCP Developers
 						</h2>
 					</div>
 					<div className="text-base leading-7 text-marketing-fg-muted text-pretty">
 						<p>
-							Join thousands of companies that rely on our platform to power
-							their business every day.
+							The fastest way to build, deploy, and manage MCP servers for your
+							AI assistants.
 						</p>
 					</div>
 				</div>
 
 				{/* Stats Grid */}
-				<div className="grid grid-cols-2 gap-6 lg:grid-cols-4 lg:gap-8">
+				<div className="grid grid-cols-1 gap-6 sm:grid-cols-3 lg:gap-8">
 					{stats.map((stat) => (
 						<div
 							key={stat.label}

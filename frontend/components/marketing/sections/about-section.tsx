@@ -7,33 +7,35 @@ import { cn } from "@/lib/utils";
 
 const stats = [
 	{
-		value: "2M+",
-		description: "Tasks completed every week across thousands of teams.",
+		value: "100+",
+		description: "MCP integrations built and deployed.",
 	},
 	{
-		value: "99.98%",
-		description: "Uptime - because your work never stops.",
+		value: "Zero",
+		description: "Configuration needed - natural language to production.",
 	},
 ];
 
 const values = [
 	{
-		title: "Simplicity",
-		description: "We believe powerful tools don't have to be complicated.",
-	},
-	{
-		title: "Customer Focus",
+		title: "AI-First Development",
 		description:
-			"Every feature we build starts with understanding what you actually need.",
+			"The future is describing what you want, not how to build it.",
 	},
 	{
-		title: "Reliability",
+		title: "Zero Configuration",
 		description:
-			"You can count on us. We're here when you need us, every time.",
+			"Complex infrastructure should be invisible. Deploy MCPs with one click.",
 	},
 	{
-		title: "Continuous Improvement",
-		description: "We're always learning and getting better at what we do.",
+		title: "Open Standards",
+		description:
+			"Built on the Model Context Protocol (MCP) for maximum interoperability.",
+	},
+	{
+		title: "Developer Experience",
+		description:
+			"From natural language to production-ready MCP servers in minutes.",
 	},
 ];
 
@@ -52,13 +54,14 @@ export function AboutSection() {
 									"sm:text-[5rem] sm:leading-20",
 								)}
 							>
-								We're building something different.
+								Building the Future of AI Tool Integration
 							</h1>
 							<div className="flex max-w-3xl flex-col gap-4 text-lg leading-8 text-marketing-fg-muted">
 								<p>
-									A small team with big ambitions. We're on a mission to help
-									teams work better together - building tools that get out of
-									your way and let you focus on what matters most.
+									MCP Hero is the fastest way to build and deploy Model Context
+									Protocol (MCP) servers. We transform natural language
+									descriptions into production-ready MCP servers that connect
+									your AI assistants to databases, APIs, spreadsheets, and more.
 								</p>
 							</div>
 						</div>
@@ -72,7 +75,7 @@ export function AboutSection() {
 					<div className="flex max-w-2xl flex-col gap-6">
 						<div className="flex flex-col gap-2">
 							<div className="text-sm font-semibold text-marketing-fg-muted">
-								Built for scale
+								Powering AI integrations
 							</div>
 							<h2
 								className={cn(
@@ -81,14 +84,14 @@ export function AboutSection() {
 									"sm:text-5xl sm:leading-14",
 								)}
 							>
-								The platform powering teams everywhere.
+								The platform for MCP developers.
 							</h2>
 						</div>
 						<div className="text-base leading-7 text-marketing-fg-muted text-pretty">
 							<p>
-								{appConfig.appName} helps teams deliver organized, efficient
-								work across the world. From small startups to enterprise teams,
-								we process millions of tasks each month.
+								{appConfig.appName} empowers developers to connect AI assistants
+								to any tool or data source. From indie hackers to enterprise
+								teams, we power the next generation of AI integrations.
 							</p>
 						</div>
 					</div>
@@ -163,13 +166,13 @@ export function AboutSection() {
 									"sm:text-5xl sm:leading-14",
 								)}
 							>
-								Ready to get started?
+								Ready to build your first MCP server?
 							</h2>
 						</div>
 						<div className="max-w-3xl text-base leading-7 text-marketing-fg-muted text-pretty">
 							<p>
-								Join thousands of teams already using {appConfig.appName} to
-								work smarter, not harder.
+								Join developers using {appConfig.appName} to connect their AI
+								assistants to the tools they need.
 							</p>
 						</div>
 					</div>

@@ -3,10 +3,8 @@ import { FaqSection } from "@/components/marketing/sections/faq-section";
 import { FeaturesSection } from "@/components/marketing/sections/features-section";
 import { HeroSection } from "@/components/marketing/sections/hero-section";
 import { LatestArticlesSection } from "@/components/marketing/sections/latest-articles-section";
-import { LogoCloudSection } from "@/components/marketing/sections/logo-cloud-section";
 import { PricingSection } from "@/components/marketing/sections/pricing-section";
 import { StatsSection } from "@/components/marketing/sections/stats-section";
-import { TestimonialsSection } from "@/components/marketing/sections/testimonials-section";
 import { appConfig } from "@/config/app.config";
 import { getAllPosts } from "@/lib/marketing/blog/posts";
 
@@ -115,12 +113,10 @@ export default async function HomePage() {
 			<OrganizationJsonLd />
 			<WebSiteJsonLd />
 			<HeroSection />
-			<LogoCloudSection />
 			<FeaturesSection />
 			<StatsSection />
-			<TestimonialsSection />
 			<FaqSection content={faqContent} />
-			<PricingSection />
+			<PricingSection showEnterprisePlans={true} />
 			<LatestArticlesSection posts={posts} />
 			<CtaSection content={ctaContent} />
 		</>

@@ -117,13 +117,13 @@ export function HeroSection() {
 								Get Started
 							</Link>
 							<Link
-								href="/contact"
+								href="/docs"
 								className={cn(
 									"group inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
 									"text-marketing-fg hover:bg-marketing-card-hover",
 								)}
 							>
-								Book a Demo
+								Read Docs
 								<ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
 							</Link>
 						</div>

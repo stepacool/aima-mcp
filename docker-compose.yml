@@ -13,10 +13,11 @@ services:
     volumes:
       - backend_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U myuser"]
+      test: ["CMD-SHELL", "pg_isready -U myuser -d test_aimalabs_database"]
       interval: 2s
-      retries: 10
+      retries: 15
       timeout: 2s
+      start_period: 10s
 
   backend-db-migrate:
     image: postgres:17
@@ -60,10 +61,11 @@ services:
     volumes:
       - frontend_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aima_mcp_frontend_db"]
       interval: 2s
-      retries: 10
+      retries: 15
       timeout: 2s
+      start_period: 10s
 
   frontend:
     build:
