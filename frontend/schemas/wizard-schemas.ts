@@ -59,14 +59,14 @@ export const startWizardSchema = z.object({
 });
 export type StartWizardInput = z.infer<typeof startWizardSchema>;
 
-// Refine wizard actions (calls Python backend /api/wizard/{id}/tools/refine)
-export const refineWizardActionsSchema = z.object({
+// Refine wizard tools (calls Python backend /api/wizard/{id}/tools/refine)
+export const refineWizardToolsSchema = z.object({
 	serverId: z.string(),
 	feedback: z.string().min(1, "Feedback is required"),
 	toolIds: z.array(z.string()).optional(), // Optional list of tool UUIDs
 });
-export type RefineWizardActionsInput = z.infer<
-	typeof refineWizardActionsSchema
+export type RefineWizardToolsInput = z.infer<
+	typeof refineWizardToolsSchema
 >;
 
 // Get wizard tools (calls Python backend /api/wizard/{id}/tools)

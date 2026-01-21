@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import type { WizardTool } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
 
-interface ActionsStepProps {
+interface ToolsStepProps {
 	serverId: string;
 	suggestedTools: WizardTool[];
 	isProcessing?: boolean;
@@ -30,7 +30,7 @@ interface ActionsStepProps {
 
 const MAX_FREE_TOOLS = 3;
 
-export function ActionsStep({
+export function ToolsStep({
 	serverId,
 	suggestedTools,
 	isProcessing = false,
@@ -38,7 +38,7 @@ export function ActionsStep({
 	onToolsSubmitted,
 	onRetry,
 	onRefetchState,
-}: ActionsStepProps) {
+}: ToolsStepProps) {
 	// Track selected tools by their UUID
 	const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(
 		new Set(),
@@ -48,8 +48,8 @@ export function ActionsStep({
 
 	const submitToolsMutation =
 		trpc.organization.wizard.submitTools.useMutation();
-	const refineActionsMutation =
-		trpc.organization.wizard.refineActions.useMutation();
+	const refineToolsMutation =
+		trpc.organization.wizard.refineTools.useMutation();
 
 	// Show loading state when backend is generating tools
 	if (isProcessing) {
@@ -118,7 +118,7 @@ export function ActionsStep({
 
 		setIsRefining(true);
 		try {
-			const result = await refineActionsMutation.mutateAsync({
+			const result = await refineToolsMutation.mutateAsync({
 				serverId,
 				feedback: feedback.trim(),
 				toolIds:

@@ -1,10 +1,10 @@
 import { logger } from "@/lib/logger";
-import { pythonBackendClient } from "./client";
 import type {
 	ProcessingStatus,
 	WizardAuthType,
 	WizardStep,
 } from "@/schemas/wizard-schemas";
+import { pythonBackendClient } from "./client";
 
 export interface WizardTool {
 	id: string; // UUID from backend
@@ -59,13 +59,13 @@ export interface StartWizardResponse {
 	status: "processing" | "idle";
 }
 
-export interface RefineWizardActionsParams {
+export interface RefineWizardToolsParams {
 	serverId: string;
 	feedback: string;
 	toolIds?: string[]; // Optional list of tool UUIDs to refine
 }
 
-export interface RefineWizardActionsResponse {
+export interface RefineWizardToolsResponse {
 	serverId: string;
 	status: "refining";
 }
@@ -164,12 +164,12 @@ export async function startWizard(
 /**
  * Refines the suggested tools based on user feedback.
  */
-export async function refineWizardActions(
-	params: RefineWizardActionsParams,
-): Promise<RefineWizardActionsResponse> {
+export async function refineWizardTools(
+	params: RefineWizardToolsParams,
+): Promise<RefineWizardToolsResponse> {
 	try {
 		const response =
-			await pythonBackendClient.post<RefineWizardActionsResponse>(
+			await pythonBackendClient.post<RefineWizardToolsResponse>(
 				`/api/wizard/${params.serverId}/tools/refine`,
 				{
 					feedback: params.feedback,
@@ -178,13 +178,13 @@ export async function refineWizardActions(
 			);
 		logger.info(
 			{ serverId: params.serverId },
-			"Wizard actions refined in Python backend",
+			"Wizard tools refined in Python backend",
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId: params.serverId, error },
-			"Failed to refine wizard actions in Python backend",
+			"Failed to refine wizard tools in Python backend",
 		);
 		throw error;
 	}

@@ -3,31 +3,31 @@ import {
 	activateServer,
 	configureWizardAuth,
 	generateWizardCode,
+	getEnvVars,
 	getWizardState,
 	getWizardTools,
-	refineWizardActions,
-	retryToolGeneration,
-	submitWizardTools,
-	startWizard,
-	suggestEnvVars,
-	getEnvVars,
 	refineEnvVars,
+	refineWizardTools,
+	retryToolGeneration,
+	startWizard,
 	submitEnvVars,
+	submitWizardTools,
+	suggestEnvVars,
 } from "@/lib/python-backend";
 import {
 	activateServerSchema,
 	configureWizardAuthSchema,
 	generateWizardCodeSchema,
+	getEnvVarsSchema,
 	getWizardStateSchema,
 	getWizardToolsSchema,
-	refineWizardActionsSchema,
-	retryWizardSchema,
-	submitWizardToolsSchema,
-	startWizardSchema,
-	suggestEnvVarsSchema,
-	getEnvVarsSchema,
 	refineEnvVarsSchema,
+	refineWizardToolsSchema,
+	retryWizardSchema,
+	startWizardSchema,
 	submitEnvVarsSchema,
+	submitWizardToolsSchema,
+	suggestEnvVarsSchema,
 } from "@/schemas/wizard-schemas";
 import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
 
@@ -59,7 +59,7 @@ export const organizationWizardRouter = createTRPCRouter({
 	// Get wizard state from Python backend
 	getState: protectedOrganizationProcedure
 		.input(getWizardStateSchema)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			const state = await getWizardState(input.serverId);
 
 			return state;
@@ -80,10 +80,10 @@ export const organizationWizardRouter = createTRPCRouter({
 		}),
 
 	// Refine suggested tools based on feedback
-	refineActions: protectedOrganizationProcedure
-		.input(refineWizardActionsSchema)
+	refineTools: protectedOrganizationProcedure
+		.input(refineWizardToolsSchema)
 		.mutation(async ({ ctx, input }) => {
-			const result = await refineWizardActions({
+			const result = await refineWizardTools({
 				serverId: input.serverId,
 				feedback: input.feedback,
 				toolIds: input.toolIds,
@@ -91,13 +91,13 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Wizard actions refined",
+				"Wizard tools refined",
 			);
 
 			return result;
 		}),
 
-	// Submit selected tools (transitions wizard from ACTIONS to ENV_VARS)
+	// Submit selected tools (transitions wizard from TOOLS to ENV_VARS)
 	submitTools: protectedOrganizationProcedure
 		.input(submitWizardToolsSchema)
 		.mutation(async ({ ctx, input }) => {

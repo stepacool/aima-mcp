@@ -4,12 +4,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
-import { ActionsStep } from "@/components/wizard/actions-step";
 import { AuthStep } from "@/components/wizard/auth-step";
 import { CompleteStep } from "@/components/wizard/complete-step";
 import { DeployStep } from "@/components/wizard/deploy-step";
 import { EnvVarsStep } from "@/components/wizard/env-vars-step";
 import { StepZeroChat } from "@/components/wizard/step-zero-chat";
+import { ToolsStep } from "@/components/wizard/tools-step";
 import { WizardStepIndicator } from "@/components/wizard/wizard-step-indicator";
 import {
 	useWizardPolling,
@@ -250,7 +250,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				)}
 
 				{currentStep === WizardStep.tools && serverId && (
-					<ActionsStep
+					<ToolsStep
 						serverId={serverId}
 						suggestedTools={suggestedTools}
 						isProcessing={isProcessing}
