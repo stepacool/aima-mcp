@@ -56,7 +56,14 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
         """Get server by UUID."""
         async with self.db.session() as session:
             result = await session.execute(
-                select(self.model).where(self.model.id == server_id)
+                select(self.model)
+                .where(self.model.id == server_id)
+                .options(
+                    selectinload(self.model.tools),
+                    selectinload(self.model.environment_variables),
+                    selectinload(self.model.prompts),
+                    selectinload(self.model.deployment),
+                )
             )
             return result.scalars().first()
 
