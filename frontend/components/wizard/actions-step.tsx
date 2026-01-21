@@ -42,12 +42,16 @@ export function ActionsStep({
 	onRefetchState,
 }: ActionsStepProps) {
 	// Track selected tools by their UUID
-	const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set());
+	const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(
+		new Set(),
+	);
 	const [feedback, setFeedback] = useState("");
 	const [isRefining, setIsRefining] = useState(false);
 
-	const submitToolsMutation = trpc.organization.wizard.submitTools.useMutation();
-	const refineActionsMutation = trpc.organization.wizard.refineActions.useMutation();
+	const submitToolsMutation =
+		trpc.organization.wizard.submitTools.useMutation();
+	const refineActionsMutation =
+		trpc.organization.wizard.refineActions.useMutation();
 
 	// Show loading state when backend is generating tools
 	if (isProcessing) {
@@ -59,7 +63,8 @@ export function ActionsStep({
 						Generating your MCP server tools...
 					</p>
 					<p className="text-sm text-muted-foreground/70">
-						This may take a moment. Feel free to navigate away - you can return to this page anytime.
+						This may take a moment. Feel free to navigate away - you can return
+						to this page anytime.
 					</p>
 				</div>
 			</div>
@@ -118,7 +123,8 @@ export function ActionsStep({
 			const result = await refineActionsMutation.mutateAsync({
 				serverId,
 				feedback: feedback.trim(),
-				toolIds: selectedToolIds.size > 0 ? Array.from(selectedToolIds) : undefined,
+				toolIds:
+					selectedToolIds.size > 0 ? Array.from(selectedToolIds) : undefined,
 			});
 			onRefine(result.suggestedTools);
 			setFeedback("");
@@ -166,45 +172,48 @@ export function ActionsStep({
 
 					{/* Tool Cards */}
 					<div className="grid gap-4 md:grid-cols-2">
-						{suggestedTools && suggestedTools.map((tool) => {
-							const isSelected = selectedToolIds.has(tool.id);
-							return (
-								<Card
-									key={tool.id}
-									className={cn(
-										"cursor-pointer transition-all hover:shadow-md",
-										isSelected && "border-primary ring-2 ring-primary/20"
-									)}
-									onClick={() => toggleTool(tool.id)}
-								>
-									<CardHeader className="pb-2">
-										<div className="flex items-start justify-between">
-											<div className="flex items-center gap-2">
-												<div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
-													<WrenchIcon className="size-4 text-primary" />
+						{suggestedTools &&
+							suggestedTools.map((tool) => {
+								const isSelected = selectedToolIds.has(tool.id);
+								return (
+									<Card
+										key={tool.id}
+										className={cn(
+											"cursor-pointer transition-all hover:shadow-md",
+											isSelected && "border-primary ring-2 ring-primary/20",
+										)}
+										onClick={() => toggleTool(tool.id)}
+									>
+										<CardHeader className="pb-2">
+											<div className="flex items-start justify-between">
+												<div className="flex items-center gap-2">
+													<div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+														<WrenchIcon className="size-4 text-primary" />
+													</div>
+													<CardTitle className="text-base">
+														{tool.name}
+													</CardTitle>
 												</div>
-												<CardTitle className="text-base">{tool.name}</CardTitle>
+												<div
+													className={cn(
+														"flex size-6 items-center justify-center rounded-full border-2 transition-colors",
+														isSelected
+															? "border-primary bg-primary text-primary-foreground"
+															: "border-muted-foreground/30",
+													)}
+												>
+													{isSelected && <CheckIcon className="size-4" />}
+												</div>
 											</div>
-											<div
-												className={cn(
-													"flex size-6 items-center justify-center rounded-full border-2 transition-colors",
-													isSelected
-														? "border-primary bg-primary text-primary-foreground"
-														: "border-muted-foreground/30"
-												)}
-											>
-												{isSelected && <CheckIcon className="size-4" />}
-											</div>
-										</div>
-									</CardHeader>
-									<CardContent>
-										<CardDescription className="text-sm">
-											{tool.description}
-										</CardDescription>
-									</CardContent>
-								</Card>
-							);
-						})}
+										</CardHeader>
+										<CardContent>
+											<CardDescription className="text-sm">
+												{tool.description}
+											</CardDescription>
+										</CardContent>
+									</Card>
+								);
+							})}
 					</div>
 
 					{/* Selection Counter */}

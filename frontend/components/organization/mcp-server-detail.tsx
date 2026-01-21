@@ -90,9 +90,13 @@ export function McpServerDetail({
 	const router = useRouter();
 	const utils = trpc.useUtils();
 
-	const { data: server, isPending, error } = trpc.organization.server.getDetails.useQuery(
+	const {
+		data: server,
+		isPending,
+		error,
+	} = trpc.organization.server.getDetails.useQuery(
 		{ serverId },
-		{ enabled: !!serverId }
+		{ enabled: !!serverId },
 	);
 
 	const deleteServerMutation = trpc.organization.server.delete.useMutation({
@@ -212,10 +216,7 @@ export function McpServerDetail({
 					</div>
 					{server.status === "draft" && (
 						<div className="mt-4 pt-4 border-t">
-							<Button
-								asChild
-								className="w-full sm:w-auto"
-							>
+							<Button asChild className="w-full sm:w-auto">
 								<Link
 									href={`/dashboard/organization/new-mcp-server?serverId=${server.id}`}
 								>
@@ -242,7 +243,8 @@ export function McpServerDetail({
 					<CardContent>
 						<div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
 							<code className="flex-1 truncate font-mono text-sm">
-								{window.location.origin}{server.mcpEndpoint}
+								{window.location.origin}
+								{server.mcpEndpoint}
 							</code>
 							<Button
 								variant="outline"
@@ -250,7 +252,7 @@ export function McpServerDetail({
 								onClick={() =>
 									copyToClipboard(
 										window.location.origin + server.mcpEndpoint,
-										"Endpoint URL"
+										"Endpoint URL",
 									)
 								}
 							>

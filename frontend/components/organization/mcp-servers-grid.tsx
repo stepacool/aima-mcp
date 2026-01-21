@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import * as React from "react";
+import type * as React from "react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
@@ -174,7 +174,7 @@ export function McpServersGrid(): React.JSX.Element {
 										<DropdownMenuItem
 											onClick={() =>
 												router.push(
-													`/dashboard/organization/mcp-servers/${server.id}`
+													`/dashboard/organization/mcp-servers/${server.id}`,
 												)
 											}
 										>
@@ -184,7 +184,7 @@ export function McpServersGrid(): React.JSX.Element {
 											<DropdownMenuItem
 												onClick={() => {
 													navigator.clipboard.writeText(
-														window.location.origin + server.mcpEndpoint
+														window.location.origin + server.mcpEndpoint,
 													);
 													toast.success("Endpoint URL copied to clipboard");
 												}}
@@ -195,9 +195,7 @@ export function McpServersGrid(): React.JSX.Element {
 										<DropdownMenuSeparator />
 										<DropdownMenuItem
 											variant="destructive"
-											onClick={() =>
-												handleDeleteServer(server.id, server.name)
-											}
+											onClick={() => handleDeleteServer(server.id, server.name)}
 										>
 											<Trash2Icon className="mr-2 size-4" />
 											Delete
@@ -263,11 +261,7 @@ export function McpServersGrid(): React.JSX.Element {
 								</p>
 								<div className="flex gap-2">
 									{server.status === "draft" && (
-										<Button
-											variant="default"
-											size="sm"
-											asChild
-										>
+										<Button variant="default" size="sm" asChild>
 											<Link
 												href={`/dashboard/organization/new-mcp-server?serverId=${server.id}`}
 											>
@@ -275,11 +269,7 @@ export function McpServersGrid(): React.JSX.Element {
 											</Link>
 										</Button>
 									)}
-									<Button
-										variant="outline"
-										size="sm"
-										asChild
-									>
+									<Button variant="outline" size="sm" asChild>
 										<Link
 											href={`/dashboard/organization/mcp-servers/${server.id}`}
 										>

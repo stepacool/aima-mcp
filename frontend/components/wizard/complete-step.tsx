@@ -57,9 +57,7 @@ export function CompleteStep({ serverUrl, serverName }: CompleteStepProps) {
 
 				{/* Success Message */}
 				<div>
-					<h2 className="font-semibold text-2xl">
-						Your MCP Server is Live!
-					</h2>
+					<h2 className="font-semibold text-2xl">Your MCP Server is Live!</h2>
 					<p className="mt-2 text-muted-foreground">
 						{serverName
 							? `${serverName} has been deployed and is ready to use.`
@@ -77,20 +75,12 @@ export function CompleteStep({ serverUrl, serverName }: CompleteStepProps) {
 					</CardHeader>
 					<CardContent>
 						<div className="flex gap-2">
-							<Input
-								readOnly
-								value={serverUrl}
-								className="font-mono text-sm"
-							/>
+							<Input readOnly value={serverUrl} className="font-mono text-sm" />
 							<Button variant="outline" size="icon" onClick={handleCopyUrl}>
 								<CopyIcon className="size-4" />
 								<span className="sr-only">Copy URL</span>
 							</Button>
-							<Button
-								variant="outline"
-								size="icon"
-								asChild
-							>
+							<Button variant="outline" size="icon" asChild>
 								<a href={serverUrl} target="_blank" rel="noopener noreferrer">
 									<ExternalLinkIcon className="size-4" />
 									<span className="sr-only">Open in new tab</span>

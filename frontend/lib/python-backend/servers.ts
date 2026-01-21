@@ -47,21 +47,21 @@ export interface ServerDetails {
  * Lists all MCP servers for a customer.
  */
 export async function listServers(
-	customerId: string
+	customerId: string,
 ): Promise<ServerListResponse> {
 	try {
 		const response = await pythonBackendClient.get<ServerListResponse>(
-			`/api/servers/list/${customerId}`
+			`/api/servers/list/${customerId}`,
 		);
 		logger.info(
 			{ customerId, count: response.data.servers.length },
-			"Fetched server list from Python backend"
+			"Fetched server list from Python backend",
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ customerId, error },
-			"Failed to list servers from Python backend"
+			"Failed to list servers from Python backend",
 		);
 		throw error;
 	}
@@ -71,18 +71,18 @@ export async function listServers(
  * Gets detailed information about a specific server.
  */
 export async function getServerDetails(
-	serverId: string
+	serverId: string,
 ): Promise<ServerDetails> {
 	try {
 		const response = await pythonBackendClient.get<ServerDetails>(
-			`/api/servers/${serverId}/details`
+			`/api/servers/${serverId}/details`,
 		);
 		logger.info({ serverId }, "Fetched server details from Python backend");
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to get server details from Python backend"
+			"Failed to get server details from Python backend",
 		);
 		throw error;
 	}
@@ -92,7 +92,7 @@ export async function getServerDetails(
  * Deletes an MCP server.
  */
 export async function deleteServer(
-	serverId: string
+	serverId: string,
 ): Promise<{ status: string; serverId: string }> {
 	try {
 		const response = await pythonBackendClient.delete<{
@@ -104,7 +104,7 @@ export async function deleteServer(
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to delete server from Python backend"
+			"Failed to delete server from Python backend",
 		);
 		throw error;
 	}

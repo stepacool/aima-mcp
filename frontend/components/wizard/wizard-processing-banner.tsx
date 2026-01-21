@@ -33,7 +33,8 @@ export function WizardProcessingBanner({
 				</div>
 				<AlertTitle className="text-destructive">Generation failed</AlertTitle>
 				<AlertDescription className="text-destructive/80">
-					{processingError || "An error occurred while generating your MCP server tools."}
+					{processingError ||
+						"An error occurred while generating your MCP server tools."}
 					<span className="block text-xs text-destructive/60 mt-1">
 						Server ID: {serverId}
 					</span>
@@ -65,7 +66,9 @@ export function WizardProcessingBanner({
 				<ServerIcon className="h-4 w-4 text-amber-500" />
 				<Loader2 className="h-4 w-4 animate-spin text-amber-500" />
 			</div>
-			<AlertTitle className="text-amber-500">Processing your request</AlertTitle>
+			<AlertTitle className="text-amber-500">
+				Processing your request
+			</AlertTitle>
 			<AlertDescription className="text-amber-500/80">
 				Your MCP server is being created. Auto-refreshing every 3 seconds.
 				<span className="block text-xs text-amber-500/60 mt-1">

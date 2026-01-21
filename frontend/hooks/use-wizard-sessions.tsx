@@ -23,7 +23,9 @@ interface StoredWizards {
  * Uses TanStack Query's refetchInterval for automatic status updates.
  */
 export function useWizardSessions(organizationId: string) {
-	const [inProgressWizards, setInProgressWizards] = useState<InProgressWizard[]>([]);
+	const [inProgressWizards, setInProgressWizards] = useState<
+		InProgressWizard[]
+	>([]);
 
 	// Load from localStorage on mount
 	useEffect(() => {
@@ -53,7 +55,7 @@ export function useWizardSessions(organizationId: string) {
 			allWizards[organizationId] = wizards;
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(allWizards));
 		},
-		[organizationId]
+		[organizationId],
 	);
 
 	// Add a new in-progress wizard session
@@ -75,7 +77,7 @@ export function useWizardSessions(organizationId: string) {
 				return updated;
 			});
 		},
-		[organizationId, saveToStorage]
+		[organizationId, saveToStorage],
 	);
 
 	// Remove a wizard session (when completed or error)
@@ -87,7 +89,7 @@ export function useWizardSessions(organizationId: string) {
 				return updated;
 			});
 		},
-		[saveToStorage]
+		[saveToStorage],
 	);
 
 	// Clear all wizard sessions for this organization
@@ -127,7 +129,7 @@ export function useWizardPolling(
 		onError?: (error: string) => void;
 		onNetworkError?: (error: unknown) => void;
 		enabled?: boolean;
-	}
+	},
 ) {
 	const { enabled = true } = options || {};
 
@@ -144,7 +146,12 @@ export function useWizardPolling(
 		envVarsReady: boolean;
 		error: string | null;
 		completedStep: string | null;
-	}>({ toolsReady: false, envVarsReady: false, error: null, completedStep: null });
+	}>({
+		toolsReady: false,
+		envVarsReady: false,
+		error: null,
+		completedStep: null,
+	});
 
 	// Update refs when callbacks change
 	useEffect(() => {
@@ -155,33 +162,43 @@ export function useWizardPolling(
 		onNetworkErrorRef.current = options?.onNetworkError;
 	});
 
-	const { data, isLoading, error, refetch } = trpc.organization.wizard.getState.useQuery(
-		{ serverId: serverId! },
-		{
-			enabled: enabled && !!serverId,
-			retry: 2,
-			// Auto-polling: refetch every 3 seconds while processing
-			// Stop polling once processing is complete or has failed
-			refetchInterval: (query) => {
-				const state = query.state.data;
-				if (!state) return 3000; // Keep polling if no data yet
-				// Continue polling only while processing
-				return isProcessingStatus(state.processingStatus) ? 3000 : false;
+	const { data, isLoading, error, refetch } =
+		trpc.organization.wizard.getState.useQuery(
+			{ serverId: serverId! },
+			{
+				enabled: enabled && !!serverId,
+				retry: 2,
+				// Auto-polling: refetch every 3 seconds while processing
+				// Stop polling once processing is complete or has failed
+				refetchInterval: (query) => {
+					const state = query.state.data;
+					if (!state) return 3000; // Keep polling if no data yet
+					// Continue polling only while processing
+					return isProcessingStatus(state.processingStatus) ? 3000 : false;
+				},
+				refetchIntervalInBackground: true, // Continue polling even when tab is inactive
 			},
-			refetchIntervalInBackground: true, // Continue polling even when tab is inactive
-		}
-	);
+		);
 
 	// Reset notification tracking when serverId changes
 	useEffect(() => {
-		notifiedRef.current = { toolsReady: false, envVarsReady: false, error: null, completedStep: null };
+		notifiedRef.current = {
+			toolsReady: false,
+			envVarsReady: false,
+			error: null,
+			completedStep: null,
+		};
 	}, [serverId]);
 
 	// Handle all notifications in a single effect based on data changes
 	useEffect(() => {
 		if (!data) return;
 
-		const { wizardStep: wizard_step, processingStatus: processing_status, processingError: processing_error } = data;
+		const {
+			wizardStep: wizard_step,
+			processingStatus: processing_status,
+			processingError: processing_error,
+		} = data;
 
 		// Notify when tools are ready (only once)
 		if (
@@ -240,4 +257,3 @@ export function useWizardPolling(
 		processingError: data?.processingError ?? null,
 	};
 }
-

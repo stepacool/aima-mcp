@@ -12,7 +12,9 @@ interface CreateCustomerParams {
  * Creates a customer in the Python backend.
  * Called when a new organization is created.
  */
-export async function createCustomer(params: CreateCustomerParams): Promise<void> {
+export async function createCustomer(
+	params: CreateCustomerParams,
+): Promise<void> {
 	try {
 		await pythonBackendClient.post("/api/customers/", {
 			id: params.id,
@@ -20,11 +22,14 @@ export async function createCustomer(params: CreateCustomerParams): Promise<void
 			email: params.email ?? null,
 			meta: params.meta ?? null,
 		});
-		logger.info({ customerId: params.id }, "Customer created in Python backend");
+		logger.info(
+			{ customerId: params.id },
+			"Customer created in Python backend",
+		);
 	} catch (error) {
 		logger.error(
 			{ customerId: params.id, error },
-			"Failed to create customer in Python backend"
+			"Failed to create customer in Python backend",
 		);
 	}
 }

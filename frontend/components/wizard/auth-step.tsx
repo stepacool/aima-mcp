@@ -31,11 +31,12 @@ export function AuthStep({
 	const [generatedToken, setGeneratedToken] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
 
-	const configureAuthMutation = trpc.organization.wizard.configureAuth.useMutation();
+	const configureAuthMutation =
+		trpc.organization.wizard.configureAuth.useMutation();
 
 	// Get selected tools by matching IDs
 	const selectedTools = suggestedTools.filter((tool) =>
-		selectedToolIds.includes(tool.id)
+		selectedToolIds.includes(tool.id),
 	);
 
 	const handleGenerateToken = async () => {
@@ -113,7 +114,9 @@ export function AuthStep({
 									<KeyIcon className="size-5 text-primary" />
 								</div>
 								<div>
-									<CardTitle className="text-lg">API Key Authentication</CardTitle>
+									<CardTitle className="text-lg">
+										API Key Authentication
+									</CardTitle>
 									<CardDescription>
 										Your MCP server will be secured with an API key
 									</CardDescription>
@@ -124,8 +127,9 @@ export function AuthStep({
 							{!generatedToken ? (
 								<div className="space-y-4">
 									<p className="text-sm text-muted-foreground">
-										Click the button below to generate a secure API key. This key will be used
-										to authenticate requests to your MCP server.
+										Click the button below to generate a secure API key. This
+										key will be used to authenticate requests to your MCP
+										server.
 									</p>
 									<Button
 										onClick={handleGenerateToken}
@@ -153,7 +157,9 @@ export function AuthStep({
 												) : (
 													<CopyIcon className="size-4" />
 												)}
-												<span className="ml-1">{copied ? "Copied" : "Copy"}</span>
+												<span className="ml-1">
+													{copied ? "Copied" : "Copy"}
+												</span>
 											</Button>
 										</div>
 										<code className="block break-all rounded bg-background p-3 font-mono text-sm">
@@ -162,8 +168,8 @@ export function AuthStep({
 									</div>
 									<div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950">
 										<p className="text-sm text-yellow-800 dark:text-yellow-200">
-											<strong>Important:</strong> Save this API key now. You won't be able to
-											see it again after leaving this page.
+											<strong>Important:</strong> Save this API key now. You
+											won't be able to see it again after leaving this page.
 										</p>
 									</div>
 								</div>
@@ -176,10 +182,7 @@ export function AuthStep({
 			{/* Footer */}
 			<div className="shrink-0 border-t bg-background/80 p-4 backdrop-blur-sm">
 				<div className="mx-auto flex max-w-3xl justify-end">
-					<Button
-						onClick={handleContinue}
-						disabled={!generatedToken}
-					>
+					<Button onClick={handleContinue} disabled={!generatedToken}>
 						Continue to Deploy
 					</Button>
 				</div>

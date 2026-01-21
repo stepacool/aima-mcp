@@ -23,7 +23,7 @@ const UUID_PATTERN =
  */
 function keysToAnyCase(
 	data: JsonValue,
-	convertFn: (key: string) => string
+	convertFn: (key: string) => string,
 ): JsonValue {
 	if (Array.isArray(data)) {
 		return data.map((item) => keysToAnyCase(item, convertFn));
@@ -34,7 +34,7 @@ function keysToAnyCase(
 			Object.entries(data).map(([key, value]) => [
 				UUID_PATTERN.test(key) ? key : convertFn(key),
 				keysToAnyCase(value, convertFn),
-			])
+			]),
 		);
 	}
 
@@ -91,10 +91,10 @@ function createPythonBackendClient(): AxiosInstance {
 		(error: AxiosError) => {
 			logger.error(
 				{ error: error.message },
-				"Python backend request interceptor error"
+				"Python backend request interceptor error",
 			);
 			return Promise.reject(error);
-		}
+		},
 	);
 
 	// Response interceptor: Convert response data keys to camelCase
@@ -117,11 +117,11 @@ function createPythonBackendClient(): AxiosInstance {
 					method,
 					message: error.message,
 				},
-				"Python backend request failed"
+				"Python backend request failed",
 			);
 
 			return Promise.reject(error);
-		}
+		},
 	);
 
 	return client;

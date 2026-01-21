@@ -50,7 +50,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: result.serverId, organizationId: ctx.organization.id },
-				"Wizard started via Python backend"
+				"Wizard started via Python backend",
 			);
 
 			return result;
@@ -73,7 +73,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Wizard tools fetched"
+				"Wizard tools fetched",
 			);
 
 			return result;
@@ -91,7 +91,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Wizard actions refined"
+				"Wizard actions refined",
 			);
 
 			return result;
@@ -107,8 +107,12 @@ export const organizationWizardRouter = createTRPCRouter({
 			});
 
 			logger.info(
-				{ serverId: input.serverId, toolIds: input.selectedToolIds, organizationId: ctx.organization.id },
-				"Wizard tools submitted"
+				{
+					serverId: input.serverId,
+					toolIds: input.selectedToolIds,
+					organizationId: ctx.organization.id,
+				},
+				"Wizard tools submitted",
 			);
 
 			return result;
@@ -122,7 +126,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Env vars suggestion triggered"
+				"Env vars suggestion triggered",
 			);
 
 			return result;
@@ -136,7 +140,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Env vars fetched"
+				"Env vars fetched",
 			);
 
 			return result;
@@ -153,7 +157,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Env vars refined"
+				"Env vars refined",
 			);
 
 			return result;
@@ -170,7 +174,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Env vars submitted"
+				"Env vars submitted",
 			);
 
 			return result;
@@ -187,7 +191,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Wizard auth configured"
+				"Wizard auth configured",
 			);
 
 			return result;
@@ -201,7 +205,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Wizard code generated"
+				"Wizard code generated",
 			);
 
 			return result;
@@ -214,8 +218,12 @@ export const organizationWizardRouter = createTRPCRouter({
 			const result = await activateServer(input.serverId);
 
 			logger.info(
-				{ serverId: input.serverId, serverUrl: result.serverUrl, organizationId: ctx.organization.id },
-				"Server activated"
+				{
+					serverId: input.serverId,
+					serverUrl: result.serverUrl,
+					organizationId: ctx.organization.id,
+				},
+				"Server activated",
 			);
 
 			return result;
@@ -229,7 +237,7 @@ export const organizationWizardRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Wizard tool generation retried"
+				"Wizard tool generation retried",
 			);
 
 			return result;

@@ -99,8 +99,9 @@ export function HeroSection() {
 						{/* Description */}
 						<div className="flex max-w-3xl flex-col gap-4 text-lg leading-8 text-marketing-fg-muted">
 							<p>
-								"Loveable for MCP servers" lets you use natural language to build MCP servers.
-                                All things considered from oAuth to ephemeral state and monitoring.
+								"Loveable for MCP servers" lets you use natural language to
+								build MCP servers. All things considered from oAuth to ephemeral
+								state and monitoring.
 							</p>
 						</div>
 

@@ -729,4 +729,3 @@ export const leadTable = pgTable(
 		index("lead_org_status_idx").on(table.organizationId, table.status),
 	],
 );
-

@@ -65,7 +65,9 @@ export const refineWizardActionsSchema = z.object({
 	feedback: z.string().min(1, "Feedback is required"),
 	toolIds: z.array(z.string()).optional(), // Optional list of tool UUIDs
 });
-export type RefineWizardActionsInput = z.infer<typeof refineWizardActionsSchema>;
+export type RefineWizardActionsInput = z.infer<
+	typeof refineWizardActionsSchema
+>;
 
 // Get wizard tools (calls Python backend /api/wizard/{id}/tools)
 export const getWizardToolsSchema = z.object({
@@ -114,7 +116,9 @@ export type SubmitEnvVarsInput = z.infer<typeof submitEnvVarsSchema>;
 export const configureWizardAuthSchema = z.object({
 	serverId: z.string(),
 });
-export type ConfigureWizardAuthInput = z.infer<typeof configureWizardAuthSchema>;
+export type ConfigureWizardAuthInput = z.infer<
+	typeof configureWizardAuthSchema
+>;
 
 // Generate wizard code (calls Python backend /api/wizard/{id}/generate-code)
 export const generateWizardCodeSchema = z.object({

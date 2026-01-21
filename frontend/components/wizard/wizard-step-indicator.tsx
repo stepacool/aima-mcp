@@ -11,12 +11,32 @@ interface WizardStepIndicatorProps {
 }
 
 const STEPS = [
-	{ key: WizardStep.stepZero, label: "Describe", description: "Tell us what you want to build" },
-	{ key: WizardStep.actions, label: "Tools", description: "Select the tools for your server" },
-	{ key: WizardStep.envVars, label: "Config", description: "Configure environment variables" },
+	{
+		key: WizardStep.stepZero,
+		label: "Describe",
+		description: "Tell us what you want to build",
+	},
+	{
+		key: WizardStep.actions,
+		label: "Tools",
+		description: "Select the tools for your server",
+	},
+	{
+		key: WizardStep.envVars,
+		label: "Config",
+		description: "Configure environment variables",
+	},
 	{ key: WizardStep.auth, label: "Auth", description: "Generate API key" },
-	{ key: WizardStep.deploy, label: "Deploy", description: "Review and deploy your server" },
-	{ key: WizardStep.complete, label: "Complete", description: "Your server is live" },
+	{
+		key: WizardStep.deploy,
+		label: "Deploy",
+		description: "Review and deploy your server",
+	},
+	{
+		key: WizardStep.complete,
+		label: "Complete",
+		description: "Your server is live",
+	},
 ];
 
 function getStepIndex(step: WizardStep): number {
@@ -43,9 +63,11 @@ export function WizardStepIndicator({
 						<div
 							className={cn(
 								"flex size-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors",
-								isComplete && "border-primary bg-primary text-primary-foreground",
+								isComplete &&
+									"border-primary bg-primary text-primary-foreground",
 								isCurrent && "border-primary text-primary",
-								isPending && "border-muted-foreground/30 text-muted-foreground/50"
+								isPending &&
+									"border-muted-foreground/30 text-muted-foreground/50",
 							)}
 						>
 							{isComplete ? (
@@ -61,13 +83,13 @@ export function WizardStepIndicator({
 						<div
 							className={cn(
 								"ml-2 hidden flex-col md:flex",
-								isPending && "opacity-50"
+								isPending && "opacity-50",
 							)}
 						>
 							<span
 								className={cn(
 									"text-sm font-medium",
-									isCurrent && "text-primary"
+									isCurrent && "text-primary",
 								)}
 							>
 								{step.label}
@@ -79,7 +101,9 @@ export function WizardStepIndicator({
 							<div
 								className={cn(
 									"mx-3 h-0.5 w-8 transition-colors md:w-12",
-									index < currentIndex ? "bg-primary" : "bg-muted-foreground/30"
+									index < currentIndex
+										? "bg-primary"
+										: "bg-muted-foreground/30",
 								)}
 							/>
 						)}

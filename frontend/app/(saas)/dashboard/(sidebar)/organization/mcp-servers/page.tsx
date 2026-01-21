@@ -26,7 +26,7 @@ export default async function McpServersPage(): Promise<React.JSX.Element> {
 	}
 
 	const organization = await getOrganizationById(
-		session.session.activeOrganizationId
+		session.session.activeOrganizationId,
 	);
 	if (!organization) {
 		redirect("/dashboard");

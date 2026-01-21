@@ -30,7 +30,7 @@ export default async function McpServerDetailPage({
 	}
 
 	const organization = await getOrganizationById(
-		session.session.activeOrganizationId
+		session.session.activeOrganizationId,
 	);
 	if (!organization) {
 		redirect("/dashboard");
@@ -44,7 +44,10 @@ export default async function McpServerDetailPage({
 						segments={[
 							{ label: "Home", href: "/dashboard" },
 							{ label: organization.name, href: "/dashboard/organization" },
-							{ label: "MCP Servers", href: "/dashboard/organization/mcp-servers" },
+							{
+								label: "MCP Servers",
+								href: "/dashboard/organization/mcp-servers",
+							},
 							{ label: "Server Details" },
 						]}
 					/>

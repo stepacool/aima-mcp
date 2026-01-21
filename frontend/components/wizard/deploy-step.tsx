@@ -1,6 +1,13 @@
 "use client";
 
-import { CheckIcon, CodeIcon, CopyIcon, KeyIcon, RocketIcon, WrenchIcon } from "lucide-react";
+import {
+	CheckIcon,
+	CodeIcon,
+	CopyIcon,
+	KeyIcon,
+	RocketIcon,
+	WrenchIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -33,7 +40,7 @@ export function DeployStep({
 }: DeployStepProps) {
 	// Get selected tools by matching IDs
 	const selectedTools = suggestedTools.filter((tool) =>
-		selectedToolIds.includes(tool.id)
+		selectedToolIds.includes(tool.id),
 	);
 	const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
@@ -147,7 +154,9 @@ export function DeployStep({
 										) : (
 											<CopyIcon className="size-3" />
 										)}
-										<span className="ml-1 text-xs">{tokenCopied ? "Copied" : "Copy Key"}</span>
+										<span className="ml-1 text-xs">
+											{tokenCopied ? "Copied" : "Copy Key"}
+										</span>
 									</Button>
 								</div>
 							</CardContent>

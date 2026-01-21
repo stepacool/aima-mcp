@@ -88,7 +88,7 @@ function WizardSessionItem({
 						<ServerIcon
 							className={cn(
 								"size-4 shrink-0",
-								isProcessing ? "text-amber-500" : "text-muted-foreground"
+								isProcessing ? "text-amber-500" : "text-muted-foreground",
 							)}
 						/>
 						{isProcessing && (
@@ -104,7 +104,7 @@ function WizardSessionItem({
 							"ml-auto shrink-0 text-[10px] px-1.5 py-0",
 							isProcessing
 								? "border-amber-500/50 text-amber-500"
-								: "border-green-500/50 text-green-500"
+								: "border-green-500/50 text-green-500",
 						)}
 					>
 						{isProcessing ? "In Progress" : "Ready"}
@@ -115,7 +115,10 @@ function WizardSessionItem({
 	);
 }
 
-function getStepLabel(step: WizardStep | undefined, isProcessing: boolean): string {
+function getStepLabel(
+	step: WizardStep | undefined,
+	isProcessing: boolean,
+): string {
 	switch (step) {
 		case WizardStep.actions:
 			return isProcessing ? "Generating tools..." : "Select tools";

@@ -43,8 +43,10 @@ export function EnvVarsStep({
 	const [feedback, setFeedback] = useState("");
 	const [isRefining, setIsRefining] = useState(false);
 
-	const submitEnvVarsMutation = trpc.organization.wizard.submitEnvVars.useMutation();
-	const refineEnvVarsMutation = trpc.organization.wizard.refineEnvVars.useMutation();
+	const submitEnvVarsMutation =
+		trpc.organization.wizard.submitEnvVars.useMutation();
+	const refineEnvVarsMutation =
+		trpc.organization.wizard.refineEnvVars.useMutation();
 
 	const handleValueChange = (envVarId: string, value: string) => {
 		setEnvVarValues((prev) => ({
@@ -120,7 +122,9 @@ export function EnvVarsStep({
 			<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
 				<div className="max-w-md space-y-4">
 					<div className="text-destructive">
-						<p className="font-medium">Environment variable generation failed</p>
+						<p className="font-medium">
+							Environment variable generation failed
+						</p>
 						<p className="mt-2 text-sm text-muted-foreground">
 							{processingError}
 						</p>
@@ -151,10 +155,12 @@ export function EnvVarsStep({
 							</div>
 						</div>
 						<div>
-							<h2 className="font-semibold text-2xl">No Configuration Required</h2>
+							<h2 className="font-semibold text-2xl">
+								No Configuration Required
+							</h2>
 							<p className="mt-2 text-muted-foreground">
-								Your MCP server doesn't require any environment variables.
-								You can proceed to the next step.
+								Your MCP server doesn't require any environment variables. You
+								can proceed to the next step.
 							</p>
 						</div>
 					</div>
@@ -162,7 +168,10 @@ export function EnvVarsStep({
 
 				<div className="shrink-0 border-t bg-background/80 p-4 backdrop-blur-sm">
 					<div className="mx-auto flex max-w-4xl justify-end">
-						<Button onClick={handleContinue} loading={submitEnvVarsMutation.isPending}>
+						<Button
+							onClick={handleContinue}
+							loading={submitEnvVarsMutation.isPending}
+						>
 							Continue to Authentication
 						</Button>
 					</div>
@@ -177,9 +186,12 @@ export function EnvVarsStep({
 				<div className="mx-auto max-w-3xl space-y-6">
 					{/* Header */}
 					<div className="text-center">
-						<h2 className="font-semibold text-2xl">Configure Environment Variables</h2>
+						<h2 className="font-semibold text-2xl">
+							Configure Environment Variables
+						</h2>
 						<p className="mt-2 text-muted-foreground">
-							Set the values for the environment variables your MCP server needs.
+							Set the values for the environment variables your MCP server
+							needs.
 						</p>
 					</div>
 
@@ -192,7 +204,9 @@ export function EnvVarsStep({
 										<div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
 											<SettingsIcon className="size-4 text-primary" />
 										</div>
-										<CardTitle className="font-mono text-base">{envVar.name}</CardTitle>
+										<CardTitle className="font-mono text-base">
+											{envVar.name}
+										</CardTitle>
 									</div>
 								</CardHeader>
 								<CardContent className="space-y-3">
@@ -204,7 +218,9 @@ export function EnvVarsStep({
 											type="password"
 											placeholder={`Enter ${envVar.name}`}
 											value={envVarValues[envVar.id] ?? envVar.value ?? ""}
-											onChange={(e) => handleValueChange(envVar.id, e.target.value)}
+											onChange={(e) =>
+												handleValueChange(envVar.id, e.target.value)
+											}
 										/>
 									</div>
 								</CardContent>
@@ -215,9 +231,7 @@ export function EnvVarsStep({
 					{/* Refine Section */}
 					<Card className="bg-muted/50">
 						<CardHeader className="pb-2">
-							<CardTitle className="text-base">
-								Missing something?
-							</CardTitle>
+							<CardTitle className="text-base">Missing something?</CardTitle>
 							<CardDescription>
 								Tell us what's missing and we'll update the configuration.
 							</CardDescription>

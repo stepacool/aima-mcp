@@ -27,10 +27,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
-import {
-	extractReadyDescription,
-	isReadyToStart,
-} from "@/lib/wizard/prompts";
+import { extractReadyDescription, isReadyToStart } from "@/lib/wizard/prompts";
 import type { WizardMessage } from "@/schemas/wizard-schemas";
 
 interface StepZeroChatProps {
@@ -43,7 +40,7 @@ interface StepZeroChatProps {
 
 // Helper function to extract text content from message parts
 function getMessageText(
-	message: ReturnType<typeof useChat>["messages"][number]
+	message: ReturnType<typeof useChat>["messages"][number],
 ): string {
 	const textPart = message.parts?.find((part) => part.type === "text");
 	if (textPart && typeof textPart.text === "string") {
@@ -128,7 +125,9 @@ export function StepZeroChat({
 				!readinessDetectedRef.current &&
 				isReadyToStart(lastAssistantMessage.content)
 			) {
-				const description = extractReadyDescription(lastAssistantMessage.content);
+				const description = extractReadyDescription(
+					lastAssistantMessage.content,
+				);
 				if (description) {
 					readinessDetectedRef.current = true;
 					onReady(description);
@@ -159,7 +158,10 @@ export function StepZeroChat({
 	const lastMessageCountRef = useRef(0);
 	useEffect(() => {
 		// Skip if no messages or if count hasn't changed (avoid duplicate updates)
-		if (messages.length === 0 || messages.length === lastMessageCountRef.current) {
+		if (
+			messages.length === 0 ||
+			messages.length === lastMessageCountRef.current
+		) {
 			return;
 		}
 		lastMessageCountRef.current = messages.length;
@@ -197,7 +199,7 @@ export function StepZeroChat({
 				parts: [{ type: "text", text: text.trim() }],
 			});
 		},
-		[sendMessage]
+		[sendMessage],
 	);
 
 	const onSubmit = () => {
@@ -248,86 +250,85 @@ export function StepZeroChat({
 						</div>
 					) : (
 						<>
-						{displayMessages.map((message) => (
-							<Message key={message.id} from={message.role}>
-								<div
-									className={cn(
-										"flex w-full gap-4",
-										message.role === "user" && "flex-row-reverse"
-									)}
-								>
-									{message.role === "assistant" ? (
-										<Avatar className="size-8 shrink-0">
-											<AvatarFallback className="bg-primary text-primary-foreground">
-												<SparklesIcon className="size-4" />
-											</AvatarFallback>
-										</Avatar>
-									) : (
-										<UserAvatar
-											name={user?.name ?? "User"}
-											src={user?.image}
-											className="size-8 shrink-0"
-										/>
-									)}
-									<div className="flex min-w-0 flex-1 flex-col gap-1">
-										<MessageContent
-											className={cn(
-												"max-w-none",
-												message.role === "user" &&
-													"rounded-2xl bg-secondary px-4 py-3"
-											)}
-										>
-											{message.role === "assistant" ? (
-												<MessageResponse>
-													{getMessageText(message)}
-												</MessageResponse>
-											) : (
-												<span className="whitespace-pre-wrap">
-													{getMessageText(message)}
-												</span>
-											)}
-										</MessageContent>
+							{displayMessages.map((message) => (
+								<Message key={message.id} from={message.role}>
+									<div
+										className={cn(
+											"flex w-full gap-4",
+											message.role === "user" && "flex-row-reverse",
+										)}
+									>
+										{message.role === "assistant" ? (
+											<Avatar className="size-8 shrink-0">
+												<AvatarFallback className="bg-primary text-primary-foreground">
+													<SparklesIcon className="size-4" />
+												</AvatarFallback>
+											</Avatar>
+										) : (
+											<UserAvatar
+												name={user?.name ?? "User"}
+												src={user?.image}
+												className="size-8 shrink-0"
+											/>
+										)}
+										<div className="flex min-w-0 flex-1 flex-col gap-1">
+											<MessageContent
+												className={cn(
+													"max-w-none",
+													message.role === "user" &&
+														"rounded-2xl bg-secondary px-4 py-3",
+												)}
+											>
+												{message.role === "assistant" ? (
+													<MessageResponse>
+														{getMessageText(message)}
+													</MessageResponse>
+												) : (
+													<span className="whitespace-pre-wrap">
+														{getMessageText(message)}
+													</span>
+												)}
+											</MessageContent>
+										</div>
 									</div>
+								</Message>
+							))}
+
+							{/* Error message */}
+							{streamError && (
+								<div className="flex w-full gap-4">
+									<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+										<AlertCircleIcon className="size-4 text-destructive" />
+									</div>
+									<div className="flex min-w-0 flex-1 flex-col gap-1">
+										<div className="rounded-2xl bg-destructive/10 px-4 py-3 text-destructive">
+											<p className="font-medium">Something went wrong</p>
+											<p className="text-sm opacity-80">{streamError}</p>
+										</div>
+									</div>
+								</div>
+							)}
+						</>
+					)}
+
+					{isStreaming &&
+						displayMessages[displayMessages.length - 1]?.role === "user" && (
+							<Message from="assistant">
+								<div className="flex w-full gap-4">
+									<Avatar className="size-8 shrink-0">
+										<AvatarFallback className="bg-primary text-primary-foreground">
+											<SparklesIcon className="size-4" />
+										</AvatarFallback>
+									</Avatar>
+									<MessageContent className="max-w-none flex-1">
+										<div className="flex items-center gap-2 text-muted-foreground">
+											<Loader size={16} />
+											<span>Thinking...</span>
+										</div>
+									</MessageContent>
 								</div>
 							</Message>
-						))}
-
-					{/* Error message */}
-					{streamError && (
-						<div className="flex w-full gap-4">
-							<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-								<AlertCircleIcon className="size-4 text-destructive" />
-							</div>
-							<div className="flex min-w-0 flex-1 flex-col gap-1">
-								<div className="rounded-2xl bg-destructive/10 px-4 py-3 text-destructive">
-									<p className="font-medium">Something went wrong</p>
-									<p className="text-sm opacity-80">
-										{streamError}
-									</p>
-								</div>
-							</div>
-						</div>
-					)}
-					</>
-					)}
-
-					{isStreaming && displayMessages[displayMessages.length - 1]?.role === "user" && (
-						<Message from="assistant">
-							<div className="flex w-full gap-4">
-								<Avatar className="size-8 shrink-0">
-									<AvatarFallback className="bg-primary text-primary-foreground">
-										<SparklesIcon className="size-4" />
-									</AvatarFallback>
-								</Avatar>
-								<MessageContent className="max-w-none flex-1">
-									<div className="flex items-center gap-2 text-muted-foreground">
-										<Loader size={16} />
-										<span>Thinking...</span>
-									</div>
-								</MessageContent>
-							</div>
-						</Message>
-					)}
+						)}
 				</ConversationContent>
 				<ConversationScrollButton />
 			</Conversation>

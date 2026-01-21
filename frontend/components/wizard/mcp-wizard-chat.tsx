@@ -11,7 +11,10 @@ import { EnvVarsStep } from "@/components/wizard/env-vars-step";
 import { StepZeroChat } from "@/components/wizard/step-zero-chat";
 import { WizardStepIndicator } from "@/components/wizard/wizard-step-indicator";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
-import { useWizardPolling, useWizardSessions } from "@/hooks/use-wizard-sessions";
+import {
+	useWizardPolling,
+	useWizardSessions,
+} from "@/hooks/use-wizard-sessions";
 import {
 	ProcessingStatus,
 	WizardStep,
@@ -30,9 +33,13 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	const searchParams = useSearchParams();
 
 	// Wizard state - Step 0 is client-side, rest is managed by Python backend
-	const [currentStep, setCurrentStep] = useState<WizardStep>(WizardStep.stepZero);
+	const [currentStep, setCurrentStep] = useState<WizardStep>(
+		WizardStep.stepZero,
+	);
 	const [serverId, setServerId] = useState<string | null>(null);
-	const [preWizardMessages, setPreWizardMessages] = useState<WizardMessage[]>([]);
+	const [preWizardMessages, setPreWizardMessages] = useState<WizardMessage[]>(
+		[],
+	);
 	const [suggestedTools, setSuggestedTools] = useState<WizardTool[]>([]);
 	const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
 	const [suggestedEnvVars, setSuggestedEnvVars] = useState<WizardEnvVar[]>([]);
@@ -41,7 +48,8 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	const [isStarting, setIsStarting] = useState(false);
 
 	// Wizard session management for async processing
-	const { addWizardSession, removeWizardSession } = useWizardSessions(organizationId);
+	const { addWizardSession, removeWizardSession } =
+		useWizardSessions(organizationId);
 
 	// Mutations
 	const startWizardMutation = trpc.organization.wizard.start.useMutation();
@@ -90,7 +98,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 			setCurrentStep(wizardState.wizardStep as WizardStep);
 			setSuggestedTools(wizardState.tools);
 			// Restore selectedToolIds from wizard state (array of UUIDs)
-			if (wizardState.selectedToolIds && wizardState.selectedToolIds.length > 0) {
+			if (
+				wizardState.selectedToolIds &&
+				wizardState.selectedToolIds.length > 0
+			) {
 				setSelectedToolIds(wizardState.selectedToolIds);
 			}
 			// Restore env vars
@@ -124,14 +135,16 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				addWizardSession(result.serverId, description);
 
 				// Update URL with server ID for resumability
-				router.replace(`/dashboard/organization/new-mcp-server?serverId=${result.serverId}`);
+				router.replace(
+					`/dashboard/organization/new-mcp-server?serverId=${result.serverId}`,
+				);
 			} catch (_error) {
 				toast.error("Failed to start wizard");
 			} finally {
 				setIsStarting(false);
 			}
 		},
-		[startWizardMutation, router, addWizardSession]
+		[startWizardMutation, router, addWizardSession],
 	);
 
 	// Handle messages update in Step 0 (client-side only, not persisted)
@@ -196,9 +209,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 			<div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
 				<p className="text-destructive">Failed to load wizard state</p>
 				{queryError && (
-					<p className="text-sm text-muted-foreground">
-						{queryError.message}
-					</p>
+					<p className="text-sm text-muted-foreground">{queryError.message}</p>
 				)}
 				<div className="flex gap-2">
 					<button
@@ -210,7 +221,9 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					</button>
 					<button
 						type="button"
-						onClick={() => router.push("/dashboard/organization/new-mcp-server")}
+						onClick={() =>
+							router.push("/dashboard/organization/new-mcp-server")
+						}
 						className="inline-flex items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
 					>
 						Start New Wizard
@@ -224,7 +237,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		<div className="flex h-full flex-col">
 			{/* Step Indicator */}
 			<div className="shrink-0 border-b bg-background/80 px-4 py-3 backdrop-blur-sm">
-				<WizardStepIndicator currentStep={currentStep} isProcessing={isProcessing} />
+				<WizardStepIndicator
+					currentStep={currentStep}
+					isProcessing={isProcessing}
+				/>
 			</div>
 
 			{/* Step Content */}

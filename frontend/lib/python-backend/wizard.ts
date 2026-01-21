@@ -1,6 +1,10 @@
 import { logger } from "@/lib/logger";
 import { pythonBackendClient } from "./client";
-import type { ProcessingStatus, WizardAuthType, WizardStep } from "@/schemas/wizard-schemas";
+import type {
+	ProcessingStatus,
+	WizardAuthType,
+	WizardStep,
+} from "@/schemas/wizard-schemas";
 
 export interface WizardTool {
 	id: string; // UUID from backend
@@ -133,27 +137,23 @@ export interface RetryToolGenerationResponse {
  * This initiates the MCP server creation process and returns suggested tools.
  */
 export async function startWizard(
-	params: StartWizardParams
+	params: StartWizardParams,
 ): Promise<StartWizardResponse> {
 	try {
-		const response = await pythonBackendClient.post<any>(
-			"/api/wizard/start",
-			{
-				customerId: params.customerId,
-				description: params.description,
-				openapiSchema: params.openapiSchema ?? null,
-			}
-		);
+		const response = await pythonBackendClient.post<any>("/api/wizard/start", {
+			customerId: params.customerId,
+			description: params.description,
+			openapiSchema: params.openapiSchema ?? null,
+		});
 		logger.info(
 			{ customerId: params.customerId, wizardId: response.data.serverId },
-			"Wizard started in Python backend"
+			"Wizard started in Python backend",
 		);
 		return response.data;
-
 	} catch (error) {
 		logger.error(
 			{ customerId: params.customerId, error },
-			"Failed to start wizard in Python backend"
+			"Failed to start wizard in Python backend",
 		);
 		throw error;
 	}
@@ -163,25 +163,26 @@ export async function startWizard(
  * Refines the suggested tools based on user feedback.
  */
 export async function refineWizardActions(
-	params: RefineWizardActionsParams
+	params: RefineWizardActionsParams,
 ): Promise<RefineWizardActionsResponse> {
 	try {
-		const response = await pythonBackendClient.post<RefineWizardActionsResponse>(
-			`/api/wizard/${params.serverId}/tools/refine`,
-			{
-				feedback: params.feedback,
-				tool_ids: params.toolIds ?? null,
-			}
-		);
+		const response =
+			await pythonBackendClient.post<RefineWizardActionsResponse>(
+				`/api/wizard/${params.serverId}/tools/refine`,
+				{
+					feedback: params.feedback,
+					tool_ids: params.toolIds ?? null,
+				},
+			);
 		logger.info(
 			{ serverId: params.serverId },
-			"Wizard actions refined in Python backend"
+			"Wizard actions refined in Python backend",
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId: params.serverId, error },
-			"Failed to refine wizard actions in Python backend"
+			"Failed to refine wizard actions in Python backend",
 		);
 		throw error;
 	}
@@ -191,17 +192,17 @@ export async function refineWizardActions(
  * Gets the list of suggested tools for a wizard session.
  */
 export async function getWizardTools(
-	serverId: string
+	serverId: string,
 ): Promise<GetWizardToolsResponse> {
 	try {
 		const response = await pythonBackendClient.get<GetWizardToolsResponse>(
-			`/api/wizard/${serverId}/tools`
+			`/api/wizard/${serverId}/tools`,
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to get wizard tools from Python backend"
+			"Failed to get wizard tools from Python backend",
 		);
 		throw error;
 	}
@@ -212,24 +213,24 @@ export async function getWizardTools(
  * Free tier is limited to max 3 tools.
  */
 export async function submitWizardTools(
-	params: SubmitWizardToolsParams
+	params: SubmitWizardToolsParams,
 ): Promise<SubmitWizardToolsResponse> {
 	try {
 		const response = await pythonBackendClient.post<SubmitWizardToolsResponse>(
 			`/api/wizard/${params.serverId}/tools/submit`,
 			{
 				selected_tool_ids: params.selectedToolIds,
-			}
+			},
 		);
 		logger.info(
 			{ serverId: params.serverId, selectedToolIds: params.selectedToolIds },
-			"Wizard tools submitted in Python backend"
+			"Wizard tools submitted in Python backend",
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId: params.serverId, error },
-			"Failed to submit wizard tools in Python backend"
+			"Failed to submit wizard tools in Python backend",
 		);
 		throw error;
 	}
@@ -240,21 +241,22 @@ export async function submitWizardTools(
  * Backend generates API key and returns bearer token.
  */
 export async function configureWizardAuth(
-	params: ConfigureWizardAuthParams
+	params: ConfigureWizardAuthParams,
 ): Promise<ConfigureWizardAuthResponse> {
 	try {
-		const response = await pythonBackendClient.post<ConfigureWizardAuthResponse>(
-			`/api/wizard/${params.serverId}/auth`
-		);
+		const response =
+			await pythonBackendClient.post<ConfigureWizardAuthResponse>(
+				`/api/wizard/${params.serverId}/auth`,
+			);
 		logger.info(
 			{ serverId: params.serverId },
-			"Wizard auth configured in Python backend"
+			"Wizard auth configured in Python backend",
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId: params.serverId, error },
-			"Failed to configure wizard auth in Python backend"
+			"Failed to configure wizard auth in Python backend",
 		);
 		throw error;
 	}
@@ -264,18 +266,18 @@ export async function configureWizardAuth(
  * Triggers environment variable suggestion for the wizard.
  */
 export async function suggestEnvVars(
-	serverId: string
+	serverId: string,
 ): Promise<SuggestEnvVarsResponse> {
 	try {
 		const response = await pythonBackendClient.post<SuggestEnvVarsResponse>(
-			`/api/wizard/${serverId}/env-vars/suggest`
+			`/api/wizard/${serverId}/env-vars/suggest`,
 		);
 		logger.info({ serverId }, "Env var suggestion triggered in Python backend");
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to suggest env vars in Python backend"
+			"Failed to suggest env vars in Python backend",
 		);
 		throw error;
 	}
@@ -285,17 +287,17 @@ export async function suggestEnvVars(
  * Gets the list of suggested environment variables for a wizard session.
  */
 export async function getEnvVars(
-	serverId: string
+	serverId: string,
 ): Promise<GetEnvVarsResponse> {
 	try {
 		const response = await pythonBackendClient.get<GetEnvVarsResponse>(
-			`/api/wizard/${serverId}/env-vars`
+			`/api/wizard/${serverId}/env-vars`,
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to get env vars from Python backend"
+			"Failed to get env vars from Python backend",
 		);
 		throw error;
 	}
@@ -305,24 +307,24 @@ export async function getEnvVars(
  * Refines the suggested environment variables based on user feedback.
  */
 export async function refineEnvVars(
-	params: RefineEnvVarsParams
+	params: RefineEnvVarsParams,
 ): Promise<RefineEnvVarsResponse> {
 	try {
 		const response = await pythonBackendClient.post<RefineEnvVarsResponse>(
 			`/api/wizard/${params.serverId}/env-vars/refine`,
 			{
 				feedback: params.feedback,
-			}
+			},
 		);
 		logger.info(
 			{ serverId: params.serverId },
-			"Env vars refined in Python backend"
+			"Env vars refined in Python backend",
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId: params.serverId, error },
-			"Failed to refine env vars in Python backend"
+			"Failed to refine env vars in Python backend",
 		);
 		throw error;
 	}
@@ -332,24 +334,24 @@ export async function refineEnvVars(
  * Submits the environment variable values.
  */
 export async function submitEnvVars(
-	params: SubmitEnvVarsParams
+	params: SubmitEnvVarsParams,
 ): Promise<SubmitEnvVarsResponse> {
 	try {
 		const response = await pythonBackendClient.post<SubmitEnvVarsResponse>(
 			`/api/wizard/${params.serverId}/env-vars/submit`,
 			{
 				values: params.values,
-			}
+			},
 		);
 		logger.info(
 			{ serverId: params.serverId },
-			"Env vars submitted in Python backend"
+			"Env vars submitted in Python backend",
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId: params.serverId, error },
-			"Failed to submit env vars in Python backend"
+			"Failed to submit env vars in Python backend",
 		);
 		throw error;
 	}
@@ -359,18 +361,18 @@ export async function submitEnvVars(
  * Generates the code for the selected tools.
  */
 export async function generateWizardCode(
-	serverId: string
+	serverId: string,
 ): Promise<GenerateWizardCodeResponse> {
 	try {
 		const response = await pythonBackendClient.post<GenerateWizardCodeResponse>(
-			`/api/wizard/${serverId}/generate-code`
+			`/api/wizard/${serverId}/generate-code`,
 		);
 		logger.info({ serverId }, "Wizard code generated in Python backend");
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to generate wizard code in Python backend"
+			"Failed to generate wizard code in Python backend",
 		);
 		throw error;
 	}
@@ -382,13 +384,13 @@ export async function generateWizardCode(
 export async function getWizardState(serverId: string): Promise<WizardState> {
 	try {
 		const response = await pythonBackendClient.get<WizardState>(
-			`/api/wizard/${serverId}/state`
+			`/api/wizard/${serverId}/state`,
 		);
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to get wizard state from Python backend"
+			"Failed to get wizard state from Python backend",
 		);
 		throw error;
 	}
@@ -398,18 +400,18 @@ export async function getWizardState(serverId: string): Promise<WizardState> {
  * Activates the server, deploying it and making it live.
  */
 export async function activateServer(
-	serverId: string
+	serverId: string,
 ): Promise<ActivateServerResponse> {
 	try {
 		const response = await pythonBackendClient.post<ActivateServerResponse>(
-			`/api/servers/${serverId}/activate`
+			`/api/servers/${serverId}/activate`,
 		);
 		logger.info({ serverId }, "Server activated in Python backend");
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to activate server in Python backend"
+			"Failed to activate server in Python backend",
 		);
 		throw error;
 	}
@@ -420,18 +422,19 @@ export async function activateServer(
  * Only works if the server is in a FAILED processing state.
  */
 export async function retryToolGeneration(
-	serverId: string
+	serverId: string,
 ): Promise<RetryToolGenerationResponse> {
 	try {
-		const response = await pythonBackendClient.post<RetryToolGenerationResponse>(
-			`/api/wizard/${serverId}/retry`
-		);
+		const response =
+			await pythonBackendClient.post<RetryToolGenerationResponse>(
+				`/api/wizard/${serverId}/retry`,
+			);
 		logger.info({ serverId }, "Retrying tool generation in Python backend");
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to retry tool generation in Python backend"
+			"Failed to retry tool generation in Python backend",
 		);
 		throw error;
 	}

@@ -18,7 +18,7 @@ export const organizationServerRouter = createTRPCRouter({
 
 		logger.info(
 			{ organizationId: ctx.organization.id, count: result.servers.length },
-			"Listed MCP servers"
+			"Listed MCP servers",
 		);
 
 		return result;
@@ -34,7 +34,7 @@ export const organizationServerRouter = createTRPCRouter({
 			// Note: The backend should enforce this too, but we add an extra check
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Fetched MCP server details"
+				"Fetched MCP server details",
 			);
 
 			return details;
@@ -48,7 +48,7 @@ export const organizationServerRouter = createTRPCRouter({
 
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
-				"Deleted MCP server"
+				"Deleted MCP server",
 			);
 
 			return result;
