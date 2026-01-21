@@ -101,7 +101,7 @@ export function HeroSection() {
 							<p>
 								"Loveable for MCP servers" lets you use natural language to
 								build MCP servers. All things considered from oAuth to ephemeral
-								state and monitoring.
+								state and advanced monitoring.
 							</p>
 						</div>
 
