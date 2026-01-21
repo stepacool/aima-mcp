@@ -9,7 +9,7 @@ services:
       repo: stepacool/aima-mcp
       branch: main
       deploy_on_push: true
-    source_dir: /frontend
+    source_dir: ./frontend
     dockerfile_path: ./Dockerfile
     http_port: 3000
     instance_size_slug: apps-s-1vcpu-1gb
@@ -166,8 +166,10 @@ services:
 databases:
   - name: frontend-db
     engine: PG
-    version: "17"
-    production: false
+    version: "18"
+    production: true
+    cluster_name: mcphero-prod-db
+    db_name: frontend-db
 
 domains:
   - domain: mcphero.app

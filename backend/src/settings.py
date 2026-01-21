@@ -19,7 +19,7 @@ class MonitoringSettings(BaseSettings):
 class LLMSettings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    DEFAULT_MODEL: str = "anthropic/claude-3.5-sonnet"
+    DEFAULT_MODEL: str = "google/gemini-3-pro-preview"
 
 
 class PostgresSettings(BaseSettings):
