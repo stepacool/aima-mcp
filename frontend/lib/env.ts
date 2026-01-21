@@ -188,5 +188,5 @@ export function getDatabaseUrl(): string {
 	if (env.DATABASE_URL) {
 		return env.DATABASE_URL;
 	}
-	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}`;
+	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}?sslmode=require`;
 }
