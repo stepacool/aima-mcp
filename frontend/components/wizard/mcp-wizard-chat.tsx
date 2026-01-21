@@ -147,33 +147,39 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	// Handle tools submitted - transition to ENV_VARS
 	const handleToolsSubmitted = useCallback((toolIds: string[]) => {
 		setSelectedToolIds(toolIds);
+		refetch();
 		setCurrentStep(WizardStep.envVars);
 	}, []);
 
 	// Handle tools refined
 	const handleToolsRefined = useCallback((newTools: WizardTool[]) => {
 		setSuggestedTools(newTools);
+		refetch();
 	}, []);
 
 	// Handle env vars submitted - transition to AUTH
 	const handleEnvVarsSubmitted = useCallback(() => {
+		refetch();
 		setCurrentStep(WizardStep.auth);
 	}, []);
 
 	// Handle env vars refined
 	const handleEnvVarsRefined = useCallback((newEnvVars: WizardEnvVar[]) => {
 		setSuggestedEnvVars(newEnvVars);
+		refetch();
 	}, []);
 
 	// Handle auth configured - transition to DEPLOY
 	const handleAuthConfigured = useCallback((token: string) => {
 		setBearerToken(token);
+		refetch();
 		setCurrentStep(WizardStep.deploy);
 	}, []);
 
 	// Handle server activated - transition to COMPLETE
 	const handleServerActivated = useCallback((url: string) => {
 		setServerUrl(url);
+		refetch();
 		setCurrentStep(WizardStep.complete);
 	}, []);
 
