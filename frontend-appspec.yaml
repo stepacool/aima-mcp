@@ -10,7 +10,7 @@ services:
       branch: main
       deploy_on_push: true
     source_dir: ./frontend
-    dockerfile_path: ./Dockerfile
+    dockerfile_path: ./frontend/Dockerfile
     http_port: 3000
     instance_size_slug: apps-s-1vcpu-1gb
     instance_count: 1
