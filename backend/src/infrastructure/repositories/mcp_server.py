@@ -101,6 +101,7 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
                 .where(self.model.customer_id == customer_id)
                 .options(
                     selectinload(self.model.tools),
+                    selectinload(self.model.environment_variables),
                     selectinload(self.model.deployment),
                 )
             )
@@ -143,6 +144,7 @@ class MCPServerRepo(BaseCRUDRepo[MCPServer, MCPServerCreate, MCPServerUpdate]):
                 .options(
                     selectinload(self.model.tools),
                     selectinload(self.model.prompts),
+                    selectinload(self.model.environment_variables),
                     selectinload(self.model.deployment),
                 )
             )

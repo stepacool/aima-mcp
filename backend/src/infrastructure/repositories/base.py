@@ -115,3 +115,23 @@ class BaseCRUDRepo(BaseRepo, Generic[ModelType, CreateSchemaType, UpdateSchemaTy
             )
             await session.commit()
             return result.rowcount > 0
+
+    async def delete_cascade(self, id: UUID) -> bool:
+        """Delete an object by ID with cascade deletes.
+
+        This method loads the object first and deletes it through the ORM,
+        which triggers cascade deletes defined in SQLAlchemy relationships
+        (e.g., cascade="all, delete-orphan").
+        """
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model).where(self.model.id == id)
+            )
+            db_obj = result.scalars().first()
+            if db_obj is None:
+                return False
+
+            # Delete through ORM to trigger cascade deletes
+            await session.delete(db_obj)
+            await session.commit()
+            return True

@@ -1,10 +1,11 @@
 """Server routes for activation and deployment."""
 
+from datetime import datetime
 from uuid import UUID
-
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from core.services.tier_service import (
     CURATED_LIBRARIES,
@@ -245,40 +246,66 @@ async def deploy_server(server_id: UUID, request: DeployRequest) -> DeployRespon
 # === Server Management Endpoints ===
 
 
+class MCPToolResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    description: str
+    parameters_schema: list[dict]
+    code: str
+    server_id: UUID
+
+    @field_validator("parameters_schema", mode="before")
+    @classmethod
+    def normalize_parameters_schema(cls, v):
+        """Handle both dict format {'parameters': [...]} and list format [...]"""
+        if isinstance(v, dict):
+            return v.get("parameters", [])
+        return v if isinstance(v, list) else []
+
+
+class MCPEnvironmentVariableResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    description: str
+    value: str | None
+    server_id: UUID
+
+
+class DeploymentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    server_id: UUID
+    target: str
+    status: str
+    endpoint_url: str | None
+    target_config: dict | None
+    error_message: str | None
+    deployed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class ServerListItem(BaseModel):
-    """Summary of a server for list view."""
+    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     name: str
     description: str | None
-    status: str
-    wizard_step: str
-    tools_count: int
-    is_deployed: bool
-    mcp_endpoint: str | None
-    created_at: str
+    setup_status: str
+    tools: list[MCPToolResponse]
+    environment_variables: list[MCPEnvironmentVariableResponse]
+    deployment: Optional[DeploymentResponse]
+    created_at: datetime
+    updated_at: datetime
 
 
 class ServerListResponse(BaseModel):
     servers: list[ServerListItem]
-
-
-class ServerDetailsResponse(BaseModel):
-    """Full server details including tools and deployment."""
-
-    id: UUID
-    name: str
-    description: str | None
-    status: str
-    wizard_step: str
-    auth_type: str
-    auth_config: dict | None
-    tier: str
-    is_deployed: bool
-    mcp_endpoint: str | None
-    tools: list[dict]
-    created_at: str
-    updated_at: str
 
 
 @router.get("/list/{customer_id}", response_model=ServerListResponse)
@@ -288,85 +315,22 @@ async def list_servers(customer_id: UUID) -> ServerListResponse:
 
     Returns both drafts and completed servers with basic info.
     """
-    server_repo = Provider.mcp_server_repo()
-
-    # Use optimized query with eager loading
-    servers = await server_repo.get_by_customer_with_stats(customer_id)
-
-    items = []
-    for server in servers:
-        # Data is already loaded
-        deployment = server.deployment
-        is_deployed = bool(
-            deployment and deployment.status == DeploymentStatus.ACTIVE.value
-        )
-        mcp_endpoint = deployment.endpoint_url if is_deployed and deployment else None
-
-        tools_count = len(server.tools)
-
-        items.append(
-            ServerListItem(
-                id=server.id,
-                name=server.name,
-                description=server.description,
-                status=server.status,
-                wizard_step=server.wizard_step,
-                tools_count=tools_count,
-                is_deployed=is_deployed,
-                mcp_endpoint=mcp_endpoint,
-                created_at=server.created_at.isoformat() if server.created_at else "",
-            )
-        )
-
-    return ServerListResponse(servers=items)
+    servers = await Provider.mcp_server_repo().get_by_customer_with_stats(customer_id)
+    return ServerListResponse(
+        servers=[ServerListItem.model_validate(server) for server in servers]
+    )
 
 
-@router.get("/{server_id}/details", response_model=ServerDetailsResponse)
-async def get_server_details(server_id: UUID) -> ServerDetailsResponse:
+@router.get("/{server_id}/details", response_model=ServerListItem)
+async def get_server_details(server_id: UUID) -> ServerListItem:
     """
     Get full details of a server including tools and deployment info.
     """
-    server_repo = Provider.mcp_server_repo()
-    deployment_repo = Provider.deployment_repo()
-
-    server = await server_repo.get_with_full_details(server_id)
+    server = await Provider.mcp_server_repo().get_with_full_details(server_id)
     if not server:
         raise HTTPException(404, f"Server {server_id} not found")
 
-    # Get deployment info
-    deployment = await deployment_repo.get_by_server_id(server_id)
-    is_deployed = bool(
-        deployment and deployment.status == DeploymentStatus.ACTIVE.value
-    )
-    mcp_endpoint = deployment.endpoint_url if is_deployed and deployment else None
-
-    # Format tools
-    tools = [
-        {
-            "id": str(t.id),
-            "name": t.name,
-            "description": t.description,
-            "parameters": t.parameters_schema.get("parameters", []),
-            "has_code": bool(t.code),
-        }
-        for t in server.tools
-    ]
-
-    return ServerDetailsResponse(
-        id=server.id,
-        name=server.name,
-        description=server.description,
-        status=server.status,
-        wizard_step=server.wizard_step,
-        auth_type=server.auth_type,
-        auth_config=server.auth_config,
-        tier=server.tier,
-        is_deployed=is_deployed,
-        mcp_endpoint=mcp_endpoint,
-        tools=tools,
-        created_at=server.created_at.isoformat() if server.created_at else "",
-        updated_at=server.updated_at.isoformat() if server.updated_at else "",
-    )
+    return ServerListItem.model_validate(server)
 
 
 @router.delete("/{server_id}")
@@ -374,34 +338,19 @@ async def delete_server(server_id: UUID, request: Request) -> dict:
     """
     Delete an MCP server.
 
-    This will:
-    1. Unmount the MCP app from FastAPI if currently deployed
-    2. Delete the deployment record
-    3. Delete the server and all related data (tools, prompts cascade)
+    This will unmount the MCP app from FastAPI if currently deployed and delete the server and all related data (tools, prompts cascade).
     """
     server_repo = Provider.mcp_server_repo()
-    deployment_repo = Provider.deployment_repo()
 
-    # Check server exists
     server = await server_repo.get_by_uuid(server_id)
     if not server:
         raise HTTPException(404, f"Server {server_id} not found")
 
-    # Check if deployed and unmount from FastAPI
-    deployment = await deployment_repo.get_by_server_id(server_id)
-    if deployment and deployment.status == DeploymentStatus.ACTIVE.value:
-        # Unmount from FastAPI app
+    if server.deployment and server.deployment.status == DeploymentStatus.ACTIVE.value:
         unregister_mcp_app(request.app, server_id)
 
-    # Delete deployment record if exists
-    if deployment:
-        await deployment_repo.delete(deployment.id)
-
-    # Delete server (cascades to tools, prompts, etc.)
-    await server_repo.delete(server_id)
-
+    await server_repo.delete_cascade(server_id)
     logger.info(f"Deleted server {server_id}")
-
     return {
         "status": "deleted",
         "server_id": str(server_id),

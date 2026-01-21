@@ -2,6 +2,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
+from pydantic import ConfigDict
 from sqlalchemy import ForeignKey, String, Text, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -95,6 +96,8 @@ class MCPServer(CustomBase):
             self.deployment is not None
             and self.deployment.status == DeploymentStatus.ACTIVE.value
         )
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MCPTool(CustomBase):
@@ -113,6 +116,8 @@ class MCPTool(CustomBase):
     parameters_schema: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
     code: Mapped[str] = mapped_column(Text, nullable=False)
     server: Mapped["MCPServer"] = relationship(back_populates="tools")
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MCPPrompt(CustomBase):
@@ -133,6 +138,8 @@ class MCPPrompt(CustomBase):
 
     server: Mapped["MCPServer"] = relationship(back_populates="prompts")
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class MCPEnvironmentVariable(CustomBase):
     __tablename__ = "mcp_environment_variables"
@@ -149,3 +156,5 @@ class MCPEnvironmentVariable(CustomBase):
     value: Mapped[str] = mapped_column(Text, nullable=True)
 
     server: Mapped["MCPServer"] = relationship(back_populates="environment_variables")
+
+    model_config = ConfigDict(from_attributes=True)
