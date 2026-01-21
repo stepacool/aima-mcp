@@ -46,6 +46,8 @@ CURATED_LIBRARIES = {
     "collections": None,  # Collection types
     "itertools": None,  # Iterator utilities
     "functools": None,  # Function utilities
+    "time": None,  # Time functions
+    "dateutil": None,  # Date utilities
 }
 
 # Dangerous modules that should never be allowed

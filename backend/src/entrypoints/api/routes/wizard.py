@@ -385,6 +385,29 @@ async def set_auth(server_id: UUID) -> AuthResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{server_id}/generate-code")
+async def generate_code(server_id: UUID) -> dict[str, Any]:
+    """
+    Step 4: Generate code for the tools and environment variables.
+    """
+    server = await Provider.mcp_server_repo().get_by_uuid(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
+    try:
+        service = get_wizard_service()
+        await service.step_4_generate_code_for_tools_and_env_vars(
+            mcp_server_id=server_id,
+        )
+
+        return {
+            "server_id": str(server_id),
+            "status": "code_generated",
+        }
+    except Exception as e:
+        logger.error(f"Error generating code: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{server_id}/state", response_model=WizardStateResponse)
 async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
     """Get current state of a server for the wizard UI."""

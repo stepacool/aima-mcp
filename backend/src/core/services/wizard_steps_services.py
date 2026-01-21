@@ -1,18 +1,28 @@
+import asyncio
 import secrets
 from pathlib import Path
+import time
 from uuid import UUID
 
 import yaml
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-from infrastructure.models.mcp_server import MCPServerSetupStatus
+from infrastructure.models.mcp_server import MCPServerSetupStatus, MCPTool
 from infrastructure.repositories.mcp_server import (
     MCPEnvironmentVariableCreate,
     MCPToolCreate,
 )
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
+
+from core.services.tier_service import (
+    CURATED_LIBRARIES,
+    BLOCKED_MODULES,
+    Tier,
+    CodeValidator,
+)
+from loguru import logger
 
 openai_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -54,7 +64,7 @@ class EnvVarsResponse(BaseModel):
 
 def load_prompt(filename: str, as_string=True):
     try:
-        with open(PROMPTS_DIR / filename, 'r') as file:
+        with open(PROMPTS_DIR / filename, "r") as file:
             if as_string:
                 return file.read()
             prompt_data = yaml.full_load(file)
@@ -160,9 +170,7 @@ class WizardStepsService:
             )
 
             system_prompt = load_prompt(prompt_file)
-            user_content = (
-                f"Server description:\n{server.description}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}"
-            )
+            user_content = f"Server description:\n{server.description}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}"
 
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
@@ -198,7 +206,7 @@ class WizardStepsService:
         self,
         mcp_server_id: UUID,
         selected_tool_ids: list[UUID],
-        #TODO: remove this override when suggest is called normally.
+        # TODO: remove this override when suggest is called normally.
         setup_status_override: MCPServerSetupStatus | None = None,
     ) -> None:
         """
@@ -237,9 +245,7 @@ class WizardStepsService:
 
         try:
             system_prompt = load_prompt(prompt_file)
-            user_content = (
-                f"Server description:\n{server.description}\n"
-            )
+            user_content = f"Server description:\n{server.description}\n"
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
                 messages=[
@@ -342,6 +348,10 @@ class WizardStepsService:
         """
         Set setup-status accordingly here.
         Values are sent as pairs of variable ID (in db) and values, update each var.
+
+        Parameters:
+        - mcp_server_id: UUID - The ID of the MCP server
+        - values: dict[UUID, str] - A dictionary of variable IDs and their values
         """
         for var_id, value in values.items():
             await Provider.environment_variable_repo().update_value(var_id, value)
@@ -380,17 +390,101 @@ class WizardStepsService:
             mcp_server_id, MCPServerSetupStatus.code_generating
         )
 
-        try:
-            # TODO: Implement code generation logic
-            pass
-        finally:
-            # Set to code_gen when done (success or failure)
-            await Provider.mcp_server_repo().update_setup_status(
-                mcp_server_id, MCPServerSetupStatus.code_gen
+        server = await Provider.mcp_server_repo().get_by_uuid(mcp_server_id)
+
+        # customer_id = server.customer_id
+        # customer = await Provider.customer_repo().get(customer_id)
+        # tier = Tier(customer.tier)
+        tier = Tier.FREE
+
+        system_prompt = load_prompt("step_4_code_generation.yaml", as_string=False)
+
+        async def generate_code_for_tool(
+            prompt_template: str, tool: MCPTool, enable_logging: bool = False
+        ):
+            logger_instance = logger.bind(tool_name=tool.name)
+            if not enable_logging:
+                logger_instance.disable()
+            logger_instance.info(f"[{tool.name}] Generating code for tool")
+
+            available_libraries = []
+            for package, imports in CURATED_LIBRARIES.items():
+                available_libraries.append(
+                    f"- {package}: "
+                    + ("all exports" if imports is None else ", ".join(imports))
+                )
+
+            prompt = prompt_template.format(
+                AVAILABLE_LIBRARIES="\n".join(available_libraries),
+                FORBIDDEN_LIBRARIES="\n".join(f"- {lib}" for lib in BLOCKED_MODULES),
+                ENVIRONMENT_VARIABLES="\n".join(
+                    f"- {var.name}: {var.description}"
+                    for var in server.environment_variables
+                ),
+                FUNCTION_NAME=tool.name,
+                TOOL_NAME=tool.name,
+                TOOL_DESCRIPTION=tool.description,
+                MCP_SERVER_DESCRIPTION=server.description.split("**Exposed Tools:**")[
+                    0
+                ].strip(),
+                ARGUMENTS_DOCSTRING="\n".join(
+                    f"{param.get('name', 'arg')}: {param.get('type', 'str')} - {param.get('description', '')}"
+                    for param in tool.parameters_schema
+                ),
+                TOOL_ARGUMENTS="\n".join(
+                    f"{param.get('name', 'arg')}: {param.get('type', 'str')} = Field(description='{param.get('description', '')}')"
+                    for param in tool.parameters_schema
+                ),
             )
+            logger_instance.info(f"[{tool.name}] Prompt: {prompt}")
+
+            messages = [
+                {"role": "user", "content": prompt},
+            ]
+            code_validator = CodeValidator(tier)
+            while True:
+                response = await openai_client.chat.completions.create(
+                    model="google/gemini-3-pro-preview",
+                    messages=messages,
+                )
+                code = response.choices[0].message.content
+                logger_instance.info(f"[{tool.name}] Code: {code}")
+                errors = code_validator.validate(code)
+                if not errors:
+                    break
+                logger_instance.info(
+                    f"[{tool.name}] Code is not valid. Errors: {errors}"
+                )
+                messages.append({"role": "assistant", "content": code})
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": f"The code is not valid. Please fix the errors and return the code again. Errors: {errors}",
+                    }
+                )
+
+            logger_instance.info(f"[{tool.name}] Code: {code}")
+
+        tasks = [
+            generate_code_for_tool(system_prompt["prompt"], tool)
+            for tool in server.tools
+        ]
+
+        start_time = time.time()
+        results = await asyncio.gather(*tasks)
+        end_time = time.time()
+        logger.info(f"[{mcp_server_id}] Time taken: {end_time - start_time} seconds")
+        for tool, code in zip(server.tools, results):
+            logger.info(
+                f"[{mcp_server_id}] Tool: {tool.name}, completed code generation"
+            )
+            await Provider.mcp_tool_repo().update_tool_code(tool.id, code)
+
+        await Provider.mcp_server_repo().update_setup_status(
+            mcp_server_id, MCPServerSetupStatus.code_gen
+        )
 
     async def step_5_deploy_to_shared(
         self,
         mcp_server_id: UUID,
-    ):
-        ...
+    ): ...

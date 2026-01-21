@@ -1,0 +1,41 @@
+prompt: |
+  Respond only with the rest of the implementation, including function definition and docstring.
+  Implementation must be of a highest grade as if it was written by a seasoned Python expert. 
+  Start your response with "async def"
+  Do not use code formatting with "```python"
+
+  # Available libraries:
+  {AVAILABLE_LIBRARIES}
+
+  # Forbidden libraries:
+  {FORBIDDEN_LIBRARIES}
+
+  # Environment variables available at runtime:
+  {ENVIRONMENT_VARIABLES}
+
+  # Function implementation
+  async def {FUNCTION_NAME}(
+    {TOOL_ARGUMENTS}
+  ):
+  """
+  A function that implements the tool {TOOL_NAME}.
+
+  {TOOL_NAME} description: {TOOL_DESCRIPTION}
+
+  The tool is a part of the following application:
+  {MCP_SERVER_DESCRIPTION}
+
+  Args:
+    {ARGUMENTS_DOCSTRING}
+
+  """
+
+
+examples:
+  - input: "stub"
+    output: |
+      stub
+
+  - input: "stub"
+    output: |
+      stub
