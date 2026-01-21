@@ -54,6 +54,17 @@ export function EnvVarsStep({
 		}));
 	};
 
+	// Check if all env vars have values
+	const areAllEnvVarsFilled = () => {
+		if (!suggestedEnvVars || suggestedEnvVars.length === 0) {
+			return true; // No env vars means we can continue
+		}
+		return suggestedEnvVars.every((envVar) => {
+			const value = envVarValues[envVar.id] ?? envVar.value ?? "";
+			return value.trim() !== "";
+		});
+	};
+
 	const handleRefine = async () => {
 		if (!feedback.trim()) {
 			toast.error("Please provide feedback for refinement");
@@ -288,6 +299,7 @@ export function EnvVarsStep({
 					<Button
 						onClick={handleContinue}
 						loading={submitEnvVarsMutation.isPending}
+						disabled={!areAllEnvVarsFilled()}
 					>
 						Continue to Authentication
 					</Button>
