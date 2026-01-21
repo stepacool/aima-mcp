@@ -2,10 +2,10 @@
 
 from datetime import datetime
 from uuid import UUID
-from typing import Optional
+from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 
 from core.services.tier_service import (
     CURATED_LIBRARIES,
@@ -297,11 +297,40 @@ class ServerListItem(BaseModel):
     name: str
     description: str | None
     setup_status: str
+    auth_type: str
+    auth_config: dict[str, Any] | None
     tools: list[MCPToolResponse]
     environment_variables: list[MCPEnvironmentVariableResponse]
     deployment: Optional[DeploymentResponse]
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    def tools_count(self) -> int:
+        """Number of tools for this server."""
+        return len(self.tools)
+
+    @computed_field
+    def is_deployed(self) -> bool:
+        """Check if server is actively deployed."""
+        return (
+            self.deployment is not None
+            and self.deployment.status == DeploymentStatus.ACTIVE.value
+        )
+
+    @computed_field
+    def mcp_endpoint(self) -> str | None:
+        """Get MCP endpoint URL if deployed."""
+        if self.deployment and self.deployment.endpoint_url:
+            return self.deployment.endpoint_url
+        return None
+
+    @computed_field
+    def tier(self) -> str:
+        """Derive tier from deployment target."""
+        if self.deployment and self.deployment.target != DeploymentTarget.SHARED.value:
+            return "paid"
+        return "free"
 
 
 class ServerListResponse(BaseModel):

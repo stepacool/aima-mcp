@@ -7,41 +7,56 @@ export interface ServerTool {
 	id: string;
 	name: string;
 	description: string;
-	parameters: Record<string, unknown>[];
-	hasCode: boolean;
+	parametersSchema: Record<string, unknown>[];
+	code: string;
+	serverId: string;
+}
+
+export interface ServerEnvironmentVariable {
+	id: string;
+	name: string;
+	description: string;
+	value: string | null;
+	serverId: string;
+}
+
+export interface ServerDeployment {
+	id: string;
+	serverId: string;
+	target: string;
+	status: string;
+	endpointUrl: string | null;
+	targetConfig: Record<string, unknown> | null;
+	errorMessage: string | null;
+	deployedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface ServerListItem {
 	id: string;
 	name: string;
 	description: string | null;
-	status: string;
-	wizardStep: string;
+	setupStatus: string;
+	authType: string;
+	authConfig: Record<string, unknown> | null;
+	tools: ServerTool[];
+	environmentVariables: ServerEnvironmentVariable[];
+	deployment: ServerDeployment | null;
 	toolsCount: number;
 	isDeployed: boolean;
 	mcpEndpoint: string | null;
+	tier: string;
 	createdAt: string;
+	updatedAt: string;
 }
 
 export interface ServerListResponse {
 	servers: ServerListItem[];
 }
 
-export interface ServerDetails {
-	id: string;
-	name: string;
-	description: string | null;
-	status: string;
-	wizardStep: string;
-	authType: string;
-	authConfig: Record<string, unknown> | null;
-	tier: string;
-	isDeployed: boolean;
-	mcpEndpoint: string | null;
-	tools: ServerTool[];
-	createdAt: string;
-	updatedAt: string;
-}
+// ServerDetails is the same as ServerListItem (backend returns same model)
+export type ServerDetails = ServerListItem;
 
 /**
  * Lists all MCP servers for a customer.

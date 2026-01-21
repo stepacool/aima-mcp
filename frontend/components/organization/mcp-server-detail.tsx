@@ -54,22 +54,38 @@ const defaultStatus: StatusConfigItem = {
 	icon: ClockIcon,
 };
 
+// Map setup_status values to display status
 const statusConfig: Record<string, StatusConfigItem> = {
-	draft: defaultStatus,
+	// Tools step
+	tools_generating: {
+		label: "Generating Tools",
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+		icon: CircleDotIcon,
+	},
+	tools_selection: defaultStatus,
+	// Env vars step
+	env_vars_generating: {
+		label: "Generating Env Vars",
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+		icon: CircleDotIcon,
+	},
+	env_vars_setup: defaultStatus,
+	// Auth step
+	auth_selection: defaultStatus,
+	// Code generation step
+	code_generating: {
+		label: "Generating Code",
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+		icon: CircleDotIcon,
+	},
+	code_gen: defaultStatus,
+	// Deployment step
+	deployment_selection: defaultStatus,
+	// Ready
 	ready: {
 		label: "Ready",
 		color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
 		icon: CheckCircle2Icon,
-	},
-	processing: {
-		label: "Processing",
-		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-		icon: CircleDotIcon,
-	},
-	failed: {
-		label: "Failed",
-		color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-		icon: CircleDotIcon,
 	},
 };
 
@@ -149,10 +165,14 @@ export function McpServerDetail({
 		);
 	}
 
-	const status = statusConfig[server.status] ?? defaultStatus;
+	const status = statusConfig[server.setupStatus] ?? defaultStatus;
 	const StatusIcon = status.icon;
 	const authConfig = authTypeLabels[server.authType] ?? defaultAuthConfig;
 	const AuthIcon = authConfig.icon;
+	const createdAt = server.createdAt ? new Date(server.createdAt) : null;
+	const updatedAt = server.updatedAt ? new Date(server.updatedAt) : null;
+	const isValidCreatedDate = createdAt && !Number.isNaN(createdAt.getTime());
+	const isValidUpdatedDate = updatedAt && !Number.isNaN(updatedAt.getTime());
 
 	return (
 		<div className="space-y-6">
@@ -204,17 +224,21 @@ export function McpServerDetail({
 						<div>
 							<p className="text-sm text-muted-foreground">Created</p>
 							<p className="font-medium">
-								{format(new Date(server.createdAt), "MMM d, yyyy 'at' h:mm a")}
+								{isValidCreatedDate
+									? format(createdAt, "MMM d, yyyy 'at' h:mm a")
+									: "Date unavailable"}
 							</p>
 						</div>
 						<div>
 							<p className="text-sm text-muted-foreground">Last Updated</p>
 							<p className="font-medium">
-								{format(new Date(server.updatedAt), "MMM d, yyyy 'at' h:mm a")}
+								{isValidUpdatedDate
+									? format(updatedAt, "MMM d, yyyy 'at' h:mm a")
+									: "Date unavailable"}
 							</p>
 						</div>
 					</div>
-					{server.status === "draft" && (
+					{server.setupStatus !== "ready" && (
 						<div className="mt-4 pt-4 border-t">
 							<Button asChild className="w-full sm:w-auto">
 								<Link
@@ -269,14 +293,14 @@ export function McpServerDetail({
 				<CardHeader>
 					<CardTitle className="flex items-center text-base">
 						<WrenchIcon className="mr-2 size-4" />
-						Tools ({server.tools.length})
+						Tools ({server.toolsCount})
 					</CardTitle>
 					<CardDescription>
 						The tools available on this MCP server.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					{server.tools.length === 0 ? (
+					{server.toolsCount === 0 ? (
 						<p className="py-4 text-center text-sm text-muted-foreground">
 							No tools configured yet.
 						</p>
@@ -294,7 +318,7 @@ export function McpServerDetail({
 												</p>
 											</div>
 											<div className="flex gap-2">
-												{tool.hasCode ? (
+												{tool.code && tool.code.trim().length > 0 ? (
 													<Badge
 														variant="outline"
 														className="border-none bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
@@ -311,10 +335,10 @@ export function McpServerDetail({
 												)}
 											</div>
 										</div>
-										{tool.parameters && tool.parameters.length > 0 && (
+										{tool.parametersSchema && tool.parametersSchema.length > 0 && (
 											<div className="mt-2">
 												<p className="text-xs text-muted-foreground">
-													Parameters: {tool.parameters.length}
+													Parameters: {tool.parametersSchema.length}
 												</p>
 											</div>
 										)}

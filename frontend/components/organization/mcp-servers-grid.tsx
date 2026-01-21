@@ -49,31 +49,51 @@ const defaultStatus: StatusConfigItem = {
 	icon: ClockIcon,
 };
 
+// Map setup_status values to display status
 const statusConfig: Record<string, StatusConfigItem> = {
-	draft: defaultStatus,
+	// Tools step
+	tools_generating: {
+		label: "Generating Tools",
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+		icon: CircleDotIcon,
+	},
+	tools_selection: defaultStatus,
+	// Env vars step
+	env_vars_generating: {
+		label: "Generating Env Vars",
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+		icon: CircleDotIcon,
+	},
+	env_vars_setup: defaultStatus,
+	// Auth step
+	auth_selection: defaultStatus,
+	// Code generation step
+	code_generating: {
+		label: "Generating Code",
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+		icon: CircleDotIcon,
+	},
+	code_gen: defaultStatus,
+	// Deployment step
+	deployment_selection: defaultStatus,
+	// Ready
 	ready: {
 		label: "Ready",
 		color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
 		icon: CheckCircle2Icon,
 	},
-	processing: {
-		label: "Processing",
-		color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-		icon: CircleDotIcon,
-	},
-	failed: {
-		label: "Failed",
-		color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-		icon: CircleDotIcon,
-	},
 };
 
-const wizardStepLabels: Record<string, string> = {
-	describe: "Describing",
-	actions: "Configuring Actions",
-	auth: "Setting Up Auth",
-	deploy: "Deploying",
-	complete: "Complete",
+const setupStatusLabels: Record<string, string> = {
+	tools_generating: "Generating Tools",
+	tools_selection: "Selecting Tools",
+	env_vars_generating: "Generating Env Vars",
+	env_vars_setup: "Setting Up Env Vars",
+	auth_selection: "Configuring Auth",
+	code_generating: "Generating Code",
+	code_gen: "Reviewing Code",
+	deployment_selection: "Deploying",
+	ready: "Ready",
 };
 
 export function McpServersGrid(): React.JSX.Element {
@@ -134,11 +154,13 @@ export function McpServersGrid(): React.JSX.Element {
 		);
 	}
 
-	return (
-		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-			{servers.map((server) => {
-				const status = statusConfig[server.status] ?? defaultStatus;
-				const StatusIcon = status.icon;
+		return (
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				{servers.map((server) => {
+					const status = statusConfig[server.setupStatus] ?? defaultStatus;
+					const StatusIcon = status.icon;
+					const createdAt = server.createdAt ? new Date(server.createdAt) : null;
+					const isValidDate = createdAt && !Number.isNaN(createdAt.getTime());
 
 				return (
 					<Card
@@ -225,7 +247,7 @@ export function McpServersGrid(): React.JSX.Element {
 								<div>
 									<p className="text-muted-foreground">Step</p>
 									<p className="font-medium">
-										{wizardStepLabels[server.wizardStep] || server.wizardStep}
+										{setupStatusLabels[server.setupStatus] || server.setupStatus}
 									</p>
 								</div>
 							</div>
@@ -246,10 +268,12 @@ export function McpServersGrid(): React.JSX.Element {
 						<CardFooter className="border-t pt-3">
 							<div className="flex w-full items-center justify-between">
 								<p className="text-xs text-muted-foreground">
-									Created {format(new Date(server.createdAt), "MMM d, yyyy")}
+									{isValidDate
+										? `Created ${format(createdAt, "MMM d, yyyy")}`
+										: "Created date unavailable"}
 								</p>
 								<div className="flex gap-2">
-									{server.status === "draft" && (
+									{server.setupStatus !== "ready" && (
 										<Button variant="default" size="sm" asChild>
 											<Link
 												href={`/dashboard/organization/new-mcp-server?serverId=${server.id}`}
