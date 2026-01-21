@@ -1,0 +1,61 @@
+name: aima-mcp-backend
+region: nyc
+features:
+  - buildpack-stack=ubuntu-22
+
+services:
+  - name: backend
+    github:
+      repo: stepacool/aima-mcp
+      branch: main
+      deploy_on_push: true
+    source_dir: /backend
+    dockerfile_path: ./Dockerfile
+    http_port: 8000
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+    envs:
+      - key: POSTGRES_HOST
+        scope: RUN_TIME
+        value: ${backend-db.HOSTNAME}
+      - key: POSTGRES_PORT
+        scope: RUN_TIME
+        value: ${backend-db.PORT}
+      - key: POSTGRES_USER
+        scope: RUN_TIME
+        value: ${backend-db.USERNAME}
+      - key: POSTGRES_PASSWORD
+        scope: RUN_TIME
+        value: ${backend-db.PASSWORD}
+      - key: POSTGRES_DB
+        scope: RUN_TIME
+        value: ${backend-db.DATABASE}
+      - key: PORT
+        scope: RUN_TIME
+        value: "8000"
+      - key: DEBUG
+        scope: RUN_TIME
+        value: "false"
+      - key: OPENROUTER_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<user-fills-openrouter-api-key>"
+      - key: OPENROUTER_BASE_URL
+        scope: RUN_TIME
+        value: "https://openrouter.ai/api/v1"
+      - key: DEFAULT_MODEL
+        scope: RUN_TIME
+        value: "anthropic/claude-3.5-sonnet"
+      - key: LOGFIRE_TOKEN
+        scope: RUN_TIME
+        value: ""
+
+databases:
+  - name: backend-db
+    engine: PG
+    version: "17"
+    production: false
+
+domains:
+  - domain: api.mcphero.app
+    type: PRIMARY

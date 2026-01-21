@@ -1,0 +1,174 @@
+name: aima-mcp-frontend
+region: nyc
+features:
+  - buildpack-stack=ubuntu-22
+
+services:
+  - name: frontend
+    github:
+      repo: stepacool/aima-mcp
+      branch: main
+      deploy_on_push: true
+    source_dir: /frontend
+    dockerfile_path: ./Dockerfile
+    http_port: 3000
+    instance_size_slug: apps-s-1vcpu-1gb
+    instance_count: 1
+    build_command: ""
+    envs:
+      # Build-time args (placeholders for Docker build)
+      - key: DATABASE_URL
+        scope: BUILD_TIME
+        value: "postgresql://placeholder:placeholder@placeholder:5432/placeholder"
+      - key: BETTER_AUTH_SECRET
+        scope: BUILD_TIME
+        value: "placeholder-secret-for-build"
+
+      # Database
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${frontend-db.DATABASE_URL}
+
+      # Auth
+      - key: BETTER_AUTH_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: "<user-fills-better-auth-secret>"
+      - key: GOOGLE_CLIENT_ID
+        scope: RUN_TIME
+        value: ""
+      - key: GOOGLE_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+
+      # Cloudflare Turnstile (Captcha)
+      - key: TURNSTILE_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+      - key: NEXT_PUBLIC_TURNSTILE_SITE_KEY
+        scope: RUN_TIME
+        value: ""
+
+      # Site URL
+      - key: NEXT_PUBLIC_SITE_URL
+        scope: RUN_TIME
+        value: "https://mcphero.app"
+
+      # AI
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<user-fills-openai-api-key>"
+      - key: OPENROUTER_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+
+      # Python Backend
+      - key: PYTHON_BACKEND_URL
+        scope: RUN_TIME
+        value: "https://api.mcphero.app"
+      - key: PYTHON_BACKEND_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<user-fills-python-backend-api-key>"
+
+      # Stripe Billing
+      - key: STRIPE_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<user-fills-stripe-secret-key>"
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        scope: RUN_TIME
+        value: "<user-fills-stripe-publishable-key>"
+      - key: STRIPE_WEBHOOK_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: "<user-fills-stripe-webhook-secret>"
+      - key: NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY
+        scope: RUN_TIME
+        value: ""
+      - key: NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY
+        scope: RUN_TIME
+        value: ""
+      - key: NEXT_PUBLIC_STRIPE_PRICE_LIFETIME
+        scope: RUN_TIME
+        value: ""
+      - key: NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STARTER
+        scope: RUN_TIME
+        value: ""
+      - key: NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC
+        scope: RUN_TIME
+        value: ""
+      - key: NEXT_PUBLIC_STRIPE_PRICE_CREDITS_PRO
+        scope: RUN_TIME
+        value: ""
+
+      # Email (Resend)
+      - key: RESEND_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<user-fills-resend-api-key>"
+      - key: EMAIL_FROM
+        scope: RUN_TIME
+        value: "<user-fills-email-from>"
+
+      # Monitoring (Sentry)
+      - key: SENTRY_ORG
+        scope: RUN_TIME
+        value: ""
+      - key: SENTRY_PROJECT
+        scope: RUN_TIME
+        value: ""
+      - key: SENTRY_AUTH_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+      - key: NEXT_PUBLIC_SENTRY_DSN
+        scope: RUN_TIME
+        value: ""
+      - key: SENTRY_SUPPRESS_TURBOPACK_WARNING
+        scope: RUN_TIME
+        value: "1"
+
+      # Storage (S3-compatible)
+      - key: S3_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+      - key: S3_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: ""
+      - key: S3_ENDPOINT
+        scope: RUN_TIME
+        value: ""
+      - key: S3_REGION
+        scope: RUN_TIME
+        value: "auto"
+      - key: NEXT_PUBLIC_IMAGES_BUCKET_NAME
+        scope: RUN_TIME
+        value: ""
+
+      # Misc
+      - key: ANALYZE
+        scope: RUN_TIME
+        value: "false"
+      - key: SKIP_ENV_VALIDATION
+        scope: RUN_TIME
+        value: "false"
+      - key: NEXT_PUBLIC_LOG_LEVEL
+        scope: RUN_TIME
+        value: "info"
+
+databases:
+  - name: frontend-db
+    engine: PG
+    version: "17"
+    production: false
+
+domains:
+  - domain: mcphero.app
+    type: PRIMARY
