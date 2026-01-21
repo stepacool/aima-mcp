@@ -13,7 +13,6 @@ import {
 	WrenchIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type * as React from "react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -78,7 +77,6 @@ const wizardStepLabels: Record<string, string> = {
 };
 
 export function McpServersGrid(): React.JSX.Element {
-	const router = useRouter();
 	const utils = trpc.useUtils();
 
 	const { data, isPending, error } = trpc.organization.server.list.useQuery();
@@ -171,15 +169,6 @@ export function McpServersGrid(): React.JSX.Element {
 										</Button>
 									</DropdownMenuTrigger>
 									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											onClick={() =>
-												router.push(
-													`/dashboard/organization/mcp-servers/${server.id}`,
-												)
-											}
-										>
-											View Details
-										</DropdownMenuItem>
 										{server.mcpEndpoint && (
 											<DropdownMenuItem
 												onClick={() => {
@@ -192,7 +181,7 @@ export function McpServersGrid(): React.JSX.Element {
 												Copy Endpoint URL
 											</DropdownMenuItem>
 										)}
-										<DropdownMenuSeparator />
+										{server.mcpEndpoint && <DropdownMenuSeparator />}
 										<DropdownMenuItem
 											variant="destructive"
 											onClick={() => handleDeleteServer(server.id, server.name)}
