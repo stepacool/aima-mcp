@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 export const WizardStep = {
 	stepZero: "step_zero", // AI onboarding chat (frontend only)
 	describe: "describe", // Processing initial description
-	actions: "actions", // Select tools
+	tools: "tools", // Select tools
 	envVars: "env_vars", // Configure environment variables
 	auth: "auth", // Configure authentication
 	deploy: "deploy", // Review and deploy

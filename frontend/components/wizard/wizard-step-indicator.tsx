@@ -1,8 +1,8 @@
 "use client";
 
 import { CheckIcon, LoaderCircleIcon } from "lucide-react";
-import { WizardStep } from "@/schemas/wizard-schemas";
 import { cn } from "@/lib/utils";
+import { WizardStep } from "@/schemas/wizard-schemas";
 
 interface WizardStepIndicatorProps {
 	currentStep: WizardStep;
@@ -17,16 +17,20 @@ const STEPS = [
 		description: "Tell us what you want to build",
 	},
 	{
-		key: WizardStep.actions,
+		key: WizardStep.tools,
 		label: "Tools",
 		description: "Select the tools for your server",
 	},
 	{
 		key: WizardStep.envVars,
-		label: "Config",
+		label: "Environment Variables",
 		description: "Configure environment variables",
 	},
-	{ key: WizardStep.auth, label: "Auth", description: "Generate API key" },
+	{
+		key: WizardStep.auth,
+		label: "Authentication",
+		description: "Generate API key",
+	},
 	{
 		key: WizardStep.deploy,
 		label: "Deploy",

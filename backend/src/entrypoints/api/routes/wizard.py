@@ -1,5 +1,6 @@
 """Wizard routes for MCP server creation with DB persistence."""
 
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
@@ -61,10 +62,18 @@ class AuthResponse(BaseModel):
     bearer_token: str
 
 
+class WizardStep(str, Enum):
+    TOOLS = "tools"
+    ENV_VARS = "env_vars"
+    AUTH = "auth"
+    DEPLOY = "deploy"
+    COMPLETE = "complete"
+
+
 class WizardStateResponse(BaseModel):
     server_id: UUID
     customer_id: UUID
-    setup_status: str
+    setup_status: MCPServerSetupStatus
     wizard_step: str  # Mapped step for frontend (actions, env_vars, auth, etc.)
     processing_status: str  # idle, processing, or failed
     processing_error: str | None
@@ -81,28 +90,28 @@ class WizardStateResponse(BaseModel):
     updated_at: str
 
 
-def map_setup_status_to_wizard_step(setup_status: str) -> str:
+def map_setup_status_to_wizard_step(setup_status: MCPServerSetupStatus) -> WizardStep:
     """Map backend setup_status to frontend wizard_step."""
     mapping = {
-        "tools_generating": "actions",
-        "tools_selection": "actions",
-        "env_vars_generating": "env_vars",
-        "env_vars_setup": "env_vars",
-        "auth_selection": "auth",
-        "code_generating": "deploy",
-        "code_gen": "deploy",
-        "deployment_selection": "deploy",
-        "ready": "complete",
+        MCPServerSetupStatus.tools_generating: WizardStep.TOOLS,
+        MCPServerSetupStatus.tools_selection: WizardStep.TOOLS,
+        MCPServerSetupStatus.env_vars_generating: WizardStep.ENV_VARS,
+        MCPServerSetupStatus.env_vars_setup: WizardStep.ENV_VARS,
+        MCPServerSetupStatus.auth_selection: WizardStep.AUTH,
+        MCPServerSetupStatus.code_generating: WizardStep.DEPLOY,
+        MCPServerSetupStatus.code_gen: WizardStep.DEPLOY,
+        MCPServerSetupStatus.deployment_selection: WizardStep.DEPLOY,
+        MCPServerSetupStatus.ready: WizardStep.COMPLETE,
     }
-    return mapping.get(setup_status, "actions")
+    return mapping.get(setup_status, WizardStep.TOOLS)
 
 
-def get_processing_status(setup_status: str) -> str:
+def get_processing_status(setup_status: MCPServerSetupStatus) -> str:
     """Determine processing status from setup_status."""
     generating_states = {
-        "tools_generating",
-        "env_vars_generating",
-        "code_generating",
+        MCPServerSetupStatus.tools_generating,
+        MCPServerSetupStatus.env_vars_generating,
+        MCPServerSetupStatus.code_generating,
     }
     if setup_status in generating_states:
         return "processing"
@@ -248,7 +257,7 @@ async def get_tools(server_id: UUID) -> list[ToolResponse]:
     ]
 
 
-#TODO: right now suggest is never called on FE, I'll put it into submit tools
+# TODO: right now suggest is never called on FE, I'll put it into submit tools
 @router.post("/{server_id}/env-vars/suggest")
 async def suggest_env_vars(
     server_id: UUID,

@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { ActionsStep } from "@/components/wizard/actions-step";
 import { AuthStep } from "@/components/wizard/auth-step";
 import { CompleteStep } from "@/components/wizard/complete-step";
@@ -10,16 +11,14 @@ import { DeployStep } from "@/components/wizard/deploy-step";
 import { EnvVarsStep } from "@/components/wizard/env-vars-step";
 import { StepZeroChat } from "@/components/wizard/step-zero-chat";
 import { WizardStepIndicator } from "@/components/wizard/wizard-step-indicator";
-import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import {
 	useWizardPolling,
 	useWizardSessions,
 } from "@/hooks/use-wizard-sessions";
 import {
-	ProcessingStatus,
-	WizardStep,
 	type WizardEnvVar,
 	type WizardMessage,
+	WizardStep,
 	type WizardTool,
 } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
@@ -92,28 +91,21 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 
 	// Initialize from URL params or Python backend state
 	useEffect(() => {
-		if (urlServerId && wizardState) {
-			setServerId(wizardState.serverId);
-			// map wizard_step to our local state
-			setCurrentStep(wizardState.wizardStep as WizardStep);
-			setSuggestedTools(wizardState.tools);
-			// Restore selectedToolIds from wizard state (array of UUIDs)
-			if (
-				wizardState.selectedToolIds &&
-				wizardState.selectedToolIds.length > 0
-			) {
-				setSelectedToolIds(wizardState.selectedToolIds);
-			}
-			// Restore env vars
-			if (wizardState.envVars) {
-				setSuggestedEnvVars(wizardState.envVars);
-			}
-			// Restore bearer token
-			if (wizardState.bearerToken) {
-				setBearerToken(wizardState.bearerToken);
-			}
-			setServerUrl(wizardState.serverUrl);
+		if (!urlServerId) return;
+		if (!wizardState) return;
+		setServerId(wizardState.serverId);
+		setCurrentStep(wizardState.wizardStep as WizardStep);
+		setSuggestedTools(wizardState.tools);
+		if (wizardState.selectedToolIds && wizardState.selectedToolIds.length > 0) {
+			setSelectedToolIds(wizardState.selectedToolIds);
 		}
+		if (wizardState.envVars) {
+			setSuggestedEnvVars(wizardState.envVars);
+		}
+		if (wizardState.bearerToken) {
+			setBearerToken(wizardState.bearerToken);
+		}
+		setServerUrl(wizardState.serverUrl);
 	}, [urlServerId, wizardState]);
 
 	// Handle Step 0 readiness - start the Python backend wizard
@@ -128,7 +120,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				setServerId(result.serverId);
 
 				// Go to actions step (backend processes in background, component handles loading state)
-				setCurrentStep(WizardStep.actions);
+				setCurrentStep(WizardStep.tools);
 
 				// Add to in-progress sessions for async tracking
 				// User can navigate away and return later
@@ -263,7 +255,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					</>
 				)}
 
-				{currentStep === WizardStep.actions && serverId && (
+				{currentStep === WizardStep.tools && serverId && (
 					<ActionsStep
 						serverId={serverId}
 						suggestedTools={suggestedTools}

@@ -120,7 +120,7 @@ function getStepLabel(
 	isProcessing: boolean,
 ): string {
 	switch (step) {
-		case WizardStep.actions:
+		case WizardStep.tools:
 			return isProcessing ? "Generating tools..." : "Select tools";
 		case WizardStep.envVars:
 			return isProcessing ? "Generating config..." : "Configure variables";

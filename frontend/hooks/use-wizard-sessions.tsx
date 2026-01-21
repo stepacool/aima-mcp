@@ -202,7 +202,7 @@ export function useWizardPolling(
 
 		// Notify when tools are ready (only once)
 		if (
-			wizard_step === WizardStep.actions &&
+			wizard_step === WizardStep.tools &&
 			processing_status === ProcessingStatus.idle &&
 			!notifiedRef.current.toolsReady
 		) {
