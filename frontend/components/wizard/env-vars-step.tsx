@@ -11,9 +11,10 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
+import { InputPassword } from "@/components/ui/custom/input-password";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import type { WizardEnvVar } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
 
@@ -213,9 +214,8 @@ export function EnvVarsStep({
 									<CardDescription>{envVar.description}</CardDescription>
 									<div className="space-y-2">
 										<Label htmlFor={`env-${envVar.id}`}>Value</Label>
-										<Input
+										<InputPassword
 											id={`env-${envVar.id}`}
-											type="password"
 											placeholder={`Enter ${envVar.name}`}
 											value={envVarValues[envVar.id] ?? envVar.value ?? ""}
 											onChange={(e) =>
