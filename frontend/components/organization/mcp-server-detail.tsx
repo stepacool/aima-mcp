@@ -335,13 +335,14 @@ export function McpServerDetail({
 												)}
 											</div>
 										</div>
-										{tool.parametersSchema && tool.parametersSchema.length > 0 && (
-											<div className="mt-2">
-												<p className="text-xs text-muted-foreground">
-													Parameters: {tool.parametersSchema.length}
-												</p>
-											</div>
-										)}
+										{tool.parametersSchema &&
+											tool.parametersSchema.length > 0 && (
+												<div className="mt-2">
+													<p className="text-xs text-muted-foreground">
+														Parameters: {tool.parametersSchema.length}
+													</p>
+												</div>
+											)}
 									</div>
 								</React.Fragment>
 							))}

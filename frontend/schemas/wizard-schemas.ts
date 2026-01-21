@@ -65,9 +65,7 @@ export const refineWizardToolsSchema = z.object({
 	feedback: z.string().min(1, "Feedback is required"),
 	toolIds: z.array(z.string()).optional(), // Optional list of tool UUIDs
 });
-export type RefineWizardToolsInput = z.infer<
-	typeof refineWizardToolsSchema
->;
+export type RefineWizardToolsInput = z.infer<typeof refineWizardToolsSchema>;
 
 // Get wizard tools (calls Python backend /api/wizard/{id}/tools)
 export const getWizardToolsSchema = z.object({

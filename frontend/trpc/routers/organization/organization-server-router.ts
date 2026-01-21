@@ -1,9 +1,9 @@
 import { z } from "zod/v4";
 import { logger } from "@/lib/logger";
 import {
-	listServers,
-	getServerDetails,
 	deleteServer,
+	getServerDetails,
+	listServers,
 } from "@/lib/python-backend";
 import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
 

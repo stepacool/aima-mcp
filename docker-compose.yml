@@ -1,0 +1,46 @@
+services:
+  backend-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    volumes:
+      - backend_postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend-db
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@backend-db:5432/mydatabase
+
+  frontend-db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: frontend
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: database
+    volumes:
+      - frontend_postgres_data:/var/lib/postgresql/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - frontend-db
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://frontend:password@frontend-db:5432/database
+
+volumes:
+  backend_postgres_data:
+  frontend_postgres_data:

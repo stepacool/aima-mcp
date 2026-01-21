@@ -168,14 +168,13 @@ export async function refineWizardTools(
 	params: RefineWizardToolsParams,
 ): Promise<RefineWizardToolsResponse> {
 	try {
-		const response =
-			await pythonBackendClient.post<RefineWizardToolsResponse>(
-				`/api/wizard/${params.serverId}/tools/refine`,
-				{
-					feedback: params.feedback,
-					tool_ids: params.toolIds ?? null,
-				},
-			);
+		const response = await pythonBackendClient.post<RefineWizardToolsResponse>(
+			`/api/wizard/${params.serverId}/tools/refine`,
+			{
+				feedback: params.feedback,
+				tool_ids: params.toolIds ?? null,
+			},
+		);
 		logger.info(
 			{ serverId: params.serverId },
 			"Wizard tools refined in Python backend",

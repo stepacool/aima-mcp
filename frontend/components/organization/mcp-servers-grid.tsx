@@ -154,13 +154,13 @@ export function McpServersGrid(): React.JSX.Element {
 		);
 	}
 
-		return (
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{servers.map((server) => {
-					const status = statusConfig[server.setupStatus] ?? defaultStatus;
-					const StatusIcon = status.icon;
-					const createdAt = server.createdAt ? new Date(server.createdAt) : null;
-					const isValidDate = createdAt && !Number.isNaN(createdAt.getTime());
+	return (
+		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{servers.map((server) => {
+				const status = statusConfig[server.setupStatus] ?? defaultStatus;
+				const StatusIcon = status.icon;
+				const createdAt = server.createdAt ? new Date(server.createdAt) : null;
+				const isValidDate = createdAt && !Number.isNaN(createdAt.getTime());
 
 				return (
 					<Card
@@ -247,7 +247,8 @@ export function McpServersGrid(): React.JSX.Element {
 								<div>
 									<p className="text-muted-foreground">Step</p>
 									<p className="font-medium">
-										{setupStatusLabels[server.setupStatus] || server.setupStatus}
+										{setupStatusLabels[server.setupStatus] ||
+											server.setupStatus}
 									</p>
 								</div>
 							</div>
