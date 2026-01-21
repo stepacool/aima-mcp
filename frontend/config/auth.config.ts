@@ -6,6 +6,8 @@ const origins = Array.from(
 		[
 			getBaseUrl(),
 			env.NEXT_PUBLIC_SITE_URL,
+            "https://mcphero.app",
+            "https://www.mcphero.app",
 			env.NEXT_PUBLIC_VERCEL_URL
 				? `https://${env.NEXT_PUBLIC_VERCEL_URL}`
 				: undefined,
