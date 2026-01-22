@@ -104,6 +104,22 @@ class WizardStepsService:
 
         try:
             system_prompt = load_prompt(prompt_file)
+
+            # Get server to access meta for technical details
+            server = await Provider.mcp_server_repo().get(mcp_server_id)
+            technical_details = (
+                server.meta.get("technical_details", []) if server.meta else []
+            )
+
+            # Build user content with description and technical details
+            user_content = description
+            if technical_details:
+                technical_details_text = "\n\n".join(
+                    f"Technical Details {i + 1}:\n{details}"
+                    for i, details in enumerate(technical_details)
+                )
+                user_content = f"{description}\n\n---\n\nTECHNICAL DETAILS (use these to design tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen designing tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
+
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
                 messages=[
@@ -113,7 +129,7 @@ class WizardStepsService:
                     },
                     {
                         "role": "user",
-                        "content": description,
+                        "content": user_content,
                     },
                 ],
                 response_format=ToolsResponse,
@@ -170,7 +186,20 @@ class WizardStepsService:
             )
 
             system_prompt = load_prompt(prompt_file)
-            user_content = f"Server description:\n{server.description}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}"
+
+            # Include technical details from meta if available
+            technical_details = (
+                server.meta.get("technical_details", []) if server.meta else []
+            )
+            technical_details_text = ""
+            if technical_details:
+                technical_details_text = "\n\n".join(
+                    f"Technical Details {i + 1}:\n{details}"
+                    for i, details in enumerate(technical_details)
+                )
+                technical_details_text = f"\n\n---\n\nTECHNICAL DETAILS (use these to refine tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen refining tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
+
+            user_content = f"Server description:\n{server.description}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}{technical_details_text}"
 
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
@@ -370,9 +399,6 @@ class WizardStepsService:
         token = secrets.token_urlsafe(32)
         await Provider.api_key_repo().create_for_server(mcp_server_id, token)
         await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
-        await Provider.mcp_server_repo().update_setup_status(
-            mcp_server_id, MCPServerSetupStatus.code_gen
-        )
         return token
 
     async def step_4_generate_code_for_tools_and_env_vars(
@@ -385,12 +411,17 @@ class WizardStepsService:
         If there's DB_URL in envs, write it in the connector code etc.
         Sets status to code_generating during LLM call, then code_gen when done.
         """
+        server = await Provider.mcp_server_repo().get_by_uuid(mcp_server_id)
+
+        if server.setup_status == MCPServerSetupStatus.code_generating:
+            raise RuntimeError(
+                "Code generation invoked at invalid server state (already code_generating)"
+            )
+
         # Set generating status
         await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.code_generating
         )
-
-        server = await Provider.mcp_server_repo().get_by_uuid(mcp_server_id)
 
         # customer_id = server.customer_id
         # customer = await Provider.customer_repo().get(customer_id)
@@ -420,12 +451,11 @@ class WizardStepsService:
                     f"- {var.name}: {var.description}"
                     for var in server.environment_variables
                 ),
+                TECHNICAL_DETAILS=",".join(server.meta["technical_details"]),
                 FUNCTION_NAME=tool.name,
                 TOOL_NAME=tool.name,
                 TOOL_DESCRIPTION=tool.description,
-                MCP_SERVER_DESCRIPTION=server.description.split("**Exposed Tools:**")[
-                    0
-                ].strip(),
+                MCP_SERVER_DESCRIPTION=server.description,  # needs better formatting at wizard system prompt level
                 ARGUMENTS_DOCSTRING="\n".join(
                     f"{param.get('name', 'arg')}: {param.get('type', 'str')} - {param.get('description', '')}"
                     for param in tool.parameters_schema
@@ -442,7 +472,10 @@ class WizardStepsService:
                 {"role": "user", "content": prompt},
             ]
             code_validator = CodeValidator(tier)
-            while True:
+
+            MAX_GENERATION_RETRIES = 5
+
+            for _ in range(MAX_GENERATION_RETRIES):
                 response = await openai_client.chat.completions.create(
                     model="google/gemini-3-pro-preview",
                     messages=messages,
@@ -468,6 +501,13 @@ class WizardStepsService:
             if enable_logging:
                 logger_instance.info(f"[{tool.name}] Code: {code}")
 
+            if not code:
+                raise RuntimeError(
+                    f"[{mcp_server_id}] Tool: {tool.name}, failed to generate code"
+                )
+
+            return code
+
         tasks = [
             generate_code_for_tool(system_prompt["prompt"], tool)
             for tool in server.tools
@@ -478,10 +518,14 @@ class WizardStepsService:
         end_time = time.time()
         logger.info(f"[{mcp_server_id}] Time taken: {end_time - start_time} seconds")
         for tool, code in zip(server.tools, results):
-            logger.info(
+            if not code:
+                logger.error(
+                    f"[{mcp_server_id}] Tool: {tool.name}, failed to generate code"
+                )
+            await Provider.mcp_tool_repo().update_tool_code(tool.id, code)
+            logger.success(
                 f"[{mcp_server_id}] Tool: {tool.name}, completed code generation"
             )
-            await Provider.mcp_tool_repo().update_tool_code(tool.id, code)
 
         await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.code_gen

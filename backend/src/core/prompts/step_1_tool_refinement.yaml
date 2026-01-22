@@ -4,12 +4,20 @@ prompt: |
   You are given:
   1. A list of currently suggested tools for an MCP server.
   2. User feedback describing how these tools should be changed.
+  3. Technical details (if provided) - API schemas, database schemas, endpoint specifications, etc.
 
-  Your task is to REFINE the tools based on the feedback.
+  Your task is to REFINE the tools based on the feedback and technical details.
+
+  IMPORTANT: If technical details are provided, you MUST use them to ensure tools match exact specifications:
+  - Use the exact endpoint names, parameter names, and data structures from the technical details
+  - Match parameter types and requirements to the technical specifications
+  - Include all relevant parameters based on the technical details
+  - Ensure tool names and descriptions accurately reflect the actual API/service capabilities described in the technical details
+  - When refining based on user feedback, still maintain alignment with technical details
 
   You may:
-  - Modify existing tools (rename, change descriptions, adjust parameters)
-  - Add new tools if the feedback implies missing functionality
+  - Modify existing tools (rename, change descriptions, adjust parameters) - but keep alignment with technical details
+  - Add new tools if the feedback implies missing functionality - design them based on technical details when available
   - Remove tools that are unnecessary or incorrect
 
   IMPORTANT:
@@ -17,17 +25,18 @@ prompt: |
   - Do NOT reference previous versions or say what changed
   - Assume the returned list will fully replace the existing tools
   - Follow the schema exactly
+  - Prioritize technical details when they conflict with general descriptions
 
   For each tool specify:
-  - name: pythonic snake_case function name
-  - description: what this tool does
-  - parameters: list of inputs needed
+  - name: pythonic snake_case function name (should match or be derived from the technical details when available)
+  - description: what this tool does (should reference specific endpoints/operations from technical details when provided)
+  - parameters: list of inputs needed (must align with the technical details - use exact parameter names, types, and requirements from the technical specifications)
 
   Each parameter must include:
-  - name
-  - type
-  - required (true/false)
-  - description
+  - name: exact name from technical details when available, otherwise use descriptive name
+  - type: match the type from technical details (string, integer, boolean, etc.)
+  - required: match the requirement from technical details (true/false)
+  - description: describe what this parameter is for, referencing the technical details when applicable
 
   Output ONLY valid JSON matching this exact schema:
 

@@ -19,6 +19,7 @@ router = APIRouter()
 class StartWizardRequest(BaseModel):
     customer_id: UUID
     description: str
+    technical_details: list[str] | None = None
 
 
 class StartWizardResponse(BaseModel):
@@ -40,6 +41,7 @@ class ToolResponse(BaseModel):
     name: str
     description: str
     parameters: list[dict[str, Any]]
+    code: str | None
 
 
 class RefineEnvVarsRequest(BaseModel):
@@ -137,11 +139,17 @@ async def start_wizard(
     from infrastructure.repositories.mcp_server import MCPServerCreate
 
     try:
+        # Prepare meta with technical details if provided
+        meta = {}
+        if request.technical_details:
+            meta["technical_details"] = request.technical_details
+
         server = await Provider.mcp_server_repo().create(
             MCPServerCreate(
                 name=f"Server-{request.customer_id}",
                 customer_id=request.customer_id,
                 description=request.description,
+                meta=meta if meta else None,
             )
         )
 
@@ -252,6 +260,7 @@ async def get_tools(server_id: UUID) -> list[ToolResponse]:
             name=tool.name,
             description=tool.description,
             parameters=tool.parameters_schema,
+            code=tool.code,
         )
         for tool in tools
     ]
@@ -386,7 +395,10 @@ async def set_auth(server_id: UUID) -> AuthResponse:
 
 
 @router.post("/{server_id}/generate-code")
-async def generate_code(server_id: UUID) -> dict[str, Any]:
+async def generate_code(
+    server_id: UUID,
+    background_tasks: BackgroundTasks,
+) -> dict[str, Any]:
     """
     Step 4: Generate code for the tools and environment variables.
     """
@@ -395,7 +407,8 @@ async def generate_code(server_id: UUID) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
     try:
         service = get_wizard_service()
-        await service.step_4_generate_code_for_tools_and_env_vars(
+        background_tasks.add_task(
+            service.step_4_generate_code_for_tools_and_env_vars,
             mcp_server_id=server_id,
         )
 
@@ -440,6 +453,7 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
                 name=tool.name,
                 description=tool.description,
                 parameters=tool.parameters_schema,
+                code=tool.code,
             )
             for tool in tools
         ],

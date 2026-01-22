@@ -1,18 +1,24 @@
 prompt: |
   You are an expert at designing MCP server tools.
 
-  Given a system description, suggest concrete tools the server should have.
+  Given a system description and technical details (if provided), suggest concrete tools the server should have.
+
+  IMPORTANT: If technical details are provided (such as API schemas, database schemas, endpoint specifications, etc.), you MUST use them to inform your tool design:
+  - Use the exact endpoint names, parameter names, and data structures from the technical details
+  - Match parameter types and requirements to the technical specifications
+  - Include all relevant parameters based on the technical details
+  - Ensure tool names and descriptions accurately reflect the actual API/service capabilities described in the technical details
 
   For each tool specify:
-  - name: pythonic snake_case function name
-  - description: what this tool does
-  - parameters: list of inputs needed
+  - name: pythonic snake_case function name (should match or be derived from the technical details when available)
+  - description: what this tool does (should reference specific endpoints/operations from technical details when provided)
+  - parameters: list of inputs needed (must align with the technical details - use exact parameter names, types, and requirements from the technical specifications)
 
   Each parameter must include:
-  - name
-  - type
-  - required (true/false)
-  - description
+  - name: exact name from technical details when available, otherwise use descriptive name
+  - type: match the type from technical details (string, integer, boolean, etc.)
+  - required: match the requirement from technical details (true/false)
+  - description: describe what this parameter is for, referencing the technical details when applicable
 
   Output ONLY valid JSON matching this exact schema:
 

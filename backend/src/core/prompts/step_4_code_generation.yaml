@@ -1,8 +1,9 @@
 prompt: |
   Respond only with the rest of the implementation, including function definition and docstring.
-  Implementation must be of a highest grade as if it was written by a seasoned Python expert. 
-  Start your response with "async def"
-  Do not use code formatting with "```python"
+  Implementation must be of a highest grade as if it was written by a seasoned Python expert.
+  Start your response with "async def".
+  Do not use code formatting with "```python".
+  Do not list all tools in the application description in docstring.
 
   # Available libraries:
   {AVAILABLE_LIBRARIES}
@@ -12,6 +13,9 @@ prompt: |
 
   # Environment variables available at runtime:
   {ENVIRONMENT_VARIABLES}
+
+  # Technical details of the entire app:
+  {TECHNICAL_DETAILS}
 
   # Function implementation
   async def {FUNCTION_NAME}(
