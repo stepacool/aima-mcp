@@ -18,26 +18,37 @@ async function getSession(req: NextRequest): Promise<Session | null> {
 		// Use the same baseURL that Better Auth is configured with to ensure cookies match
 		// This is critical for www vs non-www domain consistency
 		const authBaseURL = getBaseUrl();
+		const authBaseURLHost = new URL(authBaseURL).host;
 
 		// Use localhost for internal API calls when using ngrok or in development
-		// Otherwise use the same baseURL as Better Auth to ensure cookie domain matches
-		const internalBaseURL =
-			isNgrok || isDevelopment ? "http://localhost:3000" : authBaseURL;
+		// In production, use the request's origin (which should match authBaseURL)
+		const baseURLForRequest =
+			isNgrok || isDevelopment ? "http://localhost:3000" : origin;
 
 		const { data: session, error } = await betterFetch<Session>(
 			"/api/auth/get-session?disableCookieCache=true",
 			{
-				baseURL: internalBaseURL,
+				baseURL: baseURLForRequest,
 				headers: {
 					cookie: req.headers.get("cookie") || "",
+					// Include Host header matching the auth baseURL to ensure Better Auth validates correctly
+					Host: authBaseURLHost,
+					// Forward the original host for proper validation
+					"X-Forwarded-Host": req.headers.get("host") || authBaseURLHost,
+					"X-Forwarded-Proto": new URL(origin).protocol.slice(0, -1),
 				},
 			},
 		);
 
 		if (error) {
-			if (process.env.NODE_ENV === "development") {
-				console.error("Session fetch failed:", error);
-			}
+			// Log error in production too for debugging
+			console.error("Session fetch failed:", {
+				error,
+				baseURL: baseURLForRequest,
+				authBaseURL,
+				origin,
+				hasCookies: !!req.headers.get("cookie"),
+			});
 			return null;
 		}
 
