@@ -11,6 +11,7 @@ export interface WizardTool {
 	name: string;
 	description: string;
 	parameters?: Record<string, unknown>[];
+	code?: string;
 }
 
 export interface WizardEnvVar {
@@ -52,6 +53,7 @@ export interface StartWizardParams {
 	customerId: string;
 	description: string;
 	openapiSchema?: string | null;
+	technicalDetails?: string[];
 }
 
 export interface StartWizardResponse {
@@ -146,6 +148,7 @@ export async function startWizard(
 			customerId: params.customerId,
 			description: params.description,
 			openapiSchema: params.openapiSchema ?? null,
+			technicalDetails: params.technicalDetails ?? null,
 		});
 		logger.info(
 			{ customerId: params.customerId, wizardId: response.data.serverId },

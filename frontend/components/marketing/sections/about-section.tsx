@@ -19,8 +19,7 @@ const stats = [
 const values = [
 	{
 		title: "AI-First Development",
-		description:
-			"The future is describing what you want, not how to build it.",
+		description: "The future is describing what you want, not how to build it.",
 	},
 	{
 		title: "Zero Configuration",

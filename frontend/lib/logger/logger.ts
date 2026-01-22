@@ -139,8 +139,7 @@ export class Logger {
 							const { level, msg, group: logGroup, ...rest } = logObj;
 
 							const levelUppercased = (level || "info").toUpperCase();
-							const LEVEL_COLOR =
-								LEVEL_COLORS[levelUppercased] || COLOR.WHITE;
+							const LEVEL_COLOR = LEVEL_COLORS[levelUppercased] || COLOR.WHITE;
 							const GROUP_COLOR = getGroupColor(logGroup || "default");
 
 							// Simple format: [LEVEL] group: message
@@ -155,9 +154,7 @@ export class Logger {
 								const contextStr = Object.entries(rest)
 									.filter(
 										([key]) =>
-											!["pid", "hostname", "levelValue", "time"].includes(
-												key,
-											),
+											!["pid", "hostname", "levelValue", "time"].includes(key),
 									)
 									.map(([key, value]) => {
 										const serializedValue =

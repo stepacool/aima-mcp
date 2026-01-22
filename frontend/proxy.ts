@@ -10,13 +10,13 @@ async function getSession(req: NextRequest): Promise<Session | null> {
 		// For server-to-server requests, use localhost instead of external URL (e.g., ngrok)
 		// This prevents SSL errors when the server tries to call itself through external URLs
 		const origin = req.nextUrl.origin;
-		const isNgrok = origin.includes("ngrok") || origin.includes("ngrok-free.app");
+		const isNgrok =
+			origin.includes("ngrok") || origin.includes("ngrok-free.app");
 		const isDevelopment = process.env.NODE_ENV === "development";
-		
+
 		// Use localhost for internal API calls when using ngrok or in development
-		const internalBaseURL = isNgrok || isDevelopment
-			? "http://localhost:3000"
-			: origin;
+		const internalBaseURL =
+			isNgrok || isDevelopment ? "http://localhost:3000" : origin;
 
 		const { data: session, error } = await betterFetch<Session>(
 			"/api/auth/get-session?disableCookieCache=true",

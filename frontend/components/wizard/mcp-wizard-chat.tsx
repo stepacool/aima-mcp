@@ -54,6 +54,9 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	const startWizardMutation = trpc.organization.wizard.start.useMutation();
 	const retryMutation = trpc.organization.wizard.retry.useMutation();
 
+	const generateCodeMutation =
+		trpc.organization.wizard.generateCode.useMutation();
+
 	// Check for existing serverId in URL
 	const urlServerId = searchParams.get("serverId");
 
@@ -110,11 +113,13 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 
 	// Handle Step 0 readiness - start the Python backend wizard
 	const handleStepZeroReady = useCallback(
-		async (description: string) => {
+		async (description: string, technicalDetails: string[]) => {
 			setIsStarting(true);
 			try {
 				const result = await startWizardMutation.mutateAsync({
 					description,
+					technicalDetails:
+						technicalDetails.length > 0 ? technicalDetails : undefined,
 				});
 
 				setServerId(result.serverId);
@@ -158,11 +163,20 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	}, []);
 
 	// Handle auth configured - transition to DEPLOY
-	const handleAuthConfigured = useCallback((token: string) => {
-		setBearerToken(token);
-		refetch();
-		setCurrentStep(WizardStep.deploy);
-	}, []);
+	const handleAuthConfigured = useCallback(
+		async (token: string) => {
+			if (!serverId) {
+				return;
+			}
+			setBearerToken(token);
+			generateCodeMutation.mutateAsync({ serverId }).then(() => {
+				refetch().then(() => {
+					setCurrentStep(WizardStep.deploy);
+				});
+			});
+		},
+		[serverId, generateCodeMutation, refetch],
+	);
 
 	// Handle server activated - transition to COMPLETE
 	const handleServerActivated = useCallback((url: string) => {
@@ -287,8 +301,12 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						serverId={serverId}
 						selectedToolIds={selectedToolIds}
 						suggestedTools={suggestedTools}
+						toolsWithCode={wizardState!.tools}
 						bearerToken={bearerToken}
+						isProcessing={isProcessing}
+						processingError={hasFailed ? processingError : null}
 						onServerActivated={handleServerActivated}
+						onRetry={handleRetry}
 					/>
 				)}
 

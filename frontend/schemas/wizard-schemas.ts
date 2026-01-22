@@ -56,6 +56,7 @@ export type WizardMessage = z.infer<typeof wizardMessageSchema>;
 export const startWizardSchema = z.object({
 	description: z.string().min(1, "Description is required"),
 	openapiSchema: z.string().optional().nullable(),
+	technicalDetails: z.array(z.string()).optional(),
 });
 export type StartWizardInput = z.infer<typeof startWizardSchema>;
 

@@ -129,9 +129,23 @@ export function useWizardPolling(
 		onError?: (error: string) => void;
 		onNetworkError?: (error: unknown) => void;
 		enabled?: boolean;
+		refetchIndefinitely?: boolean;
 	},
 ) {
-	const { enabled = true } = options || {};
+	const {
+		enabled = true,
+		refetchIndefinitely: initialRefetchIndefinitely = false,
+	} = options || {};
+
+	// State to control indefinite refetch, can be toggled at runtime
+	const [refetchIndefinitely, setRefetchIndefinitely] = useState(
+		initialRefetchIndefinitely,
+	);
+
+	// Toggle function for indefinite refetch
+	const toggleRefetchIndefinitely = useCallback(() => {
+		setRefetchIndefinitely((prev) => !prev);
+	}, []);
 
 	// Use refs to store callbacks to avoid infinite loops
 	const onCompleteRef = useRef(options?.onComplete);
@@ -162,18 +176,28 @@ export function useWizardPolling(
 		onNetworkErrorRef.current = options?.onNetworkError;
 	});
 
+	// Sync state with initial option value when it changes
+	useEffect(() => {
+		if (options?.refetchIndefinitely !== undefined) {
+			setRefetchIndefinitely(options.refetchIndefinitely);
+		}
+	}, [options?.refetchIndefinitely]);
+
 	const { data, isLoading, error, refetch } =
 		trpc.organization.wizard.getState.useQuery(
 			{ serverId: serverId! },
 			{
 				enabled: enabled && !!serverId,
 				retry: 2,
-				// Auto-polling: refetch every 3 seconds while processing
-				// Stop polling once processing is complete or has failed
+				// Auto-polling: refetch every 3 seconds
+				// If refetchIndefinitely is true, always poll regardless of status
+				// Otherwise, stop polling once processing is complete or has failed
 				refetchInterval: (query) => {
 					const state = query.state.data;
 					if (!state) return 3000; // Keep polling if no data yet
-					// Continue polling only while processing
+					// If indefinite refetch is enabled, always poll
+					if (refetchIndefinitely) return 3000;
+					// Otherwise, continue polling only while processing
 					return isProcessingStatus(state.processingStatus) ? 3000 : false;
 				},
 				refetchIntervalInBackground: true, // Continue polling even when tab is inactive
@@ -255,5 +279,7 @@ export function useWizardPolling(
 		isProcessing: data ? isProcessingStatus(data.processingStatus) : true,
 		hasFailed: data ? hasFailedStatus(data.processingStatus) : false,
 		processingError: data?.processingError ?? null,
+		refetchIndefinitely,
+		toggleRefetchIndefinitely,
 	};
 }

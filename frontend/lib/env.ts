@@ -189,7 +189,8 @@ export function getDatabaseUrl(): string {
 		return env.DATABASE_URL;
 	}
 	// Only require SSL for non-localhost connections
-	const isLocalhost = env.POSTGRES_HOST === "localhost" || env.POSTGRES_HOST === "127.0.0.1";
+	const isLocalhost =
+		env.POSTGRES_HOST === "localhost" || env.POSTGRES_HOST === "127.0.0.1";
 	const sslMode = isLocalhost ? "disable" : "require";
 	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}?sslmode=${sslMode}`;
 }
@@ -212,6 +213,7 @@ export function shouldUseSSL(): boolean {
 		return true;
 	}
 	// For granular vars, check if host is localhost
-	const isLocalhost = env.POSTGRES_HOST === "localhost" || env.POSTGRES_HOST === "127.0.0.1";
+	const isLocalhost =
+		env.POSTGRES_HOST === "localhost" || env.POSTGRES_HOST === "127.0.0.1";
 	return !isLocalhost;
 }

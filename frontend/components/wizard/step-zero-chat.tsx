@@ -25,14 +25,26 @@ import {
 import { Suggestion, Suggestions } from "@/components/ai/suggestion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
 import {
 	END_READY_MARKER,
+	END_TECHNICAL_DETAILS_MARKER,
 	extractReadyDescription,
+	extractTechnicalDetails,
+	hasTechnicalDetails,
 	isReadyToStart,
 	READY_TO_START_MARKER,
+	TECHNICAL_DETAILS_MARKER,
 } from "@/lib/wizard/prompts";
 import type { WizardMessage } from "@/schemas/wizard-schemas";
 
@@ -40,7 +52,7 @@ interface StepZeroChatProps {
 	sessionId: string;
 	organizationId: string;
 	initialMessages: WizardMessage[];
-	onReady: (description: string) => void;
+	onReady: (description: string, technicalDetails: string[]) => void;
 	onMessagesUpdate: (messages: WizardMessage[]) => void;
 }
 
@@ -59,6 +71,16 @@ function getMessageText(
 	return "";
 }
 
+// Calls getMessageText, clears it from readyness tags and removes technical detials block
+function getUserMessageText(
+	message: ReturnType<typeof useChat>["messages"][number],
+): string {
+	let text = getMessageText(message);
+	text = text.replace(READY_TO_START_MARKER, "").replace(END_READY_MARKER, "");
+	// remove everything after the technical details marker start, including the markers
+	text = text.replace(new RegExp(`${TECHNICAL_DETAILS_MARKER}.*`, "gs"), "");
+	return text;
+}
 export function StepZeroChat({
 	sessionId,
 	organizationId,
@@ -75,6 +97,8 @@ export function StepZeroChat({
 	const [streamError, setStreamError] = useState<string | null>(null);
 	// Track when chat is ready and store the description for confirmation
 	const [readyDescription, setReadyDescription] = useState<string | null>(null);
+	// Track all technical details from all messages
+	const [allTechnicalDetails, setAllTechnicalDetails] = useState<string[]>([]);
 
 	const { messages, setMessages, sendMessage, status } = useChat({
 		id: sessionId,
@@ -125,11 +149,29 @@ export function StepZeroChat({
 
 	// Check for readiness marker when messages change
 	// Only show ready button if last message is assistant and contains marker
+	// Also accumulate technical details from all messages
 	useEffect(() => {
 		if (messages.length === 0) {
 			setReadyDescription(null);
+			setAllTechnicalDetails([]);
 			return;
 		}
+
+		// Accumulate technical details from all assistant messages
+		const technicalDetailsList: string[] = [];
+		for (const message of messages) {
+			if (message.role === "assistant") {
+				const messageText = getMessageText(message);
+				if (hasTechnicalDetails(messageText)) {
+					const details = extractTechnicalDetails(messageText);
+					if (details) {
+						technicalDetailsList.push(details);
+					}
+				}
+			}
+		}
+		setAllTechnicalDetails(technicalDetailsList);
+
 		const lastMessage = messages[messages.length - 1];
 		if (!lastMessage || lastMessage.role !== "assistant") {
 			setReadyDescription(null);
@@ -204,7 +246,7 @@ export function StepZeroChat({
 
 	const handleConfirmReady = () => {
 		if (readyDescription) {
-			onReady(readyDescription);
+			onReady(readyDescription, allTechnicalDetails);
 		}
 	};
 
@@ -248,51 +290,115 @@ export function StepZeroChat({
 						</div>
 					) : (
 						<>
-							{displayMessages.map((message) => (
-								<Message key={message.id} from={message.role}>
-									<div
-										className={cn(
-											"flex w-full gap-4",
-											message.role === "user" && "flex-row-reverse",
-										)}
-									>
-										{message.role === "assistant" ? (
-											<Avatar className="size-8 shrink-0">
-												<AvatarFallback className="bg-primary text-primary-foreground">
-													<SparklesIcon className="size-4" />
-												</AvatarFallback>
-											</Avatar>
-										) : (
-											<UserAvatar
-												name={user?.name ?? "User"}
-												src={user?.image}
-												className="size-8 shrink-0"
-											/>
-										)}
-										<div className="flex min-w-0 flex-1 flex-col gap-1">
-											<MessageContent
-												className={cn(
-													"max-w-none",
-													message.role === "user" &&
-														"rounded-2xl bg-secondary px-4 py-3",
+							{displayMessages.map((message, index) => {
+								const messageText = getMessageText(message);
+								const isLastMessage = index === displayMessages.length - 1;
+								const isStreamingThisMessage =
+									isStreaming && isLastMessage && message.role === "assistant";
+								const hasTechDetailsMarker =
+									message.role === "assistant" &&
+									messageText.includes(TECHNICAL_DETAILS_MARKER);
+								const hasCompleteTechDetails =
+									message.role === "assistant" &&
+									hasTechnicalDetails(messageText);
+								const isCollectingTechDetails =
+									isStreamingThisMessage &&
+									hasTechDetailsMarker &&
+									!messageText.includes(END_TECHNICAL_DETAILS_MARKER);
+
+								return (
+									<Message key={message.id} from={message.role}>
+										<div
+											className={cn(
+												"flex w-full gap-4",
+												message.role === "user" && "flex-row-reverse",
+											)}
+										>
+											{message.role === "assistant" ? (
+												<Avatar className="size-8 shrink-0">
+													<AvatarFallback className="bg-primary text-primary-foreground">
+														<SparklesIcon className="size-4" />
+													</AvatarFallback>
+												</Avatar>
+											) : (
+												<UserAvatar
+													name={user?.name ?? "User"}
+													src={user?.image}
+													className="size-8 shrink-0"
+												/>
+											)}
+											<div className="flex min-w-0 flex-1 flex-col gap-1">
+												<MessageContent
+													className={cn(
+														"max-w-none",
+														message.role === "user" &&
+															"rounded-2xl bg-secondary px-4 py-3",
+													)}
+												>
+													{message.role === "assistant" ? (
+														<MessageResponse>
+															{getUserMessageText(message)}
+														</MessageResponse>
+													) : (
+														<span className="whitespace-pre-wrap">
+															{getMessageText(message)}
+														</span>
+													)}
+												</MessageContent>
+												{isCollectingTechDetails && (
+													<div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+														<Loader size={16} />
+														<span>Collecting technical details...</span>
+													</div>
 												)}
-											>
-												{message.role === "assistant" ? (
-													<MessageResponse>
-														{getMessageText(message)
-															.replace(READY_TO_START_MARKER, "")
-															.replace(END_READY_MARKER, "")}
-													</MessageResponse>
-												) : (
-													<span className="whitespace-pre-wrap">
-														{getMessageText(message)}
-													</span>
+												{/* Show button under messages that have complete technical details */}
+												{hasCompleteTechDetails && (
+													<Dialog>
+														<DialogTrigger asChild>
+															<Button
+																variant="outline"
+																size="sm"
+																className="mt-2 w-fit"
+															>
+																View Technical Details
+															</Button>
+														</DialogTrigger>
+														<DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh] overflow-y-auto">
+															<DialogHeader>
+																<DialogTitle>Technical Details</DialogTitle>
+																<DialogDescription>
+																	All technical information collected from the
+																	conversation
+																</DialogDescription>
+															</DialogHeader>
+															<div className="mt-4 space-y-4">
+																{allTechnicalDetails.length > 0 ? (
+																	allTechnicalDetails.map((details, index) => (
+																		<div key={index}>
+																			{allTechnicalDetails.length > 1 && (
+																				<h4 className="mb-2 font-semibold text-sm text-muted-foreground">
+																					Technical Details #{index + 1}
+																				</h4>
+																			)}
+																			<pre className="whitespace-pre-wrap break-words rounded-lg bg-muted p-4 text-sm font-mono">
+																				{details}
+																			</pre>
+																		</div>
+																	))
+																) : (
+																	<p className="text-muted-foreground text-sm">
+																		No technical details available
+																	</p>
+																)}
+															</div>
+														</DialogContent>
+													</Dialog>
 												)}
-											</MessageContent>
+											</div>
 										</div>
-									</div>
-								</Message>
-							))}
+									</Message>
+								);
+							})}
 
 							{/* Error message */}
 							{streamError && (

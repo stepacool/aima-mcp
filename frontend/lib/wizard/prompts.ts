@@ -4,6 +4,8 @@
 export const READY_TO_START_MARKER = "---READY_TO_START---";
 export const END_READY_MARKER = "---END_READY---";
 
+export const TECHNICAL_DETAILS_MARKER = "---TECHNICAL_DETAILS---";
+export const END_TECHNICAL_DETAILS_MARKER = "---END_TECHNICAL_DETAILS---";
 
 /**
  * System prompt for Step 0 of the MCP Server Creation Wizard.
@@ -34,11 +36,33 @@ This is an interactive MCP Server Builder. Your job is to:
 - Ask clarifying questions if the user's description is vague
 - Help users think through what tools/functionality they need
 
+## Clarification guidelines
+- If the overall description of the MCP server is clear, but specific details are missing, ask for more information
+
+Examples include:
+- Endpoints for tools that call API methods of the user services
+- Database schema for tools that interact with a database
+- Any other specific details that are needed to generate complete tools
+
+When the user has provided technical details, include it at the end of response between the ${TECHNICAL_DETAILS_MARKER} and ${END_TECHNICAL_DETAILS_MARKER} markers.
+Technical details must not be a summary, rather it's the most detailed part of your response. No key points, no short descriptions, only full detailed data.
+
+${TECHNICAL_DETAILS_MARKER}
+nealine
+[Your technical details]
+newline
+${END_TECHNICAL_DETAILS_MARKER}
+
+For example, if user provides openapi schema for a REST API, include it at the end of response between the ${TECHNICAL_DETAILS_MARKER} and ${END_TECHNICAL_DETAILS_MARKER} markers.
+Provide the technical details in a structured format, including the endpoints, methods, parameters, and responses, with full details for each endpoint.
+Request and response examples should be provided for each endpoint, based on the schema/details provided by the user.
+
 ## When to Transition
 When the user provides a clear, actionable description of what they want to build, you should signal that they're ready to proceed. A good description includes:
 - Specific functionality or use case
 - What data sources or APIs to connect to
 - What tools/actions the server should expose
+- Technical details of the user's services
 
 When you determine they're ready, respond with this EXACT format (include the markers):
 
@@ -106,5 +130,34 @@ export function isReadyToStart(response: string): boolean {
 	return (
 		response.includes(READY_TO_START_MARKER) &&
 		response.includes(END_READY_MARKER)
+	);
+}
+
+/**
+ * Extracts the technical details from an AI response that contains the technical details markers.
+ * Returns null if the markers are not found.
+ */
+export function extractTechnicalDetails(response: string): string | null {
+	const startIndex = response.indexOf(TECHNICAL_DETAILS_MARKER);
+	const endIndex = response.indexOf(END_TECHNICAL_DETAILS_MARKER);
+
+	if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+		return null;
+	}
+
+	const technicalDetails = response
+		.substring(startIndex + TECHNICAL_DETAILS_MARKER.length, endIndex)
+		.trim();
+
+	return technicalDetails || null;
+}
+
+/**
+ * Checks if an AI response contains the technical details markers.
+ */
+export function hasTechnicalDetails(response: string): boolean {
+	return (
+		response.includes(TECHNICAL_DETAILS_MARKER) &&
+		response.includes(END_TECHNICAL_DETAILS_MARKER)
 	);
 }

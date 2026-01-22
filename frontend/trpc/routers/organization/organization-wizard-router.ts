@@ -46,6 +46,7 @@ export const organizationWizardRouter = createTRPCRouter({
 				customerId: ctx.organization.id,
 				description: input.description,
 				openapiSchema: input.openapiSchema,
+				technicalDetails: input.technicalDetails,
 			});
 
 			logger.info(

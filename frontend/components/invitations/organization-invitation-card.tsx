@@ -26,7 +26,7 @@ export type OrganizationInvitationModalProps = {
 export function OrganizationInvitationCard({
 	invitationId,
 	organizationName,
-	organizationSlug,
+	organizationSlug: _,
 	logoUrl,
 }: OrganizationInvitationModalProps): React.JSX.Element {
 	const router = useProgressRouter();
