@@ -1,4 +1,4 @@
-"""Dynamic tool loader for shared MCP runtime."""
+## Dynamic tool loader for shared MCP runtime.
 
 import os
 from types import ModuleType
@@ -113,7 +113,7 @@ class DynamicToolLoader:
         # Compile the function
         try:
             func = self._compile_function(
-                name, description, parameters, code, namespace, env_vars or {}
+                name, description, parameters, code, namespace, env_vars or {}, tier
             )
         except Exception as e:
             logger.error(f"Failed to compile tool {name}: {e}")
@@ -186,47 +186,7 @@ class DynamicToolLoader:
 
     def _create_safe_namespace(self) -> dict[str, Any]:
         """Create a namespace with allowed imports for free tier."""
-        namespace = {
-            "__builtins__": {
-                # Safe builtins only
-                "len": len,
-                "str": str,
-                "int": int,
-                "float": float,
-                "bool": bool,
-                "list": list,
-                "dict": dict,
-                "tuple": tuple,
-                "set": set,
-                "range": range,
-                "enumerate": enumerate,
-                "zip": zip,
-                "map": map,
-                "filter": filter,
-                "sorted": sorted,
-                "reversed": reversed,
-                "min": min,
-                "max": max,
-                "sum": sum,
-                "any": any,
-                "all": all,
-                "abs": abs,
-                "round": round,
-                "isinstance": isinstance,
-                "issubclass": issubclass,
-                "hasattr": hasattr,
-                "getattr": getattr,
-                "setattr": setattr,
-                "type": type,
-                "Exception": Exception,
-                "ValueError": ValueError,
-                "TypeError": TypeError,
-                "KeyError": KeyError,
-                "IndexError": IndexError,
-                "RuntimeError": RuntimeError,
-                "print": print,  # For debugging
-            }
-        }
+        namespace = {}
 
         # Pre-import curated libraries
         try:
@@ -275,6 +235,7 @@ class DynamicToolLoader:
         code: str,
         namespace: dict[str, Any],
         env_vars: dict[str, str],
+        tier: Tier,
     ) -> Callable:
         """
         Compile user code into an async function.
@@ -286,19 +247,51 @@ class DynamicToolLoader:
             code: Python code to compile
             namespace: Namespace for code execution
             env_vars: Static environment variables from DB
+            tier: Tier for determining restrictions
         """
         real_import = __import__
 
+        bad_builtins = [
+            "eval",
+            "exec",
+            "compile",
+            "open",
+            "input",
+            "__import__",
+            "globals",
+            "locals",
+            "vars",
+            "dir",
+            "help",
+            "breakpoint",
+            "exit",
+            "quit",
+            "license",
+            "copyright",
+            "credits",
+            "delattr",
+        ]
+
+        builtins_dict = dict(__builtins__)
+        for bad in bad_builtins:
+            builtins_dict.pop(bad, None)
+
+        # Define guarded import
+        allowed_imports = {"os", "httpx", "json", "datetime", "re", "pydantic"}
         def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if tier != Tier.FREE:
+                return real_import(name, globals, locals, fromlist, level)
+            if name not in allowed_imports:
+                raise ImportError(f"Import of {name} not allowed in this context.")
             if name == "os":
                 return namespace["os"]
             return real_import(name, globals, locals, fromlist, level)
 
-        namespace["__builtins__"] = {
-            **__builtins__,
-            "__import__": guarded_import,
-        }
+        builtins_dict["__import__"] = guarded_import
+
+        namespace["__builtins__"] = builtins_dict
         namespace["os"] = make_mock_os(env_vars)
+
         try:
             exec(code, namespace)
             return namespace[name]
