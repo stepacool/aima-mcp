@@ -168,14 +168,16 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	// Handle tools submitted - transition to ENV_VARS
 	const handleToolsSubmitted = useCallback((toolIds: string[]) => {
 		setSelectedToolIds(toolIds);
-		refetch();
-		setCurrentStep(WizardStep.envVars);
+		refetch().then(() => {
+			setCurrentStep(WizardStep.envVars);
+		});
 	}, []);
 
 	// Handle env vars submitted - transition to AUTH
 	const handleEnvVarsSubmitted = useCallback(() => {
-		refetch();
-		setCurrentStep(WizardStep.auth);
+		refetch().then(() => {
+			setCurrentStep(WizardStep.auth);
+		});
 	}, []);
 
 	// Handle auth configured - transition to DEPLOY
