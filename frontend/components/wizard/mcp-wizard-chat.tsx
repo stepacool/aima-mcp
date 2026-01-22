@@ -336,6 +336,8 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					<CompleteStep
 						serverUrl={serverUrl}
 						deployment={wizardState?.deployment ?? null}
+						bearerToken={wizardState?.bearerToken ?? null}
+						serverName={wizardState?.description ?? undefined}
 					/>
 				)}
 			</div>

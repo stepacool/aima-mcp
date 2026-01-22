@@ -1,11 +1,12 @@
 "use client";
 
 import {
+	AlertCircleIcon,
 	CheckCircleIcon,
 	CopyIcon,
+	DownloadIcon,
 	ExternalLinkIcon,
 	PlusIcon,
-	AlertCircleIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -18,22 +19,34 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getFullBackendUrl } from "@/lib/utils";
+import {
+	createMcpConfig,
+	generateClaudeCodeCommand,
+	generateCursorDeeplink,
+	generateLmStudioDeeplink,
+	generateMcpJsonConfig,
+	generateRaycastDeeplink,
+	generateVSCodeDeeplink,
+} from "@/lib/mcp/deeplinks";
 import type { WizardDeployment } from "@/lib/python-backend/wizard";
+import { getFullBackendUrl } from "@/lib/utils";
 
 interface CompleteStepProps {
 	serverUrl: string;
 	serverName?: string;
 	deployment?: WizardDeployment | null;
+	bearerToken?: string | null;
 }
 
 export function CompleteStep({
 	serverUrl,
 	serverName,
 	deployment,
+	bearerToken,
 }: CompleteStepProps) {
 	const router = useRouter();
 	const fullUrl = getFullBackendUrl(serverUrl);
+	const displayName = serverName || "MCP Server";
 
 	const handleCopyUrl = async () => {
 		try {
@@ -63,6 +76,92 @@ export function CompleteStep({
 		router.push("/dashboard/organization/mcp-servers");
 	};
 
+	const handleInstallCursor = () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const deeplink = generateCursorDeeplink(displayName, config);
+			window.location.href = deeplink;
+			toast.success("Opening Cursor to install MCP server...");
+		} catch (_error) {
+			toast.error("Failed to generate Cursor deeplink");
+		}
+	};
+
+	const handleInstallLmStudio = () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const deeplink = generateLmStudioDeeplink(displayName, config);
+			window.location.href = deeplink;
+			toast.success("Opening LM Studio to install MCP server...");
+		} catch (_error) {
+			toast.error("Failed to generate LM Studio deeplink");
+		}
+	};
+
+	const handleInstallVSCode = () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const deeplink = generateVSCodeDeeplink(displayName, config);
+			window.location.href = deeplink;
+			toast.success("Opening VS Code to install MCP server...");
+		} catch (_error) {
+			toast.error("Failed to generate VS Code deeplink");
+		}
+	};
+
+	const handleInstallRaycast = () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const deeplink = generateRaycastDeeplink(displayName, config);
+			window.location.href = deeplink;
+			toast.success("Opening Raycast to install MCP server...");
+			// Note: Raycast currently only supports stdio transport, not HTTP
+			// This may not work until Raycast adds HTTP support
+			setTimeout(() => {
+				toast.info(
+					"Note: Raycast currently only supports stdio transport. HTTP servers may not work yet.",
+					{ duration: 5000 },
+				);
+			}, 1000);
+		} catch (_error) {
+			toast.error("Failed to generate Raycast deeplink");
+		}
+	};
+
+	const handleInstallClaudeCode = async () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const command = generateClaudeCodeCommand(displayName, config);
+			await navigator.clipboard.writeText(command);
+			toast.success("Claude Code command copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to generate Claude Code command");
+		}
+	};
+
+
+	const handleCopyWindsurfConfig = async () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const jsonConfig = generateMcpJsonConfig(displayName, config);
+			await navigator.clipboard.writeText(jsonConfig);
+			toast.success("Windsurf configuration copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to copy configuration");
+		}
+	};
+
+	const handleCopyClaudeDesktopConfig = async () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const jsonConfig = generateMcpJsonConfig(displayName, config);
+			await navigator.clipboard.writeText(jsonConfig);
+			toast.success("Claude Desktop configuration copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to copy configuration");
+		}
+	};
+
 	return (
 		<div className="flex h-full flex-col items-center justify-center p-6">
 			<div className="w-full max-w-lg space-y-6 text-center">
@@ -78,7 +177,7 @@ export function CompleteStep({
 					<h2 className="font-semibold text-2xl">Your MCP Server is Live!</h2>
 					<p className="mt-2 text-muted-foreground">
 						{serverName
-							? `${serverName} has been deployed and is ready to use.`
+							? `${serverName.slice(0, 50)}... has been deployed and is ready to use.`
 							: "Your server has been deployed and is ready to use."}
 					</p>
 				</div>
@@ -108,69 +207,6 @@ export function CompleteStep({
 					</CardContent>
 				</Card>
 
-				{/* Deployment Info Card */}
-				{deployment && (
-					<Card>
-						<CardHeader className="pb-2">
-							<CardTitle className="text-base">
-								Deployment Information
-							</CardTitle>
-							<CardDescription>
-								Details about your server deployment.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-3">
-							{deployment.target && (
-								<div className="flex items-center justify-between text-sm">
-									<span className="text-muted-foreground">Target:</span>
-									<span className="font-medium capitalize">
-										{deployment.target}
-									</span>
-								</div>
-							)}
-							{deployment.status && (
-								<div className="flex items-center justify-between text-sm">
-									<span className="text-muted-foreground">Status:</span>
-									<span
-										className={`font-medium capitalize ${
-											deployment.status === "active"
-												? "text-green-600 dark:text-green-400"
-												: deployment.status === "failed"
-													? "text-destructive"
-													: "text-muted-foreground"
-										}`}
-									>
-										{deployment.status}
-									</span>
-								</div>
-							)}
-							{deployment.deployedAt && (
-								<div className="flex items-center justify-between text-sm">
-									<span className="text-muted-foreground">Deployed At:</span>
-									<span className="font-medium">
-										{formatDate(deployment.deployedAt)}
-									</span>
-								</div>
-							)}
-							{deployment.errorMessage && (
-								<div className="rounded-lg bg-destructive/10 p-3 text-sm">
-									<div className="flex items-start gap-2">
-										<AlertCircleIcon className="size-4 shrink-0 text-destructive mt-0.5" />
-										<div>
-											<p className="font-medium text-destructive">
-												Deployment Error
-											</p>
-											<p className="mt-1 text-destructive/80">
-												{deployment.errorMessage}
-											</p>
-										</div>
-									</div>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				)}
-
 				{/* Quick Start Guide */}
 				<Card className="text-left">
 					<CardHeader className="pb-2">
@@ -178,14 +214,80 @@ export function CompleteStep({
 					</CardHeader>
 					<CardContent className="space-y-3 text-sm">
 						<p className="text-muted-foreground">
-							To connect your MCP server to Claude or other AI assistants:
+							Connect your MCP server to AI assistants with one click:
 						</p>
-						<ol className="list-inside list-decimal space-y-2 text-muted-foreground">
-							<li>Copy the server URL above</li>
-							<li>Open your AI application's MCP settings</li>
-							<li>Add a new MCP server with the URL</li>
-							<li>Start using your tools in conversations!</li>
-						</ol>
+						<div className="flex flex-col gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleInstallCursor}
+								className="w-full justify-start"
+							>
+								<DownloadIcon className="mr-2 size-4" />
+								Add to Cursor
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleInstallLmStudio}
+								className="w-full justify-start"
+							>
+								<DownloadIcon className="mr-2 size-4" />
+								Add to LM Studio
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleInstallVSCode}
+								className="w-full justify-start"
+							>
+								<DownloadIcon className="mr-2 size-4" />
+								Add to VS Code
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleInstallClaudeCode}
+								className="w-full justify-start"
+							>
+								<CopyIcon className="mr-2 size-4" />
+								Add to Claude Code
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleInstallRaycast}
+								className="w-full justify-start"
+							>
+								<DownloadIcon className="mr-2 size-4" />
+								Add to Raycast
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleCopyWindsurfConfig}
+								className="w-full justify-start"
+							>
+								<CopyIcon className="mr-2 size-4" />
+								Add to Windsurf
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleCopyClaudeDesktopConfig}
+								className="w-full justify-start"
+							>
+								<CopyIcon className="mr-2 size-4" />
+								Add to Claude Desktop
+							</Button>
+						</div>
+						<div className="mt-4 pt-4 border-t">
+							<p className="text-xs text-muted-foreground">
+								For VS Code, Windsurf, Claude Desktop, and other tools, use the
+								"Copy Config" button above and paste it into your MCP
+								configuration file.
+							</p>
+						</div>
 					</CardContent>
 				</Card>
 

@@ -7,6 +7,8 @@ import {
 	CircleDotIcon,
 	ClipboardCopyIcon,
 	ClockIcon,
+	CopyIcon,
+	DownloadIcon,
 	ExternalLinkIcon,
 	KeyIcon,
 	ServerIcon,
@@ -30,6 +32,15 @@ import {
 } from "@/components/ui/card";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { Separator } from "@/components/ui/separator";
+import {
+	createMcpConfig,
+	generateClaudeCodeCommand,
+	generateCursorDeeplink,
+	generateLmStudioDeeplink,
+	generateMcpJsonConfig,
+	generateRaycastDeeplink,
+	generateVSCodeDeeplink,
+} from "@/lib/mcp/deeplinks";
 import { cn, getFullBackendUrl } from "@/lib/utils";
 import { trpc } from "@/trpc/client";
 
@@ -140,6 +151,134 @@ export function McpServerDetail({
 	const copyToClipboard = (text: string, label: string) => {
 		navigator.clipboard.writeText(text);
 		toast.success(`${label} copied to clipboard`);
+	};
+
+	const handleInstallCursor = () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const deeplink = generateCursorDeeplink(server.name, config);
+			window.location.href = deeplink;
+			toast.success("Opening Cursor to install MCP server...");
+		} catch (_error) {
+			toast.error("Failed to generate Cursor deeplink");
+		}
+	};
+
+	const handleInstallLmStudio = () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const deeplink = generateLmStudioDeeplink(server.name, config);
+			window.location.href = deeplink;
+			toast.success("Opening LM Studio to install MCP server...");
+		} catch (_error) {
+			toast.error("Failed to generate LM Studio deeplink");
+		}
+	};
+
+	const handleInstallVSCode = () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const deeplink = generateVSCodeDeeplink(server.name, config);
+			window.location.href = deeplink;
+			toast.success("Opening VS Code to install MCP server...");
+		} catch (_error) {
+			toast.error("Failed to generate VS Code deeplink");
+		}
+	};
+
+	const handleInstallRaycast = () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const deeplink = generateRaycastDeeplink(server.name, config);
+			window.location.href = deeplink;
+			toast.success("Opening Raycast to install MCP server...");
+			// Note: Raycast currently only supports stdio transport, not HTTP
+			// This may not work until Raycast adds HTTP support
+			setTimeout(() => {
+				toast.info(
+					"Note: Raycast currently only supports stdio transport. HTTP servers may not work yet.",
+					{ duration: 5000 },
+				);
+			}, 1000);
+		} catch (_error) {
+			toast.error("Failed to generate Raycast deeplink");
+		}
+	};
+
+	const handleInstallClaudeCode = async () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const command = generateClaudeCodeCommand(server.name, config);
+			await navigator.clipboard.writeText(command);
+			toast.success("Claude Code command copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to generate Claude Code command");
+		}
+	};
+
+
+	const handleCopyWindsurfConfig = async () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const jsonConfig = generateMcpJsonConfig(server.name, config);
+			await navigator.clipboard.writeText(jsonConfig);
+			toast.success("Windsurf configuration copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to copy configuration");
+		}
+	};
+
+	const handleCopyClaudeDesktopConfig = async () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const jsonConfig = generateMcpJsonConfig(server.name, config);
+			await navigator.clipboard.writeText(jsonConfig);
+			toast.success("Claude Desktop configuration copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to copy configuration");
+		}
 	};
 
 	if (isPending) {
@@ -264,7 +403,7 @@ export function McpServerDetail({
 							Use this endpoint to connect your AI client to this MCP server.
 						</CardDescription>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="space-y-4">
 						<div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
 							<code className="flex-1 truncate font-mono text-sm">
 								{getFullBackendUrl(server.mcpEndpoint)}
@@ -282,6 +421,82 @@ export function McpServerDetail({
 								<ClipboardCopyIcon className="mr-2 size-4" />
 								Copy
 							</Button>
+						</div>
+
+						{/* One-Click Installation Buttons */}
+						<div className="space-y-2">
+							<p className="text-sm font-medium">One-Click Installation</p>
+							<div className="flex flex-col gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleInstallCursor}
+									className="w-full justify-start"
+								>
+									<DownloadIcon className="mr-2 size-4" />
+									Add to Cursor
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleInstallLmStudio}
+									className="w-full justify-start"
+								>
+									<DownloadIcon className="mr-2 size-4" />
+									Add to LM Studio
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleInstallVSCode}
+									className="w-full justify-start"
+								>
+									<DownloadIcon className="mr-2 size-4" />
+									Add to VS Code
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleInstallClaudeCode}
+									className="w-full justify-start"
+								>
+									<CopyIcon className="mr-2 size-4" />
+									Add to Claude Code
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleInstallRaycast}
+									className="w-full justify-start"
+								>
+									<DownloadIcon className="mr-2 size-4" />
+									Add to Raycast
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleCopyWindsurfConfig}
+									className="w-full justify-start"
+								>
+									<CopyIcon className="mr-2 size-4" />
+									Add to Windsurf
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleCopyClaudeDesktopConfig}
+									className="w-full justify-start"
+								>
+									<CopyIcon className="mr-2 size-4" />
+									Add to Claude Desktop
+								</Button>
+							</div>
+							{server.authType !== "none" && (
+								<p className="text-xs text-muted-foreground">
+									Note: If your server requires authentication, you may need to
+									configure it manually in your MCP client settings.
+								</p>
+							)}
 						</div>
 					</CardContent>
 				</Card>
