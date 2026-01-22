@@ -74,11 +74,10 @@ class DynamicToolLoader:
         json_schema_params = self._parameters_to_json_schema(parameters)
 
         # Create the FunctionTool
-        tool = FunctionTool(
+        tool = FunctionTool.from_function(
             fn=func,
-            name=f"{customer_id}_{name}",  # Namespaced name
+            name=name,  # Namespaced name
             description=description,
-            parameters=json_schema_params,
         )
 
         cache_key = f"{customer_id}:{tool_id}"
@@ -235,22 +234,9 @@ class DynamicToolLoader:
                 params.append(f"{param_name}={repr(default)}")
             else:
                 params.append(param_name)
-
-        params_str = ", ".join(params)
-
-        # Indent the user code
-        indented_code = textwrap.indent(code.strip(), "    ")
-
-        # Build the full function
-        func_code = f'''
-async def {name}({params_str}):
-    """{description}"""
-{indented_code}
-'''
-
-        # Compile and extract the function
+        namespace["__builtins__"] = __builtins__
         try:
-            exec(func_code, namespace)
+            exec(code, namespace)
             return namespace[name]
         except Exception as e:
             raise ToolCompilationError(f"Failed to compile function: {e}")
