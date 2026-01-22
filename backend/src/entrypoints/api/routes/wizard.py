@@ -59,6 +59,15 @@ class EnvVarResponse(BaseModel):
     value: str | None
 
 
+class DeploymentResponse(BaseModel):
+    id: UUID | None
+    target: str | None
+    status: str | None
+    endpoint_url: str | None
+    error_message: str | None
+    deployed_at: str | None
+
+
 class AuthResponse(BaseModel):
     server_id: UUID
     bearer_token: str
@@ -88,6 +97,7 @@ class WizardStateResponse(BaseModel):
     bearer_token: str | None
     server_url: str | None
     has_auth: bool
+    deployment: DeploymentResponse | None
     created_at: str
     updated_at: str
 
@@ -432,12 +442,30 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
     env_vars = await Provider.environment_variable_repo().get_vars_for_server(server_id)
     api_key = await Provider.api_key_repo().get_by_server_id(server_id)
 
+    # Get deployment info if it exists
+    deployment = await Provider.deployment_repo().get_by_server_id(server_id)
+    deployment_response = None
+    if deployment:
+        deployment_response = DeploymentResponse(
+            id=deployment.id,
+            target=deployment.target,
+            status=deployment.status,
+            endpoint_url=deployment.endpoint_url,
+            error_message=deployment.error_message,
+            deployed_at=deployment.deployed_at.isoformat()
+            if deployment.deployed_at
+            else None,
+        )
+
     setup_status_value = server.setup_status.value
     wizard_step = map_setup_status_to_wizard_step(setup_status_value)
     processing_status = get_processing_status(setup_status_value)
 
     # Get processing error from meta if any
     processing_error = server.processing_error
+
+    # Use deployment endpoint_url if available, otherwise None
+    server_url = deployment.endpoint_url if deployment else None
 
     return WizardStateResponse(
         server_id=server_id,
@@ -470,8 +498,9 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
         auth_type=server.auth_type,
         auth_config=server.auth_config,
         bearer_token=api_key.key if api_key else None,
-        server_url=None,  # Will be set when deployed
+        server_url=server_url,
         has_auth=api_key is not None,
+        deployment=deployment_response,
         created_at=server.created_at.isoformat() if server.created_at else "",
         updated_at=server.updated_at.isoformat() if server.updated_at else "",
     )

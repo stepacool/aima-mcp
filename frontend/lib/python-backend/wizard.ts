@@ -29,6 +29,15 @@ export interface WizardMeta {
 	openapiSchema?: string | null;
 }
 
+export interface WizardDeployment {
+	id: string | null;
+	target: string | null;
+	status: string | null;
+	endpointUrl: string | null;
+	errorMessage: string | null;
+	deployedAt: string | null;
+}
+
 export interface WizardState {
 	serverId: string;
 	customerId: string;
@@ -44,6 +53,7 @@ export interface WizardState {
 	bearerToken: string | null;
 	generatedCode: string | null;
 	serverUrl: string | null;
+	deployment: WizardDeployment | null;
 	meta: WizardMeta;
 	createdAt: string;
 	updatedAt: string;

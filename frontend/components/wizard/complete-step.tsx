@@ -5,6 +5,7 @@ import {
 	CopyIcon,
 	ExternalLinkIcon,
 	PlusIcon,
+	AlertCircleIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -17,13 +18,19 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import type { WizardDeployment } from "@/lib/python-backend/wizard";
 
 interface CompleteStepProps {
 	serverUrl: string;
 	serverName?: string;
+	deployment?: WizardDeployment | null;
 }
 
-export function CompleteStep({ serverUrl, serverName }: CompleteStepProps) {
+export function CompleteStep({
+	serverUrl,
+	serverName,
+	deployment,
+}: CompleteStepProps) {
 	const router = useRouter();
 
 	const handleCopyUrl = async () => {
@@ -32,6 +39,15 @@ export function CompleteStep({ serverUrl, serverName }: CompleteStepProps) {
 			toast.success("Server URL copied to clipboard");
 		} catch (_error) {
 			toast.error("Failed to copy URL");
+		}
+	};
+
+	const formatDate = (dateString: string | null | undefined) => {
+		if (!dateString) return null;
+		try {
+			return new Date(dateString).toLocaleString();
+		} catch {
+			return dateString;
 		}
 	};
 
@@ -89,6 +105,67 @@ export function CompleteStep({ serverUrl, serverName }: CompleteStepProps) {
 						</div>
 					</CardContent>
 				</Card>
+
+				{/* Deployment Info Card */}
+				{deployment && (
+					<Card>
+						<CardHeader className="pb-2">
+							<CardTitle className="text-base">Deployment Information</CardTitle>
+							<CardDescription>
+								Details about your server deployment.
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-3">
+							{deployment.target && (
+								<div className="flex items-center justify-between text-sm">
+									<span className="text-muted-foreground">Target:</span>
+									<span className="font-medium capitalize">
+										{deployment.target}
+									</span>
+								</div>
+							)}
+							{deployment.status && (
+								<div className="flex items-center justify-between text-sm">
+									<span className="text-muted-foreground">Status:</span>
+									<span
+										className={`font-medium capitalize ${
+											deployment.status === "active"
+												? "text-green-600 dark:text-green-400"
+												: deployment.status === "failed"
+													? "text-destructive"
+													: "text-muted-foreground"
+										}`}
+									>
+										{deployment.status}
+									</span>
+								</div>
+							)}
+							{deployment.deployedAt && (
+								<div className="flex items-center justify-between text-sm">
+									<span className="text-muted-foreground">Deployed At:</span>
+									<span className="font-medium">
+										{formatDate(deployment.deployedAt)}
+									</span>
+								</div>
+							)}
+							{deployment.errorMessage && (
+								<div className="rounded-lg bg-destructive/10 p-3 text-sm">
+									<div className="flex items-start gap-2">
+										<AlertCircleIcon className="size-4 shrink-0 text-destructive mt-0.5" />
+										<div>
+											<p className="font-medium text-destructive">
+												Deployment Error
+											</p>
+											<p className="mt-1 text-destructive/80">
+												{deployment.errorMessage}
+											</p>
+										</div>
+									</div>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				)}
 
 				{/* Quick Start Guide */}
 				<Card className="text-left">

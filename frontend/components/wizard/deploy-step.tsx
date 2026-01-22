@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/collapsible";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { WizardDeployment } from "@/lib/python-backend/wizard";
 import type { WizardTool } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
 
@@ -128,6 +129,7 @@ interface DeployStepProps {
 	bearerToken: string;
 	isProcessing: boolean;
 	processingError: string | null;
+	deployment?: WizardDeployment | null;
 	onServerActivated: (serverUrl: string) => void;
 	onRetry?: () => void;
 }
@@ -140,6 +142,7 @@ export function DeployStep({
 	bearerToken,
 	isProcessing,
 	processingError,
+	deployment,
 	onServerActivated,
 	onRetry,
 }: DeployStepProps) {
@@ -252,7 +255,7 @@ export function DeployStep({
 					</div>
 
 					{/* Configuration Summary */}
-					<div className="grid gap-4 md:grid-cols-2">
+					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 						<Card>
 							<CardHeader className="pb-2">
 								<CardTitle className="flex items-center gap-2 text-base">
@@ -302,6 +305,50 @@ export function DeployStep({
 								</div>
 							</CardContent>
 						</Card>
+
+						{deployment && (
+							<Card>
+								<CardHeader className="pb-2">
+									<CardTitle className="flex items-center gap-2 text-base">
+										<RocketIcon className="size-4" />
+										Deployment
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-2 text-sm">
+									{deployment.target && (
+										<div className="flex items-center justify-between">
+											<span className="text-muted-foreground">Target:</span>
+											<span className="font-medium capitalize">
+												{deployment.target}
+											</span>
+										</div>
+									)}
+									{deployment.status && (
+										<div className="flex items-center justify-between">
+											<span className="text-muted-foreground">Status:</span>
+											<span
+												className={`font-medium capitalize ${
+													deployment.status === "active"
+														? "text-green-600 dark:text-green-400"
+														: deployment.status === "failed"
+															? "text-destructive"
+															: "text-muted-foreground"
+												}`}
+											>
+												{deployment.status}
+											</span>
+										</div>
+									)}
+									{deployment.errorMessage && (
+										<div className="rounded-lg bg-destructive/10 p-2 text-xs">
+											<p className="text-destructive">
+												{deployment.errorMessage}
+											</p>
+										</div>
+									)}
+								</CardContent>
+							</Card>
+						)}
 					</div>
 
 					{/* Generated Code Preview */}

@@ -326,13 +326,17 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 							bearerToken={bearerToken}
 							isProcessing={isProcessing}
 							processingError={hasFailed ? processingError : null}
+							deployment={wizardState.deployment ?? null}
 							onServerActivated={handleServerActivated}
 							onRetry={handleRetry}
 						/>
 					)}
 
 				{currentStep === WizardStep.complete && serverUrl && (
-					<CompleteStep serverUrl={serverUrl} />
+					<CompleteStep
+						serverUrl={serverUrl}
+						deployment={wizardState?.deployment ?? null}
+					/>
 				)}
 			</div>
 		</div>
