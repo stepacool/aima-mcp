@@ -281,6 +281,23 @@ export function McpServerDetail({
 		}
 	};
 
+	const handleCopyJsonConfig = async () => {
+		if (!server?.mcpEndpoint) {
+			toast.error("Server endpoint not available");
+			return;
+		}
+		try {
+			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+			// Note: bearer token not available in server details, user may need to configure auth manually
+			const config = createMcpConfig(endpointUrl, null);
+			const jsonConfig = generateMcpJsonConfig(server.name, config);
+			await navigator.clipboard.writeText(jsonConfig);
+			toast.success("MCP configuration copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to copy configuration");
+		}
+	};
+
 	if (isPending) {
 		return <CenteredSpinner />;
 	}
@@ -445,7 +462,7 @@ export function McpServerDetail({
 									<DownloadIcon className="mr-2 size-4" />
 									Add to LM Studio
 								</Button>
-								<Button
+								{/* <Button
 									variant="outline"
 									size="sm"
 									onClick={handleInstallVSCode}
@@ -453,7 +470,7 @@ export function McpServerDetail({
 								>
 									<DownloadIcon className="mr-2 size-4" />
 									Add to VS Code
-								</Button>
+								</Button> */}
 								<Button
 									variant="outline"
 									size="sm"
@@ -489,6 +506,15 @@ export function McpServerDetail({
 								>
 									<CopyIcon className="mr-2 size-4" />
 									Add to Claude Desktop
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleCopyJsonConfig}
+									className="w-full justify-start"
+								>
+									<CopyIcon className="mr-2 size-4" />
+									Copy Config for Other Tools
 								</Button>
 							</div>
 							{server.authType !== "none" && (

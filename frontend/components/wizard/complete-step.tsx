@@ -162,6 +162,17 @@ export function CompleteStep({
 		}
 	};
 
+	const handleCopyJsonConfig = async () => {
+		try {
+			const config = createMcpConfig(fullUrl, bearerToken);
+			const jsonConfig = generateMcpJsonConfig(displayName, config);
+			await navigator.clipboard.writeText(jsonConfig);
+			toast.success("MCP configuration copied to clipboard");
+		} catch (_error) {
+			toast.error("Failed to copy configuration");
+		}
+	};
+
 	return (
 		<div className="flex h-full flex-col items-center justify-center p-6">
 			<div className="w-full max-w-lg space-y-6 text-center">
@@ -235,7 +246,7 @@ export function CompleteStep({
 								<DownloadIcon className="mr-2 size-4" />
 								Add to LM Studio
 							</Button>
-							<Button
+							{/* <Button
 								variant="outline"
 								size="sm"
 								onClick={handleInstallVSCode}
@@ -243,7 +254,7 @@ export function CompleteStep({
 							>
 								<DownloadIcon className="mr-2 size-4" />
 								Add to VS Code
-							</Button>
+							</Button> */}
 							<Button
 								variant="outline"
 								size="sm"
@@ -279,6 +290,15 @@ export function CompleteStep({
 							>
 								<CopyIcon className="mr-2 size-4" />
 								Add to Claude Desktop
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleCopyJsonConfig}
+								className="w-full justify-start"
+							>
+								<CopyIcon className="mr-2 size-4" />
+								Copy Config for Other Tools
 							</Button>
 						</div>
 						<div className="mt-4 pt-4 border-t">
