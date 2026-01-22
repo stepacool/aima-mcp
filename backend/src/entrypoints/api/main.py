@@ -14,6 +14,7 @@ from opentelemetry.sdk.trace.sampling import (
     Sampler,
 )
 
+from entrypoints.api.middleware import MCPAccessMiddleware
 from entrypoints.api.routes import api_router
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
@@ -86,8 +87,8 @@ class APIRouteSampler(Sampler):
 class Application:
     def setup(self) -> FastAPI:
         self.app = FastAPI(
-            title="AIMA Labs API",
-            description="AIMA Labs OpenAPI",
+            title="MCP Hero API",
+            description="MCP Hero OpenAPI",
             debug=settings.DEBUG,
             lifespan=lifespan,
             redirect_slashes=False,
@@ -109,47 +110,7 @@ class Application:
             allow_headers=["*"],
         )
 
-        # Request logging middleware
-        from starlette.middleware.base import BaseHTTPMiddleware
-        from starlette.requests import Request
-        import json
-
-        class RequestLoggingMiddleware(BaseHTTPMiddleware):
-            async def dispatch(self, request: Request, call_next):
-                # Log request details
-                body = b""
-                if request.method in ["POST", "PUT", "PATCH"]:
-                    body = await request.body()
-                    logger.info(f"Request: {request.method} {request.url.path}")
-                    try:
-                        logger.info(f"Body: {json.loads(body)}")
-                    except Exception:
-                        logger.info(f"Body: {body}")
-
-                    # Reset body for downstream handlers
-                    # We need to handle both the initial body request and subsequent
-                    # disconnect detection (needed for SSE responses)
-                    original_receive = request._receive
-                    body_sent = False
-
-                    async def receive():
-                        nonlocal body_sent
-                        if not body_sent:
-                            body_sent = True
-                            return {"type": "http.request", "body": body}
-                        # After body is sent, delegate to original receive
-                        # to properly handle http.disconnect events for SSE
-                        return await original_receive()
-
-                    request._receive = receive
-                else:
-                    logger.info(f"Request: {request.method} {request.url.path}")
-
-                response = await call_next(request)
-                logger.info(f"Response: {response.status_code}")
-                return response
-
-        # self.app.add_middleware(RequestLoggingMiddleware)
+        self.app.add_middleware(MCPAccessMiddleware)
 
         self.app.include_router(api_router)
 

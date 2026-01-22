@@ -10,6 +10,7 @@ BASE_DIR: Path = Path(__file__).resolve().parent
 class AppSettings(BaseSettings):
     DEBUG: bool = True
     PORT: int = 8000
+    ADMIN_ROUTES_API_KEY: str = "API_KEY_SECURITY"
 
 
 class MonitoringSettings(BaseSettings):

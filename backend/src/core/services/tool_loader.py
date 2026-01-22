@@ -70,9 +70,6 @@ class DynamicToolLoader:
             logger.error(f"Failed to compile tool {name}: {e}")
             raise ToolCompilationError(f"Compilation failed: {e}")
 
-        # Convert parameters list to JSON Schema format for FunctionTool
-        json_schema_params = self._parameters_to_json_schema(parameters)
-
         # Create the FunctionTool
         tool = FunctionTool.from_function(
             fn=func,
@@ -241,70 +238,7 @@ class DynamicToolLoader:
         except Exception as e:
             raise ToolCompilationError(f"Failed to compile function: {e}")
 
-    def _get_python_type(self, type_str: str) -> type:
-        """Convert string type to Python type."""
-        type_map = {
-            "string": str,
-            "str": str,
-            "integer": int,
-            "int": int,
-            "number": float,
-            "float": float,
-            "boolean": bool,
-            "bool": bool,
-            "array": list,
-            "list": list,
-            "object": dict,
-            "dict": dict,
-        }
-        return type_map.get(type_str.lower(), str)
 
-    def _get_json_schema_type(self, type_str: str) -> str:
-        """Convert type string to JSON Schema type."""
-        type_map = {
-            "string": "string",
-            "str": "string",
-            "integer": "integer",
-            "int": "integer",
-            "number": "number",
-            "float": "number",
-            "boolean": "boolean",
-            "bool": "boolean",
-            "array": "array",
-            "list": "array",
-            "object": "object",
-            "dict": "object",
-        }
-        return type_map.get(type_str.lower(), "string")
-
-    def _parameters_to_json_schema(
-        self, parameters: list[dict[str, Any]]
-    ) -> dict[str, Any]:
-        """Convert parameters list to JSON Schema format for FunctionTool."""
-        properties: dict[str, Any] = {}
-        required: list[str] = []
-
-        for p in parameters:
-            param_name = p.get("name", "arg")
-            param_type = self._get_json_schema_type(p.get("type", "string"))
-            param_desc = p.get("description", "")
-            param_required = p.get("required", True)
-
-            properties[param_name] = {"type": param_type}
-            if param_desc:
-                properties[param_name]["description"] = param_desc
-
-            if param_required:
-                required.append(param_name)
-
-        return {
-            "type": "object",
-            "properties": properties,
-            "required": required,
-        }
-
-
-# Singleton
 _tool_loader: DynamicToolLoader | None = None
 
 
