@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/collapsible";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getFullBackendUrl } from "@/lib/utils";
 import type { WizardDeployment } from "@/lib/python-backend/wizard";
 import type { WizardTool } from "@/schemas/wizard-schemas";
 import { trpc } from "@/trpc/client";
@@ -337,6 +338,14 @@ export function DeployStep({
 											>
 												{deployment.status}
 											</span>
+										</div>
+									)}
+									{deployment.endpointUrl && (
+										<div className="flex flex-col gap-1">
+											<span className="text-muted-foreground">Endpoint:</span>
+											<code className="truncate rounded bg-muted px-2 py-1 font-mono text-xs">
+												{getFullBackendUrl(deployment.endpointUrl)}
+											</code>
 										</div>
 									)}
 									{deployment.errorMessage && (

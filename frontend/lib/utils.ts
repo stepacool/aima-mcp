@@ -62,6 +62,64 @@ export function getBaseUrl(): string {
 	return `http://localhost:3000`;
 }
 
+/**
+ * Builds a full URL from an endpoint path using the Python backend base URL.
+ * If the endpoint path is already a full URL, it returns it as-is.
+ * If NEXT_PUBLIC_PYTHON_BACKEND_URL is not set, falls back to window.location.origin.
+ */
+export function getFullBackendUrl(
+	endpointPath: string | null | undefined,
+): string {
+	if (!endpointPath) return "";
+
+	// If it's already a full URL, return as-is
+	if (
+		endpointPath.startsWith("http://") ||
+		endpointPath.startsWith("https://")
+	) {
+		return endpointPath;
+	}
+
+	// Get backend base URL from environment (client-side accessible)
+	// Access directly from process.env since NEXT_PUBLIC_ vars are available client-side
+	let backendUrl: string | undefined;
+
+	// In client-side code, NEXT_PUBLIC_ vars are available directly
+	if (typeof window !== "undefined") {
+		backendUrl = process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL;
+	} else {
+		// Server-side: try env object first, then process.env
+		backendUrl =
+			env.NEXT_PUBLIC_PYTHON_BACKEND_URL ||
+			process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL;
+	}
+
+	if (backendUrl) {
+		// Remove trailing slash from base URL and leading slash from endpoint
+		const base = backendUrl.replace(/\/$/, "");
+		const path = endpointPath.startsWith("/")
+			? endpointPath
+			: `/${endpointPath}`;
+		return `${base}${path}`;
+	}
+
+	// Log warning in development if backend URL is not configured
+	if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+		console.warn(
+			"NEXT_PUBLIC_PYTHON_BACKEND_URL is not set. Falling back to window.location.origin.",
+			"Set NEXT_PUBLIC_PYTHON_BACKEND_URL in your .env file to use the correct backend URL.",
+		);
+	}
+
+	// Fallback to window.location.origin (client-side only)
+	if (typeof window !== "undefined") {
+		return `${window.location.origin}${endpointPath.startsWith("/") ? endpointPath : `/${endpointPath}`}`;
+	}
+
+	// Server-side fallback
+	return endpointPath;
+}
+
 export function downloadCsv(content: string, filename: string) {
 	const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
 	const url = window.URL.createObjectURL(blob);

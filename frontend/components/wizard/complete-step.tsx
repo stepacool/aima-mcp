@@ -18,6 +18,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getFullBackendUrl } from "@/lib/utils";
 import type { WizardDeployment } from "@/lib/python-backend/wizard";
 
 interface CompleteStepProps {
@@ -32,10 +33,11 @@ export function CompleteStep({
 	deployment,
 }: CompleteStepProps) {
 	const router = useRouter();
+	const fullUrl = getFullBackendUrl(serverUrl);
 
 	const handleCopyUrl = async () => {
 		try {
-			await navigator.clipboard.writeText(serverUrl);
+			await navigator.clipboard.writeText(fullUrl);
 			toast.success("Server URL copied to clipboard");
 		} catch (_error) {
 			toast.error("Failed to copy URL");
@@ -91,13 +93,13 @@ export function CompleteStep({
 					</CardHeader>
 					<CardContent>
 						<div className="flex gap-2">
-							<Input readOnly value={serverUrl} className="font-mono text-sm" />
+							<Input readOnly value={fullUrl} className="font-mono text-sm" />
 							<Button variant="outline" size="icon" onClick={handleCopyUrl}>
 								<CopyIcon className="size-4" />
 								<span className="sr-only">Copy URL</span>
 							</Button>
 							<Button variant="outline" size="icon" asChild>
-								<a href={serverUrl} target="_blank" rel="noopener noreferrer">
+								<a href={fullUrl} target="_blank" rel="noopener noreferrer">
 									<ExternalLinkIcon className="size-4" />
 									<span className="sr-only">Open in new tab</span>
 								</a>
@@ -110,7 +112,9 @@ export function CompleteStep({
 				{deployment && (
 					<Card>
 						<CardHeader className="pb-2">
-							<CardTitle className="text-base">Deployment Information</CardTitle>
+							<CardTitle className="text-base">
+								Deployment Information
+							</CardTitle>
 							<CardDescription>
 								Details about your server deployment.
 							</CardDescription>

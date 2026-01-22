@@ -58,7 +58,7 @@ export function keysToSnakeCase<T>(data: T): T {
 /**
  * Creates the axios instance for communicating with the Python backend.
  * Features:
- * - Base URL from PYTHON_BACKEND_URL environment variable
+ * - Base URL from NEXT_PUBLIC_PYTHON_BACKEND_URL (or PYTHON_BACKEND_URL as fallback)
  * - Auth header with Bearer token from PYTHON_BACKEND_API_KEY
  * - 15 second timeout
  * - Automatic snake_case conversion for request bodies
@@ -67,8 +67,27 @@ export function keysToSnakeCase<T>(data: T): T {
  * - Error logging using the application logger
  */
 function createPythonBackendClient(): AxiosInstance {
+	// Use NEXT_PUBLIC_PYTHON_BACKEND_URL first, fallback to PYTHON_BACKEND_URL for backwards compatibility
+	const baseURL =
+		env.NEXT_PUBLIC_PYTHON_BACKEND_URL ||
+		env.PYTHON_BACKEND_URL ||
+		process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL ||
+		process.env.PYTHON_BACKEND_URL;
+
+	if (!baseURL) {
+		const error = new Error(
+			"Python backend URL is not set. " +
+				"Please set NEXT_PUBLIC_PYTHON_BACKEND_URL (or PYTHON_BACKEND_URL) in your .env file.",
+		);
+		logger.error(
+			{ error: error.message },
+			"Python backend client configuration error",
+		);
+		throw error;
+	}
+
 	const client = axios.create({
-		baseURL: env.PYTHON_BACKEND_URL,
+		baseURL,
 		timeout: 15000,
 		headers: {
 			"Content-Type": "application/json",

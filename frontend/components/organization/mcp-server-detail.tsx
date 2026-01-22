@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/card";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { cn, getFullBackendUrl } from "@/lib/utils";
 import { trpc } from "@/trpc/client";
 
 interface McpServerDetailProps {
@@ -267,15 +267,14 @@ export function McpServerDetail({
 					<CardContent>
 						<div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
 							<code className="flex-1 truncate font-mono text-sm">
-								{window.location.origin}
-								{server.mcpEndpoint}
+								{getFullBackendUrl(server.mcpEndpoint)}
 							</code>
 							<Button
 								variant="outline"
 								size="sm"
 								onClick={() =>
 									copyToClipboard(
-										window.location.origin + server.mcpEndpoint,
+										getFullBackendUrl(server.mcpEndpoint),
 										"Endpoint URL",
 									)
 								}

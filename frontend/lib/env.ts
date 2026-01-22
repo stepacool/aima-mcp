@@ -100,6 +100,9 @@ export const env = createEnv({
 		NEXT_PUBLIC_VERCEL_BRANCH_URL: z.string().optional(),
 		NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF: z.string().optional(),
 		NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
+
+		// Python Backend (client-side accessible)
+		NEXT_PUBLIC_PYTHON_BACKEND_URL: z.string().url().optional(),
 	},
 
 	/**
@@ -141,6 +144,7 @@ export const env = createEnv({
 		NEXT_PUBLIC_NODE_ENV: process.env.NODE_ENV,
 		NEXT_PUBLIC_LOG_LEVEL: process.env.NEXT_PUBLIC_LOG_LEVEL,
 		NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+		NEXT_PUBLIC_PYTHON_BACKEND_URL: process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL,
 		NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 		NEXT_PUBLIC_IMAGES_BUCKET_NAME: process.env.NEXT_PUBLIC_IMAGES_BUCKET_NAME,
 		NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:

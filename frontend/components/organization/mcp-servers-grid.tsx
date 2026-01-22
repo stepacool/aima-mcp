@@ -34,7 +34,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, getFullBackendUrl } from "@/lib/utils";
 import { trpc } from "@/trpc/client";
 
 interface StatusConfigItem {
@@ -195,7 +195,7 @@ export function McpServersGrid(): React.JSX.Element {
 											<DropdownMenuItem
 												onClick={() => {
 													navigator.clipboard.writeText(
-														window.location.origin + server.mcpEndpoint,
+														getFullBackendUrl(server.mcpEndpoint),
 													);
 													toast.success("Endpoint URL copied to clipboard");
 												}}
@@ -258,9 +258,9 @@ export function McpServersGrid(): React.JSX.Element {
 									<p className="text-muted-foreground">Endpoint</p>
 									<p
 										className="truncate font-mono text-xs"
-										title={server.mcpEndpoint}
+										title={getFullBackendUrl(server.mcpEndpoint)}
 									>
-										{server.mcpEndpoint}
+										{getFullBackendUrl(server.mcpEndpoint)}
 									</p>
 								</div>
 							)}
