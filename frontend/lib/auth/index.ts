@@ -51,6 +51,11 @@ export const auth = betterAuth({
 		database: {
 			generateId: false,
 		},
+		useSecureCookies: true,
+		defaultCookieAttributes: {
+			sameSite: "none",
+			secure: true,
+		},
 	},
 	session: {
 		expiresIn: authConfig.sessionCookieMaxAge,
