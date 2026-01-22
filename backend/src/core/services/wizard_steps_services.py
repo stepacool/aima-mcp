@@ -12,6 +12,7 @@ from infrastructure.models.mcp_server import MCPServerSetupStatus, MCPTool
 from infrastructure.repositories.mcp_server import (
     MCPEnvironmentVariableCreate,
     MCPToolCreate,
+    MCPServerUpdate,
 )
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
@@ -54,6 +55,10 @@ class ToolsResponse(BaseModel):
     """Wrapper for list[Tool] to support structured outputs."""
 
     tools: list[Tool]
+    technical_details: list[str] | None = Field(
+        default=None,
+        description="Additional technical details generated during refinement (API schemas, endpoint specifications, etc.)",
+    )
 
 
 class EnvVarsResponse(BaseModel):
@@ -209,7 +214,35 @@ class WizardStepsService:
                 ],
                 response_format=ToolsResponse,
             )
-            parsed: list[Tool] = response.choices[0].message.parsed.tools
+            parsed_response = response.choices[0].message.parsed
+            parsed: list[Tool] = parsed_response.tools
+
+            # Extract and merge additional technical details
+            new_technical_details = parsed_response.technical_details
+            if new_technical_details:
+                # Merge with existing technical details, avoiding duplicates
+                existing_technical_details = set(technical_details)
+                merged_technical_details = list(
+                    technical_details
+                )  # Start with existing
+
+                for new_detail in new_technical_details:
+                    # Only add if it's not already present (simple deduplication)
+                    if (
+                        new_detail.strip()
+                        and new_detail not in existing_technical_details
+                    ):
+                        merged_technical_details.append(new_detail.strip())
+                        existing_technical_details.add(new_detail.strip())
+
+                # Update server meta with merged technical details
+                updated_meta = dict(server.meta) if server.meta else {}
+                updated_meta["technical_details"] = merged_technical_details
+
+                await Provider.mcp_server_repo().update(
+                    mcp_server_id,
+                    MCPServerUpdate(meta=updated_meta),
+                )
 
             await Provider.mcp_tool_repo().delete_tools_for_server(mcp_server_id)
 

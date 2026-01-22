@@ -15,6 +15,15 @@ prompt: |
   - Ensure tool names and descriptions accurately reflect the actual API/service capabilities described in the technical details
   - When refining based on user feedback, still maintain alignment with technical details
 
+  GENERATING ADDITIONAL TECHNICAL DETAILS:
+  - When refining tools, analyze the user feedback, existing tools, and any provided technical details
+  - Generate ADDITIONAL technical details that would be helpful for implementing these tools accurately
+  - Include comprehensive API specifications, endpoint details, request/response schemas, authentication requirements, error codes, rate limits, data models, database schemas, or any other technical information relevant to the tools
+  - These additional technical details should complement and expand upon existing technical details
+  - Focus on generating detailed, actionable technical specifications that would help developers implement the tools correctly
+  - If you can infer technical details from the context (e.g., if tools suggest REST APIs, generate OpenAPI-like specifications; if tools suggest database operations, generate schema details), include them
+  - Output these additional technical details in the "technical_details" field as an array of strings, where each string contains a comprehensive technical specification
+
   You may:
   - Modify existing tools (rename, change descriptions, adjust parameters) - but keep alignment with technical details
   - Add new tools if the feedback implies missing functionality - design them based on technical details when available
@@ -54,8 +63,14 @@ prompt: |
           }
         ]
       }
+    ],
+    "technical_details": [
+      "Additional technical detail 1: Comprehensive API specification, endpoint details, schemas, etc.",
+      "Additional technical detail 2: More technical specifications as needed"
     ]
   }
+
+  Note: The "technical_details" field is optional. Include it when you can generate useful additional technical specifications that complement existing technical details. Each string in the array should be a comprehensive, detailed technical specification.
 
 examples:
   - input: |
@@ -122,6 +137,9 @@ examples:
               }
             ]
           }
+        ],
+        "technical_details": [
+          "GitHub API REST Endpoints:\n- GET /user/repos - List repositories for authenticated user. Query params: type (all, owner, member), sort (created, updated, pushed, full_name), direction (asc, desc), per_page (1-100), page (integer). Returns array of repository objects with fields: id, name, full_name, owner (object with login, id, type), private (boolean), html_url, description, fork (boolean), created_at, updated_at, pushed_at, git_url, ssh_url, clone_url, size, stargazers_count, watchers_count, language, default_branch.\n- POST /repos/{owner}/{repo}/issues - Create issue. Requires: title (string, required), body (string, optional), assignee (string, optional), milestone (integer, optional), labels (array of strings, optional), assignees (array of strings, optional). Returns issue object with number, state, title, body, user, labels, assignee, assignees, milestone, comments, created_at, updated_at, closed_at, pull_request (if issue is PR).\n- PATCH /repos/{owner}/{repo}/issues/{issue_number} - Update issue (can close by setting state to 'closed'). Requires: title, body, state (open, closed), assignee, milestone, labels, assignees. Returns updated issue object.\n- Authentication: Bearer token in Authorization header. Rate limit: 5000 requests/hour for authenticated requests."
         ]
       }
 
@@ -176,5 +194,8 @@ examples:
               }
             ]
           }
+        ],
+        "technical_details": [
+          "Weather API REST Endpoints:\n- GET /current?city={city}&units={units} - Get current weather. Response: { temperature: float, condition: string, humidity: int, wind_speed: float, wind_direction: string, pressure: float, visibility: float, uv_index: int, feels_like: float, city: string, country: string, timezone: string, timestamp: ISO8601 }. Units: 'celsius' (default) or 'fahrenheit'. Temperature in selected units, wind_speed in km/h or mph based on units.\n- GET /forecast?city={city}&days={days}&units={units} - Get forecast. Response: { city: string, country: string, forecast: [ { date: YYYY-MM-DD, high: float, low: float, condition: string, precipitation_chance: int, wind_speed: float, humidity: int } ] }. Days: 1-10. Units same as current endpoint.\n- Error responses: 400 (invalid city/parameters), 401 (invalid API key), 404 (city not found), 429 (rate limit exceeded), 500 (server error). Rate limit: 1000 requests/day with free tier API key."
         ]
       }
