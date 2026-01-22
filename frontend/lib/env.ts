@@ -188,5 +188,30 @@ export function getDatabaseUrl(): string {
 	if (env.DATABASE_URL) {
 		return env.DATABASE_URL;
 	}
-	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}?sslmode=require`;
+	// Only require SSL for non-localhost connections
+	const isLocalhost = env.POSTGRES_HOST === "localhost" || env.POSTGRES_HOST === "127.0.0.1";
+	const sslMode = isLocalhost ? "disable" : "require";
+	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}?sslmode=${sslMode}`;
+}
+
+/**
+ * Check if the database connection should use SSL.
+ * Returns true for remote databases, false for localhost.
+ */
+export function shouldUseSSL(): boolean {
+	if (env.DATABASE_URL) {
+		// Check if DATABASE_URL contains sslmode=disable or is localhost
+		const url = env.DATABASE_URL.toLowerCase();
+		if (url.includes("sslmode=disable")) {
+			return false;
+		}
+		if (url.includes("localhost") || url.includes("127.0.0.1")) {
+			return false;
+		}
+		// Default to SSL for remote databases
+		return true;
+	}
+	// For granular vars, check if host is localhost
+	const isLocalhost = env.POSTGRES_HOST === "localhost" || env.POSTGRES_HOST === "127.0.0.1";
+	return !isLocalhost;
 }
