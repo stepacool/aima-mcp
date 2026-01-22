@@ -363,7 +363,7 @@ export function StepZeroChat({
 																View Technical Details
 															</Button>
 														</DialogTrigger>
-														<DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh] overflow-y-auto">
+														<DialogContent className="!max-w-[90vw] !w-[90vw] sm:!max-w-[90vw] max-h-[90vh] overflow-y-auto">
 															<DialogHeader>
 																<DialogTitle>Technical Details</DialogTitle>
 																<DialogDescription>
@@ -380,9 +380,11 @@ export function StepZeroChat({
 																					Technical Details #{index + 1}
 																				</h4>
 																			)}
-																			<pre className="whitespace-pre-wrap break-words rounded-lg bg-muted p-4 text-sm font-mono">
-																				{details}
-																			</pre>
+																			<div className="rounded-lg bg-muted p-4 text-sm">
+																				<MessageResponse className="[&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_pre]:rounded [&_pre]:bg-background/50 [&_pre]:p-3 [&_pre]:text-xs [&_code]:rounded [&_code]:bg-background/50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:my-1 [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:my-2 [&_strong]:font-semibold [&_em]:italic">
+																					{details}
+																				</MessageResponse>
+																			</div>
 																		</div>
 																	))
 																) : (
