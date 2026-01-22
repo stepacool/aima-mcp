@@ -92,6 +92,22 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		},
 	});
 
+	// Reset state when navigating to a new chat (no serverId in URL)
+	useEffect(() => {
+		if (!urlServerId) {
+			// Reset all state to initial values for new chat
+			setServerId(null);
+			setCurrentStep(WizardStep.stepZero);
+			setPreWizardMessages([]);
+			setSuggestedTools([]);
+			setSelectedToolIds([]);
+			setSuggestedEnvVars([]);
+			setBearerToken(null);
+			setServerUrl(null);
+			setIsStarting(false);
+		}
+	}, [urlServerId]);
+
 	// Initialize from URL params or Python backend state
 	useEffect(() => {
 		if (!urlServerId) return;
@@ -296,19 +312,22 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					/>
 				)}
 
-				{currentStep === WizardStep.deploy && serverId && bearerToken && (
-					<DeployStep
-						serverId={serverId}
-						selectedToolIds={selectedToolIds}
-						suggestedTools={suggestedTools}
-						toolsWithCode={wizardState!.tools}
-						bearerToken={bearerToken}
-						isProcessing={isProcessing}
-						processingError={hasFailed ? processingError : null}
-						onServerActivated={handleServerActivated}
-						onRetry={handleRetry}
-					/>
-				)}
+				{currentStep === WizardStep.deploy &&
+					serverId &&
+					bearerToken &&
+					wizardState?.tools && (
+						<DeployStep
+							serverId={serverId}
+							selectedToolIds={selectedToolIds}
+							suggestedTools={suggestedTools}
+							toolsWithCode={wizardState.tools}
+							bearerToken={bearerToken}
+							isProcessing={isProcessing}
+							processingError={hasFailed ? processingError : null}
+							onServerActivated={handleServerActivated}
+							onRetry={handleRetry}
+						/>
+					)}
 
 				{currentStep === WizardStep.complete && serverUrl && (
 					<CompleteStep serverUrl={serverUrl} />
