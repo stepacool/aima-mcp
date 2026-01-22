@@ -144,7 +144,7 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
                 tool_id=str(tool.id),
                 name=tool.name,
                 description=tool.description,
-                parameters=tool.parameters_schema.get("parameters", []),
+                parameters=tool.parameters_schema,
                 code=tool.code,
                 customer_id=server.customer_id,
                 tier=Tier.FREE,

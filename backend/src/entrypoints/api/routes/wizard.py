@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel
 
@@ -475,3 +475,52 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
         created_at=server.created_at.isoformat() if server.created_at else "",
         updated_at=server.updated_at.isoformat() if server.updated_at else "",
     )
+
+
+class DeployToSharedResponse(BaseModel):
+    server_url: str
+    step: str = "complete"
+
+
+@router.post("/{server_id}/deploy", response_model=DeployToSharedResponse)
+async def deploy_to_shared(server_id: UUID, request: Request) -> DeployToSharedResponse:
+    """
+    Step 5: Deploy MCP server to shared runtime.
+
+    Validates tools, compiles them, registers with shared runtime,
+    and creates deployment record.
+    """
+    server = await Provider.mcp_server_repo().get_by_uuid(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
+
+    # Validate server is in correct state (code_gen or deployment_selection)
+    valid_states = {
+        MCPServerSetupStatus.code_gen,
+        MCPServerSetupStatus.deployment_selection,
+    }
+    if server.setup_status.value not in valid_states:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Server must be in code_gen or deployment_selection state. "
+            f"Current state: {server.setup_status.value}",
+        )
+
+    # Get app and stack from request
+    app = request.app
+    stack = getattr(app.state, "mcp_stack", None)
+    if not stack:
+        logger.error("MCP stack not initialized in app state")
+        raise HTTPException(status_code=500, detail="MCP runtime not initialized")
+
+    try:
+        service = get_wizard_service()
+        endpoint_url = await service.step_5_deploy_to_shared(server_id, app, stack)
+
+        return DeployToSharedResponse(server_url=endpoint_url, step="complete")
+    except ValueError as e:
+        logger.error(f"Deployment failed: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Deployment error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

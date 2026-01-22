@@ -1,14 +1,27 @@
 import asyncio
 import secrets
+from contextlib import AsyncExitStack
 from pathlib import Path
 import time
 from uuid import UUID
 
 import yaml
+from fastapi import FastAPI
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
+from core.services import get_tool_loader
+from core.services.tier_service import (
+    CURATED_LIBRARIES,
+    BLOCKED_MODULES,
+    FREE_TIER_MAX_TOOLS,
+    Tier,
+    CodeValidator,
+)
+from entrypoints.mcp.shared_runtime import register_new_customer_app
+from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
 from infrastructure.models.mcp_server import MCPServerSetupStatus, MCPTool
+from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.mcp_server import (
     MCPEnvironmentVariableCreate,
     MCPToolCreate,
@@ -16,13 +29,6 @@ from infrastructure.repositories.mcp_server import (
 )
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
-
-from core.services.tier_service import (
-    CURATED_LIBRARIES,
-    BLOCKED_MODULES,
-    Tier,
-    CodeValidator,
-)
 from loguru import logger
 
 openai_client = AsyncOpenAI(
@@ -567,4 +573,93 @@ class WizardStepsService:
     async def step_5_deploy_to_shared(
         self,
         mcp_server_id: UUID,
-    ): ...
+        app: FastAPI,
+        stack: AsyncExitStack,
+    ) -> str:
+        """
+        Deploy MCP server to the shared runtime.
+
+        Validates tools, compiles them, registers with shared runtime,
+        creates deployment record, and updates server status to ready.
+
+        Returns the endpoint URL.
+        """
+        server_repo = Provider.mcp_server_repo()
+        deployment_repo = Provider.deployment_repo()
+
+        # Load server with tools
+        server = await server_repo.get_with_tools(mcp_server_id)
+        if not server:
+            raise ValueError(f"Server {mcp_server_id} not found")
+
+        # Check if already deployed
+        existing = await deployment_repo.get_by_server_id(mcp_server_id)
+        if existing and existing.status == DeploymentStatus.ACTIVE.value:
+            raise ValueError(f"Server {mcp_server_id} is already deployed")
+
+        # Check tool count for free tier
+        if len(server.tools) > FREE_TIER_MAX_TOOLS:
+            raise ValueError(
+                f"Free tier allows max {FREE_TIER_MAX_TOOLS} tools. "
+                f"You have {len(server.tools)}. Upgrade to paid for more."
+            )
+
+        # Validate and compile tools
+        tool_loader = get_tool_loader()
+        compiled_tools = []
+        code_validator = CodeValidator(Tier.FREE)
+
+        for tool in server.tools:
+            if not tool.code:
+                raise ValueError(
+                    f"Tool {tool.name} has no code. "
+                    f"Generate code first via step 4."
+                )
+
+            # Validate code for free tier
+            errors = code_validator.validate(tool.code)
+            if errors:
+                raise ValueError(f"Tool {tool.name} validation failed: {errors}")
+
+            # Compile the tool
+            try:
+                compiled = tool_loader.compile_tool(
+                    tool_id=str(tool.id),
+                    name=tool.name,
+                    description=tool.description or "",
+                    parameters=tool.parameters_schema,
+                    code=tool.code,
+                    customer_id=server.customer_id,
+                    tier=Tier.FREE,
+                )
+                compiled_tools.append(compiled)
+            except Exception as e:
+                logger.error(f"Failed to compile tool {tool.name}: {e}", tool=tool)
+                raise ValueError(f"Failed to compile tool {tool.name}: {e}")
+
+        # Register with shared runtime
+        await register_new_customer_app(app, mcp_server_id, compiled_tools, stack=stack)
+
+        # Create or update deployment record
+        endpoint_url = f"/mcp/{mcp_server_id}/mcp"
+        if existing:
+            # Update existing deployment
+            await deployment_repo.activate(existing.id, endpoint_url)
+        else:
+            # Create new deployment
+            deployment = await deployment_repo.create(
+                DeploymentCreate(
+                    server_id=mcp_server_id,
+                    target=DeploymentTarget.SHARED.value,
+                    status=DeploymentStatus.ACTIVE.value,
+                    endpoint_url=endpoint_url,
+                )
+            )
+            # Set deployed_at
+            await deployment_repo.activate(deployment.id, endpoint_url)
+
+        # Update server setup status to READY
+        await server_repo.update_setup_status(mcp_server_id, MCPServerSetupStatus.ready)
+
+        logger.success(f"Server {mcp_server_id} deployed to shared runtime")
+        return endpoint_url

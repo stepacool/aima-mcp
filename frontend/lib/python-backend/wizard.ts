@@ -401,21 +401,21 @@ export async function getWizardState(serverId: string): Promise<WizardState> {
 }
 
 /**
- * Activates the server, deploying it and making it live.
+ * Deploys the server to the shared runtime, making it live.
  */
 export async function activateServer(
 	serverId: string,
 ): Promise<ActivateServerResponse> {
 	try {
 		const response = await pythonBackendClient.post<ActivateServerResponse>(
-			`/api/servers/${serverId}/activate`,
+			`/api/wizard/${serverId}/deploy`,
 		);
-		logger.info({ serverId }, "Server activated in Python backend");
+		logger.info({ serverId }, "Server deployed in Python backend");
 		return response.data;
 	} catch (error) {
 		logger.error(
 			{ serverId, error },
-			"Failed to activate server in Python backend",
+			"Failed to deploy server in Python backend",
 		);
 		throw error;
 	}
