@@ -148,9 +148,7 @@ class CodeValidator:
 
         return None
 
-    def _check_import_from(
-        self, module: str, names: list[ast.alias]
-    ) -> str | None:
+    def _check_import_from(self, module: str, names: list[ast.alias]) -> str | None:
         """Check if a from-import is allowed."""
         base_module = module.split(".")[0]
 

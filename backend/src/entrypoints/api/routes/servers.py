@@ -101,6 +101,7 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
     """
     server_repo = Provider.mcp_server_repo()
     deployment_repo = Provider.deployment_repo()
+    env_var_repo = Provider.environment_variable_repo()
 
     # Load server with tools from DB
     server = await server_repo.get_with_tools(server_id)
@@ -119,6 +120,10 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
             f"Free tier allows max {FREE_TIER_MAX_TOOLS} tools. "
             f"You have {len(server.tools)}. Upgrade to paid for more.",
         )
+
+    # Get environment variables for this server
+    env_var_records = await env_var_repo.get_vars_for_server(server_id)
+    env_vars = {var.name: var.value for var in env_var_records if var.value is not None}
 
     # Compile tools from DB
     tool_loader = get_tool_loader()
@@ -148,6 +153,7 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
                 code=tool.code,
                 customer_id=server.customer_id,
                 tier=Tier.FREE,
+                env_vars=env_vars,
             )
             compiled_tools.append(compiled)
         except Exception as e:

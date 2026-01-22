@@ -1,11 +1,8 @@
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from opentelemetry.sdk.trace.sampling import (
     ALWAYS_OFF,
@@ -14,11 +11,11 @@ from opentelemetry.sdk.trace.sampling import (
     Sampler,
 )
 
-from entrypoints.api.middleware import MCPAccessMiddleware
+from entrypoints.api.middleware import MCPAccessMiddleware, MCPEnvMiddleware
 from entrypoints.api.routes import api_router
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
-from contextlib import asynccontextmanager, AsyncExitStack
+from contextlib import AsyncExitStack
 
 
 @asynccontextmanager
@@ -31,8 +28,8 @@ async def lifespan(app: FastAPI):
 
         try:
             # Pass the stack to the loader
-            count = await load_and_register_all_mcp_servers(app, stack)
-            logger.info(f"Loaded MCP servers on startup")
+            await load_and_register_all_mcp_servers(app, stack)
+            logger.info("Loaded MCP servers on startup")
         except Exception as e:
             logger.error(f"Failed to load MCP servers on startup: {e}")
             # Optional: Decide if you want to crash startup or continue
@@ -111,6 +108,9 @@ class Application:
         )
 
         self.app.add_middleware(MCPAccessMiddleware)
+        # MCPEnvMiddleware must be added after MCPAccessMiddleware
+        # so it runs first (sets context before auth and handlers)
+        self.app.add_middleware(MCPEnvMiddleware)
 
         self.app.include_router(api_router)
 

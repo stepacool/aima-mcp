@@ -5,6 +5,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from core.services.request_context import request_env_vars
 from infrastructure.repositories.repo_provider import Provider
 
 
@@ -62,3 +63,37 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
             )
 
         return await call_next(request)
+
+
+class MCPEnvMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to extract ephemeral environment variables from request headers.
+
+    Headers with the prefix "X-Env-" are extracted and made available to tools
+    via the request_env_vars context variable.
+
+    Example:
+        Request header "X-Env-API-KEY: secret123" becomes {"API_KEY": "secret123"}
+        in the tool's os.environ lookup.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if not path.startswith("/mcp"):
+            return await call_next(request)
+
+        # Extract X-Env-* headers
+        ephemeral_env: dict[str, str] = {}
+        for header, value in request.headers.items():
+            header_lower = header.lower()
+            if header_lower.startswith("x-env-"):
+                # X-Env-FOO-BAR -> FOO_BAR (uppercase, hyphens to underscores)
+                env_name = header[6:].upper().replace("-", "_")
+                ephemeral_env[env_name] = value
+
+        # Set contextvar for this request
+        token = request_env_vars.set(ephemeral_env)
+        try:
+            return await call_next(request)
+        finally:
+            request_env_vars.reset(token)

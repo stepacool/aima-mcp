@@ -102,11 +102,19 @@ async def load_and_register_all_mcp_servers(
     deployments = await deployment_repo.get_active_shared_deployments()
     registered_servers: dict[UUID, FastMCP] = {}
 
+    env_var_repo = Provider.environment_variable_repo()
+
     for deployment in deployments:
         server = deployment.server
         try:
             # Get tools for this server
             tools = await tool_repo.get_tools_for_server(server.id)
+
+            # Get environment variables for this server
+            env_var_records = await env_var_repo.get_vars_for_server(server.id)
+            env_vars = {
+                var.name: var.value for var in env_var_records if var.value is not None
+            }
 
             # Compile tools for this server
             compiled_tools = []
@@ -127,6 +135,7 @@ async def load_and_register_all_mcp_servers(
                         code=tool.code,
                         customer_id=server.customer_id,
                         tier=Tier.FREE,
+                        env_vars=env_vars,
                     )
                     compiled_tools.append(compiled)
                 except Exception as e:
