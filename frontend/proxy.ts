@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { withQuery } from "ufo";
 import { appConfig } from "./config/app.config";
 import { authConfig } from "./config/auth.config";
+import { getBaseUrl } from "./lib/utils";
 import type { Session } from "./types/session";
 
 async function getSession(req: NextRequest): Promise<Session | null> {
@@ -14,9 +15,14 @@ async function getSession(req: NextRequest): Promise<Session | null> {
 			origin.includes("ngrok") || origin.includes("ngrok-free.app");
 		const isDevelopment = process.env.NODE_ENV === "development";
 
+		// Use the same baseURL that Better Auth is configured with to ensure cookies match
+		// This is critical for www vs non-www domain consistency
+		const authBaseURL = getBaseUrl();
+
 		// Use localhost for internal API calls when using ngrok or in development
+		// Otherwise use the same baseURL as Better Auth to ensure cookie domain matches
 		const internalBaseURL =
-			isNgrok || isDevelopment ? "http://localhost:3000" : origin;
+			isNgrok || isDevelopment ? "http://localhost:3000" : authBaseURL;
 
 		const { data: session, error } = await betterFetch<Session>(
 			"/api/auth/get-session?disableCookieCache=true",
