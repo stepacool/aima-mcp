@@ -79,17 +79,15 @@ class MCPEnvMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if not path.startswith("/mcp"):
+        if not path.startswith("/mcp/"):
             return await call_next(request)
 
         # Extract X-Env-* headers
         ephemeral_env: dict[str, str] = {}
         for header, value in request.headers.items():
-            header_lower = header.lower()
-            if header_lower.startswith("x-env-"):
+            if header.lower().startswith("x-env-"):
                 # X-Env-FOO-BAR -> FOO_BAR (uppercase, hyphens to underscores)
-                env_name = header[6:].upper().replace("-", "_")
-                ephemeral_env[env_name] = value
+                ephemeral_env[header[6:].upper().replace("-", "_")] = value
 
         # Set contextvar for this request
         token = request_env_vars.set(ephemeral_env)
