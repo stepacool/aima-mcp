@@ -1,6 +1,5 @@
 """Request-scoped context for ephemeral environment variables."""
 
-import os
 from contextvars import ContextVar
 from typing import Iterator
 
@@ -17,7 +16,6 @@ class DynamicEnvDict(dict):
     Lookup order:
     1. Per-request context (from headers via middleware)
     2. Static env vars (from DB, set at compile time)
-    3. Real os.environ (fallback)
     """
 
     def __getitem__(self, key: str) -> str:
@@ -28,8 +26,8 @@ class DynamicEnvDict(dict):
         # 2. Check static env vars (self)
         if key in dict.keys(self):
             return super().__getitem__(key)
-        # 3. Fallback to real os.environ
-        return os.environ[key]
+
+        raise KeyError(key)
 
     def get(self, key: str, default: str | None = None) -> str | None:
         """Get an environment variable with optional default."""
@@ -43,13 +41,12 @@ class DynamicEnvDict(dict):
         if not isinstance(key, str):
             return False
         ctx_vars = request_env_vars.get()
-        return key in ctx_vars or key in dict.keys(self) or key in os.environ
+        return key in ctx_vars or key in dict.keys(self)
 
     def keys(self) -> list[str]:
         """Return all keys from all sources."""
         ctx_vars = request_env_vars.get()
-        all_keys = set(os.environ.keys())
-        all_keys.update(dict.keys(self))
+        all_keys = set(dict.keys(self))
         all_keys.update(ctx_vars.keys())
         return list(all_keys)
 
