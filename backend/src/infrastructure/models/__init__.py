@@ -1,5 +1,5 @@
-from infrastructure.models.customer import APIKey as APIKey
 from infrastructure.models.customer import Customer as Customer
+from infrastructure.models.customer import StaticAPIKey as StaticAPIKey
 from infrastructure.models.deployment import Deployment as Deployment
 from infrastructure.models.deployment import DeploymentArtifact as DeploymentArtifact
 from infrastructure.models.deployment import DeploymentStatus as DeploymentStatus
@@ -7,3 +7,7 @@ from infrastructure.models.deployment import DeploymentTarget as DeploymentTarge
 from infrastructure.models.mcp_server import MCPPrompt as MCPPrompt
 from infrastructure.models.mcp_server import MCPServer as MCPServer
 from infrastructure.models.mcp_server import MCPTool as MCPTool
+from infrastructure.models.oauth import OAuthAccessToken as OAuthAccessToken
+from infrastructure.models.oauth import OAuthAuthorizationCode as OAuthAuthorizationCode
+from infrastructure.models.oauth import OAuthClient as OAuthClient
+from infrastructure.models.oauth import OAuthRefreshToken as OAuthRefreshToken

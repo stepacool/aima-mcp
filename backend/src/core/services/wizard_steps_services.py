@@ -436,7 +436,7 @@ class WizardStepsService:
         Sets header auth to MCP server, generates a Bearer token and returns it.
         """
         token = secrets.token_urlsafe(32)
-        await Provider.api_key_repo().create_for_server(mcp_server_id, token)
+        await Provider.static_api_key_repo().create_for_server(mcp_server_id, token)
         await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
         return token
 

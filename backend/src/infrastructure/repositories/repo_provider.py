@@ -1,5 +1,5 @@
 from infrastructure.db import create_database, Database
-from infrastructure.repositories.customer import APIKeyRepo, CustomerRepo
+from infrastructure.repositories.customer import CustomerRepo, StaticAPIKeyRepo
 from infrastructure.repositories.deployment import (
     DeploymentArtifactRepo,
     DeploymentRepo,
@@ -8,6 +8,12 @@ from infrastructure.repositories.mcp_server import (
     MCPEnvironmentVariableRepo,
     MCPServerRepo,
     MCPToolRepo,
+)
+from infrastructure.repositories.oauth import (
+    OAuthAccessTokenRepo,
+    OAuthAuthorizationCodeRepo,
+    OAuthClientRepo,
+    OAuthRefreshTokenRepo,
 )
 
 
@@ -19,7 +25,11 @@ class Provider:
     _deployment_repo: None | DeploymentRepo = None
     _deployment_artifact_repo: None | DeploymentArtifactRepo = None
     _environment_variable_repo: None | MCPEnvironmentVariableRepo = None
-    _api_key_repo: None | APIKeyRepo = None
+    _static_api_key_repo: None | StaticAPIKeyRepo = None
+    _oauth_client_repo: None | OAuthClientRepo = None
+    _oauth_authorization_code_repo: None | OAuthAuthorizationCodeRepo = None
+    _oauth_access_token_repo: None | OAuthAccessTokenRepo = None
+    _oauth_refresh_token_repo: None | OAuthRefreshTokenRepo = None
 
     @classmethod
     def get_db(cls, **overrides):
@@ -70,7 +80,33 @@ class Provider:
         return cls._environment_variable_repo
 
     @classmethod
-    def api_key_repo(cls) -> APIKeyRepo:
-        if cls._api_key_repo is None:
-            cls._api_key_repo = APIKeyRepo(cls.get_db())
-        return cls._api_key_repo
+    def static_api_key_repo(cls) -> StaticAPIKeyRepo:
+        if cls._static_api_key_repo is None:
+            cls._static_api_key_repo = StaticAPIKeyRepo(cls.get_db())
+        return cls._static_api_key_repo
+
+    @classmethod
+    def oauth_client_repo(cls) -> OAuthClientRepo:
+        if cls._oauth_client_repo is None:
+            cls._oauth_client_repo = OAuthClientRepo(cls.get_db())
+        return cls._oauth_client_repo
+
+    @classmethod
+    def oauth_authorization_code_repo(cls) -> OAuthAuthorizationCodeRepo:
+        if cls._oauth_authorization_code_repo is None:
+            cls._oauth_authorization_code_repo = OAuthAuthorizationCodeRepo(
+                cls.get_db()
+            )
+        return cls._oauth_authorization_code_repo
+
+    @classmethod
+    def oauth_access_token_repo(cls) -> OAuthAccessTokenRepo:
+        if cls._oauth_access_token_repo is None:
+            cls._oauth_access_token_repo = OAuthAccessTokenRepo(cls.get_db())
+        return cls._oauth_access_token_repo
+
+    @classmethod
+    def oauth_refresh_token_repo(cls) -> OAuthRefreshTokenRepo:
+        if cls._oauth_refresh_token_repo is None:
+            cls._oauth_refresh_token_repo = OAuthRefreshTokenRepo(cls.get_db())
+        return cls._oauth_refresh_token_repo

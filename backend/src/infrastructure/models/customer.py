@@ -22,8 +22,10 @@ class Customer(CustomBase):
         return f"Customer(id={self.id}, name={self.name})"
 
 
-class APIKey(CustomBase):
-    __tablename__ = "api_keys"
+class StaticAPIKey(CustomBase):
+    """Static API key for backward compatibility with old-school users."""
+
+    __tablename__ = "static_api_keys"
 
     key: Mapped[str] = mapped_column(String, index=True, nullable=False)
     server_id: Mapped[UUID] = mapped_column(

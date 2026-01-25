@@ -13,6 +13,20 @@ class AppSettings(BaseSettings):
     ADMIN_ROUTES_API_KEY: str = "API_KEY_SECURITY"
 
 
+class OAuthSettings(BaseSettings):
+    """OAuth 2.1 configuration settings."""
+
+    OAUTH_ISSUER: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:3000"
+    ACCESS_TOKEN_LIFETIME: int = 3600  # 1 hour in seconds
+    REFRESH_TOKEN_LIFETIME: int = 604800  # 7 days in seconds
+    AUTH_CODE_LIFETIME: int = 600  # 10 minutes in seconds
+    JWT_PRIVATE_KEY: str = ""  # RSA private key for RS256 signing (PEM format)
+    JWT_PUBLIC_KEY: str = ""  # RSA public key for RS256 verification (PEM format)
+    JWT_ALGORITHM: str = "RS256"
+    OAUTH_SCOPES: str = "mcp:access"  # Space-separated scopes
+
+
 class MonitoringSettings(BaseSettings):
     LOGFIRE_TOKEN: str = ""
 
@@ -69,6 +83,7 @@ class PostgresSettings(BaseSettings):
 
 class Settings(
     AppSettings,
+    OAuthSettings,
     MonitoringSettings,
     LLMSettings,
     PostgresSettings,

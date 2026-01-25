@@ -440,7 +440,7 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
 
     tools = await Provider.mcp_tool_repo().get_tools_for_server(server_id)
     env_vars = await Provider.environment_variable_repo().get_vars_for_server(server_id)
-    api_key = await Provider.api_key_repo().get_by_server_id(server_id)
+    api_key = await Provider.static_api_key_repo().get_by_server_id(server_id)
 
     # Get deployment info if it exists
     deployment = await Provider.deployment_repo().get_by_server_id(server_id)
