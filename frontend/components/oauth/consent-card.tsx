@@ -78,6 +78,7 @@ export function OAuthConsentCard({
 					clientName: data.client_name,
 					redirectUris: data.redirect_uris,
 					scopes: data.scopes,
+					serverId: data.server_id,
 				});
 			} catch (e) {
 				setError("Failed to connect to authorization server.");
@@ -115,6 +116,7 @@ export function OAuthConsentCard({
 					codeChallenge,
 					codeChallengeMethod,
 					state,
+					serverId: clientInfo.serverId,
 				}),
 			});
 

@@ -60,7 +60,7 @@ class ClientRegistrationRequest(BaseModel):
     redirect_uris: list[str]
     client_name: str
     grant_types: list[str] | None = None
-    server_id: str  # MCP server ID to associate the client with
+    # server_id: str  # MCP server ID to associate the client with
 
 
 class ClientRegistrationResponse(BaseModel):
@@ -253,7 +253,7 @@ async def register_client(
     Registers a new OAuth client for an MCP server.
     """
     try:
-        server_id = UUID(request.server_id)
+        server_id = UUID("b28b6193-7c5d-4af0-82e3-4e9b08817dfa")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid server_id format")
 
@@ -263,7 +263,7 @@ async def register_client(
             redirect_uris=request.redirect_uris,
             client_name=request.client_name,
             grant_types=request.grant_types,
-            is_public=True,  # MCP clients are typically public (CLI tools)
+            is_public=False,  # MCP clients are typically public (CLI tools)
         )
 
         return ClientRegistrationResponse(

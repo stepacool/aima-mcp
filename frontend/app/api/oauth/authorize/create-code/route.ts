@@ -12,6 +12,7 @@ const createCodeRequestSchema = z.object({
 	codeChallenge: z.string().min(1),
 	codeChallengeMethod: z.string().min(1),
 	state: z.string().optional(),
+	serverId: z.string().uuid(),
 });
 
 // Error response helper
@@ -75,8 +76,7 @@ export async function POST(req: Request): Promise<Response> {
 				codeChallenge: body.codeChallenge,
 				codeChallengeMethod: body.codeChallengeMethod,
 				state: body.state,
-				// Note: serverId needs to be extracted from the client registration
-				// The backend will look this up from the client record
+				serverId: body.serverId,
 			},
 		);
 

@@ -453,8 +453,9 @@ class OAuthService:
                 payload = jwt.decode(
                     token,
                     settings.JWT_PUBLIC_KEY,
+                    audience=str(server_id),  # TODO: poshel naxui
                     algorithms=[settings.JWT_ALGORITHM],
-                    options={"require": ["exp", "iat", "sub", "aud", "jti"]},
+                    options={"require": ["exp", "iat", "sub", "jti"]},
                 )
             else:
                 # Fallback to HS256 with admin key
@@ -462,7 +463,7 @@ class OAuthService:
                     token,
                     settings.ADMIN_ROUTES_API_KEY,
                     algorithms=["HS256"],
-                    options={"require": ["exp", "iat", "sub", "aud", "jti"]},
+                    options={"require": ["exp", "iat", "sub", "jti"]},
                 )
         except jwt.ExpiredSignatureError:
             raise InvalidGrantError("Access token has expired")
