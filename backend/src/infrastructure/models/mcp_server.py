@@ -41,7 +41,7 @@ class MCPServer(CustomBase):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    setup_status: Mapped[MCPServerSetupStatus]= mapped_column(
+    setup_status: Mapped[MCPServerSetupStatus] = mapped_column(
         SQLEnum(MCPServerSetupStatus),
         nullable=False,
         server_default="tools_selection",
@@ -96,7 +96,7 @@ class MCPServer(CustomBase):
             self.deployment is not None
             and self.deployment.status == DeploymentStatus.ACTIVE.value
         )
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 

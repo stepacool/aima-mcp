@@ -612,8 +612,7 @@ class WizardStepsService:
         for tool in server.tools:
             if not tool.code:
                 raise ValueError(
-                    f"Tool {tool.name} has no code. "
-                    f"Generate code first via step 4."
+                    f"Tool {tool.name} has no code. Generate code first via step 4."
                 )
 
             # Validate code for free tier
