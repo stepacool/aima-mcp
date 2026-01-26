@@ -15,6 +15,7 @@ type SearchParams = Promise<{
 	state?: string;
 	code_challenge?: string;
 	code_challenge_method?: string;
+	resource?: string;
 }>;
 
 type OAuthAuthorizePageProps = {
@@ -33,6 +34,7 @@ export default async function OAuthAuthorizePage({
 		state,
 		code_challenge: codeChallenge,
 		code_challenge_method: codeChallengeMethod,
+		resource,
 	} = params;
 
 	// Validate required parameters
@@ -129,6 +131,7 @@ export default async function OAuthAuthorizePage({
 			state={state}
 			codeChallenge={codeChallenge}
 			codeChallengeMethod={codeChallengeMethod}
+			resource={resource}
 		/>
 	);
 }

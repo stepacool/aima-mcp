@@ -59,7 +59,6 @@ class ClientRegistrationRequest(BaseModel):
     redirect_uris: list[str]
     client_name: str
     grant_types: list[str] | None = None
-    # server_id: str  # MCP server ID to associate the client with
 
 
 class ClientRegistrationResponse(BaseModel):
@@ -251,18 +250,15 @@ async def register_client(
 
     Registers a new OAuth client for an MCP server.
     """
-    try:
-        server_id = UUID("b28b6193-7c5d-4af0-82e3-4e9b08817dfa")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid server_id format")
-
+    # get server_id from request as it's in the path
+    server_id = UUID(request.path_params["server_id"])
     try:
         result = await oauth_service.register_client(
             server_id=server_id,
             redirect_uris=request.redirect_uris,
             client_name=request.client_name,
             grant_types=request.grant_types,
-            is_public=False,  # MCP clients are typically public (CLI tools)
+            is_public=False,
         )
 
         return ClientRegistrationResponse(
@@ -391,8 +387,8 @@ async def revoke_token(
 # ============================================================================
 
 
-@mcp_oauth_router.get(
-    "/.well-known/oauth-protected-resource",
+@well_known_router.get(
+    "/.well-known/oauth-protected-resource/mcp/{server_id}/mcp",
     response_model=ProtectedResourceMetadata,
 )
 async def mcp_get_protected_resource_metadata(
@@ -402,6 +398,8 @@ async def mcp_get_protected_resource_metadata(
     RFC 9728 Protected Resource Metadata for a specific MCP server.
 
     Returns metadata about this protected resource (MCP server).
+    The URL structure follows the OAuth standard where the resource path
+    comes after .well-known/oauth-protected-resource.
     """
     base_url = f"{settings.OAUTH_ISSUER}/mcp/{server_id}"
     return ProtectedResourceMetadata(
@@ -412,8 +410,8 @@ async def mcp_get_protected_resource_metadata(
     )
 
 
-@mcp_oauth_router.get(
-    "/.well-known/oauth-authorization-server",
+@well_known_router.get(
+    "/.well-known/oauth-authorization-server/mcp/{server_id}",
     response_model=AuthorizationServerMetadata,
 )
 async def mcp_get_authorization_server_metadata(
@@ -423,6 +421,8 @@ async def mcp_get_authorization_server_metadata(
     RFC 8414 Authorization Server Metadata for a specific MCP server.
 
     Returns metadata about the authorization server.
+    The URL structure follows the OAuth standard where the resource path
+    comes after .well-known/oauth-authorization-server.
     """
     base_url = f"{settings.OAUTH_ISSUER}/mcp/{server_id}"
     return AuthorizationServerMetadata(

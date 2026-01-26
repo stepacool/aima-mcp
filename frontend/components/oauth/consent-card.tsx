@@ -23,6 +23,7 @@ type OAuthConsentCardProps = {
 	state?: string;
 	codeChallenge: string;
 	codeChallengeMethod: string;
+	resource?: string;
 };
 
 type ClientInfo = {
@@ -40,6 +41,7 @@ export function OAuthConsentCard({
 	state,
 	codeChallenge,
 	codeChallengeMethod,
+	resource,
 }: OAuthConsentCardProps): React.JSX.Element {
 	const router = useRouter();
 	const { user, loaded: sessionLoaded } = useSession();
@@ -61,9 +63,13 @@ export function OAuthConsentCard({
 	React.useEffect(() => {
 		async function fetchClientInfo() {
 			try {
+				// resource is http://0.0.0.0:8001/mcp/server_id/
+				// we need /mcp/server_id/oauth/client/client_id
+				const resourcePath = resource?.replace(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000", "");
+				console.log(resourcePath);
 				const backendUrl =
 					process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000";
-				const response = await fetch(`${backendUrl}/oauth/client/${clientId}`);
+				const response = await fetch(`${backendUrl}${resourcePath}/oauth/client/${clientId}`);
 				if (!response.ok) {
 					if (response.status === 404) {
 						setError("Unknown application. The client_id is not registered.");
@@ -88,7 +94,7 @@ export function OAuthConsentCard({
 		}
 
 		fetchClientInfo();
-	}, [clientId]);
+	}, [clientId, resource]);
 
 	// Validate redirect URI against registered URIs
 	const isRedirectUriValid = React.useMemo(() => {

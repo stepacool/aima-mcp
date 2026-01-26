@@ -63,6 +63,10 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Invalid server ID format"},
             )
 
+        # allow /oauth endpoints, for example /mcp/13ddb0a7-9049-49a8-961b-5804440cf709/oauth/register
+        if path.startswith("/mcp/" + str(server_id) + "/oauth"):
+            return await call_next(request)
+
         # Extract token from Authorization header
         auth_header = request.headers.get("Authorization")
         if not auth_header:

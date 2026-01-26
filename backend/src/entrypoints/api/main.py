@@ -10,7 +10,7 @@ from opentelemetry.sdk.trace.sampling import (
     ParentBased,
     Sampler,
 )
-
+from entrypoints.api.routes.oauth import well_known_router
 from entrypoints.api.middleware import MCPAccessMiddleware, MCPEnvMiddleware
 from entrypoints.api.routes import api_router
 from entrypoints.api.routes.oauth import mcp_oauth_router
@@ -116,6 +116,8 @@ class Application:
         self.app.include_router(api_router)
         # Per-MCP-server OAuth routes at /mcp/{server_id}/.well-known/* and /mcp/{server_id}/oauth/*
         self.app.include_router(mcp_oauth_router, prefix="/mcp/{server_id}")
+        self.app.include_router(well_known_router)
+        
 
     def create_database_pool(self) -> None:
         Provider.get_db(

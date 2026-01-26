@@ -16,7 +16,7 @@ class AppSettings(BaseSettings):
 class OAuthSettings(BaseSettings):
     """OAuth 2.1 configuration settings."""
 
-    OAUTH_ISSUER: str = "http://localhost:8000"
+    OAUTH_ISSUER: str = "http://0.0.0.0:8001"
     FRONTEND_URL: str = "http://localhost:3000"
     ACCESS_TOKEN_LIFETIME: int = 36000  # 1 hour in seconds
     REFRESH_TOKEN_LIFETIME: int = 604800  # 7 days in seconds

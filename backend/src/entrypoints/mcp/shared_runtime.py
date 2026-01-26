@@ -11,7 +11,7 @@ from uuid import UUID
 from fastapi import FastAPI
 from fastmcp import FastMCP
 from loguru import logger
-
+from entrypoints.api.routes.oauth import mcp_oauth_router
 
 def build_mcp_server(server_id: UUID, tools: list) -> FastMCP:
     return FastMCP(
@@ -39,6 +39,9 @@ async def register_new_customer_app(
         f"/mcp/{server_id}",
         mcp_sub_app,
     )
+
+    # 2. Mount oauth routes
+    app.include_router(mcp_oauth_router, prefix=f"/mcp/{server_id}")
 
     # 3. Manually trigger its lifespan using the stack
     # This initializes the FastMCP TaskGroup/SessionManager
