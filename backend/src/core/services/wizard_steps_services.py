@@ -156,7 +156,7 @@ class WizardStepsService:
                         server_id=mcp_server_id,
                         name=tool.name,
                         description=tool.description,
-                        parameters_schema=[p.dict() for p in tool.parameters],
+                        parameters_schema=[p.model_dump() for p in tool.parameters],
                     )
                 )
             await Provider.mcp_tool_repo().create_bulk(create_payloads)
