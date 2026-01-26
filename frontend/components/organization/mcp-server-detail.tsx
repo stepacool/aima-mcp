@@ -246,7 +246,6 @@ export function McpServerDetail({
 		}
 	};
 
-
 	const handleCopyWindsurfConfig = async () => {
 		if (!server?.mcpEndpoint) {
 			toast.error("Server endpoint not available");

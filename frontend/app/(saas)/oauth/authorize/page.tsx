@@ -88,7 +88,9 @@ export default async function OAuthAuthorizePage({
 		return (
 			<div className="flex min-h-screen items-center justify-center p-4">
 				<div className="rounded-lg border border-destructive bg-destructive/10 p-6 text-center">
-					<h1 className="mb-2 font-semibold text-lg">Unsupported Response Type</h1>
+					<h1 className="mb-2 font-semibold text-lg">
+						Unsupported Response Type
+					</h1>
 					<p className="text-muted-foreground text-sm">
 						Only response_type=code is supported
 					</p>
@@ -113,7 +115,9 @@ export default async function OAuthAuthorizePage({
 		return (
 			<div className="flex min-h-screen items-center justify-center p-4">
 				<div className="rounded-lg border border-destructive bg-destructive/10 p-6 text-center">
-					<h1 className="mb-2 font-semibold text-lg">Invalid Code Challenge Method</h1>
+					<h1 className="mb-2 font-semibold text-lg">
+						Invalid Code Challenge Method
+					</h1>
 					<p className="text-muted-foreground text-sm">
 						Only S256 code challenge method is supported
 					</p>
@@ -125,11 +129,11 @@ export default async function OAuthAuthorizePage({
 	// All validations passed, render the consent card
 	return (
 		<OAuthConsentCard
-			clientId={clientId}
-			redirectUri={redirectUri}
+			clientId={clientId!}
+			redirectUri={redirectUri!}
 			scope={scope ?? "mcp:access"}
 			state={state}
-			codeChallenge={codeChallenge}
+			codeChallenge={codeChallenge!}
 			codeChallengeMethod={codeChallengeMethod}
 			resource={resource}
 		/>

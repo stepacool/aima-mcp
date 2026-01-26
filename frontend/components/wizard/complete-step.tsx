@@ -139,7 +139,6 @@ export function CompleteStep({
 		}
 	};
 
-
 	const handleCopyWindsurfConfig = async () => {
 		try {
 			const config = createMcpConfig(fullUrl, bearerToken);

@@ -21,10 +21,7 @@ function errorResponse(
 	description: string,
 	status: number,
 ): Response {
-	return Response.json(
-		{ error, error_description: description },
-		{ status },
-	);
+	return Response.json({ error, error_description: description }, { status });
 }
 
 /**
@@ -85,7 +82,10 @@ export async function POST(req: Request): Promise<Response> {
 		// Handle axios errors
 		if (error && typeof error === "object" && "response" in error) {
 			const axiosError = error as {
-				response?: { status: number; data?: { error?: string; error_description?: string } };
+				response?: {
+					status: number;
+					data?: { error?: string; error_description?: string };
+				};
 			};
 			const status = axiosError.response?.status ?? 500;
 			const errorCode = axiosError.response?.data?.error ?? "server_error";
@@ -101,10 +101,6 @@ export async function POST(req: Request): Promise<Response> {
 		}
 
 		logger.error({ error }, "Unexpected error in OAuth create-code");
-		return errorResponse(
-			"server_error",
-			"An unexpected error occurred",
-			500,
-		);
+		return errorResponse("server_error", "An unexpected error occurred", 500);
 	}
 }

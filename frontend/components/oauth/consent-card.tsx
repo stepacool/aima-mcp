@@ -65,11 +65,16 @@ export function OAuthConsentCard({
 			try {
 				// resource is http://0.0.0.0:8001/mcp/server_id/
 				// we need /mcp/server_id/oauth/client/client_id
-				const resourcePath = resource?.replace(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000", "");
+				const resourcePath = resource?.replace(
+					process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000",
+					"",
+				);
 				console.log(resourcePath);
 				const backendUrl =
 					process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || "http://localhost:8000";
-				const response = await fetch(`${backendUrl}${resourcePath}/oauth/client/${clientId}`);
+				const response = await fetch(
+					`${backendUrl}${resourcePath}/oauth/client/${clientId}`,
+				);
 				if (!response.ok) {
 					if (response.status === 404) {
 						setError("Unknown application. The client_id is not registered.");
@@ -284,9 +289,7 @@ export function OAuthConsentCard({
 							{scope.split(" ").map((s) => (
 								<li key={s} className="flex items-center gap-2 text-sm">
 									<CheckCircle className="size-4 text-green-500" />
-									{s === "mcp:access"
-										? "Access MCP servers on your behalf"
-										: s}
+									{s === "mcp:access" ? "Access MCP servers on your behalf" : s}
 								</li>
 							))}
 						</ul>

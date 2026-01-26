@@ -10,7 +10,7 @@ import {
 	ServerIcon,
 	SettingsIcon,
 	UserSearchIcon,
-    BookOpenCheckIcon,
+	BookOpenCheckIcon,
 	UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -92,11 +92,11 @@ export function OrganizationMenuItems(): React.JSX.Element {
 					href: `${basePath}/new-mcp-server`,
 					icon: PlusIcon,
 				},
-                {
-                    label: "Documentation",
+				{
+					label: "Documentation",
 					href: `/docs`,
 					icon: BookOpenCheckIcon,
-                }
+				},
 			],
 			collapsible: false,
 		},
