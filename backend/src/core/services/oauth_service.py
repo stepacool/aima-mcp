@@ -48,7 +48,9 @@ class InvalidGrantError(OAuthError):
 class InvalidRequestError(OAuthError):
     """Invalid request error."""
 
-    def __init__(self, description: str = "The request is missing a required parameter"):
+    def __init__(
+        self, description: str = "The request is missing a required parameter"
+    ):
         super().__init__("invalid_request", description)
 
 
@@ -153,9 +155,7 @@ class OAuthService:
 
         if not is_public:
             client_secret = secrets.token_urlsafe(48)
-            client_secret_hash = hashlib.sha256(
-                client_secret.encode()
-            ).hexdigest()
+            client_secret_hash = hashlib.sha256(client_secret.encode()).hexdigest()
 
         # Create client in database
         client_create = OAuthClientCreate(
@@ -238,7 +238,9 @@ class OAuthService:
 
         await Provider.oauth_authorization_code_repo().create(code_create)
 
-        logger.info(f"Created authorization code for user {user_id}, client {client_id}")
+        logger.info(
+            f"Created authorization code for user {user_id}, client {client_id}"
+        )
         return code
 
     # =========================================================================
@@ -279,9 +281,13 @@ class OAuthService:
         # For confidential clients, verify client_secret
         if not client.is_public:
             if not client_secret:
-                raise InvalidClientError("client_secret required for confidential client")
+                raise InvalidClientError(
+                    "client_secret required for confidential client"
+                )
             expected_hash = hashlib.sha256(client_secret.encode()).hexdigest()
-            if not secrets.compare_digest(expected_hash, client.client_secret_hash or ""):
+            if not secrets.compare_digest(
+                expected_hash, client.client_secret_hash or ""
+            ):
                 raise InvalidClientError("Invalid client_secret")
 
         # Mark code as used (one-time use)
@@ -327,9 +333,13 @@ class OAuthService:
         # For confidential clients, verify client_secret
         if not client.is_public:
             if not client_secret:
-                raise InvalidClientError("client_secret required for confidential client")
+                raise InvalidClientError(
+                    "client_secret required for confidential client"
+                )
             expected_hash = hashlib.sha256(client_secret.encode()).hexdigest()
-            if not secrets.compare_digest(expected_hash, client.client_secret_hash or ""):
+            if not secrets.compare_digest(
+                expected_hash, client.client_secret_hash or ""
+            ):
                 raise InvalidClientError("Invalid client_secret")
 
         # Validate scope (can only reduce scope, not expand)

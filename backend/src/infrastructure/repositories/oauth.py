@@ -69,9 +69,7 @@ class OAuthClientRepo(BaseCRUDRepo[OAuthClient, OAuthClientCreate, OAuthClientUp
             )
             return list(result.scalars().all())
 
-    async def validate_redirect_uri(
-        self, client_id: str, redirect_uri: str
-    ) -> bool:
+    async def validate_redirect_uri(self, client_id: str, redirect_uri: str) -> bool:
         """Validate that a redirect URI is registered for the client."""
         client = await self.get_by_client_id(client_id)
         if not client:
@@ -134,7 +132,7 @@ class OAuthAuthorizationCodeRepo(
                 .values(is_used=True)
             )
             await session.commit()
-            return result.rowcount > 0
+            return result.rowcount  # type: ignore[attr-defined] > 0
 
     async def get_valid_code(self, code: str) -> OAuthAuthorizationCode | None:
         """Get a valid (unused, unexpired) authorization code."""
@@ -154,12 +152,10 @@ class OAuthAuthorizationCodeRepo(
 
         async with self.db.session() as session:
             result = await session.execute(
-                sa_delete(self.model).where(
-                    self.model.expires_at < datetime.utcnow()
-                )
+                sa_delete(self.model).where(self.model.expires_at < datetime.utcnow())
             )
             await session.commit()
-            return result.rowcount
+            return result.rowcount  # type: ignore[attr-defined]
 
 
 # ============================================================================
@@ -214,12 +210,10 @@ class OAuthAccessTokenRepo(
         """Revoke an access token by JTI."""
         async with self.db.session() as session:
             result = await session.execute(
-                update(self.model)
-                .where(self.model.jti == jti)
-                .values(is_revoked=True)
+                update(self.model).where(self.model.jti == jti).values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount > 0
+            return result.rowcount  # type: ignore[attr-defined] > 0
 
     async def revoke_all_for_user(self, user_id: str, server_id: UUID) -> int:
         """Revoke all access tokens for a user on a server."""
@@ -234,7 +228,7 @@ class OAuthAccessTokenRepo(
                 .values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount
+            return result.rowcount  # type: ignore[attr-defined]
 
     async def is_token_valid(self, jti: str) -> bool:
         """Check if a token is valid (exists, not revoked, not expired)."""
@@ -311,7 +305,7 @@ class OAuthRefreshTokenRepo(
                 .values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount > 0
+            return result.rowcount  # type: ignore[attr-defined] > 0
 
     async def revoke_all_for_user(self, user_id: str, server_id: UUID) -> int:
         """Revoke all refresh tokens for a user on a server."""
@@ -326,7 +320,7 @@ class OAuthRefreshTokenRepo(
                 .values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount
+            return result.rowcount  # type: ignore[attr-defined]
 
     async def increment_rotation_counter(self, token_hash: str) -> bool:
         """Increment the rotation counter for refresh token rotation."""
@@ -337,4 +331,4 @@ class OAuthRefreshTokenRepo(
                 .values(rotation_counter=self.model.rotation_counter + 1)
             )
             await session.commit()
-            return result.rowcount > 0
+            return result.rowcount  # type: ignore[attr-defined] > 0

@@ -457,9 +457,9 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
             else None,
         )
 
-    setup_status_value = server.setup_status.value
-    wizard_step = map_setup_status_to_wizard_step(setup_status_value)
-    processing_status = get_processing_status(setup_status_value)
+    setup_status = server.setup_status
+    wizard_step = map_setup_status_to_wizard_step(setup_status)
+    processing_status = get_processing_status(setup_status)
 
     # Get processing error from meta if any
     processing_error = server.processing_error
@@ -470,7 +470,7 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
     return WizardStateResponse(
         server_id=server_id,
         customer_id=server.customer_id,
-        setup_status=setup_status_value,
+        setup_status=setup_status,
         wizard_step=wizard_step,
         processing_status=processing_status,
         processing_error=processing_error,

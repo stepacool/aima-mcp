@@ -90,7 +90,9 @@ class OAuthAuthorizationCode(CustomBase):
     )
 
     def __str__(self) -> str:
-        return f"OAuthAuthorizationCode(code={self.code[:8]}..., user_id={self.user_id})"
+        return (
+            f"OAuthAuthorizationCode(code={self.code[:8]}..., user_id={self.user_id})"
+        )
 
     @property
     def is_expired(self) -> bool:

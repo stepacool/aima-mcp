@@ -1,7 +1,7 @@
 lint:
 	uv run ruff check src --fix
 	uv run ruff format src
-	mypy src
+	uv run pyright src
 lint-test-files:
 	uv run ruff check tests --fix
 	uv run ruff format tests

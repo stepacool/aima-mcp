@@ -91,7 +91,7 @@ class BaseCRUDRepo(BaseRepo, Generic[ModelType, CreateSchemaType, UpdateSchemaTy
             result = await session.execute(query)
             return list(result.scalars().all())
 
-    async def update(self, id: int, obj_in: UpdateSchemaType) -> ModelType | None:
+    async def update(self, id: UUID, obj_in: UpdateSchemaType) -> ModelType | None:
         async with self.db.session() as session:
             result = await session.execute(
                 select(self.model).where(self.model.id == id)
@@ -108,13 +108,13 @@ class BaseCRUDRepo(BaseRepo, Generic[ModelType, CreateSchemaType, UpdateSchemaTy
             await session.refresh(db_obj)
             return db_obj
 
-    async def delete(self, id: int) -> bool:
+    async def delete(self, id: UUID) -> bool:
         async with self.db.session() as session:
             result = await session.execute(
                 delete(self.model).where(self.model.id == id)
             )
             await session.commit()
-            return result.rowcount > 0
+            return result.rowcount > 0  # type: ignore[attr-defined]
 
     async def delete_cascade(self, id: UUID) -> bool:
         """Delete an object by ID with cascade deletes.

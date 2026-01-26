@@ -20,9 +20,7 @@ def _build_www_authenticate_header(server_id: UUID | None = None) -> str:
     return f'Bearer resource_metadata="{resource_url}", scope="{scope}"'
 
 
-def _unauthorized_response(
-    detail: str, server_id: UUID | None = None
-) -> JSONResponse:
+def _unauthorized_response(detail: str, server_id: UUID | None = None) -> JSONResponse:
     """Create a 401 response with WWW-Authenticate header."""
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -68,9 +66,7 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
         # Extract token from Authorization header
         auth_header = request.headers.get("Authorization")
         if not auth_header:
-            return _unauthorized_response(
-                "Missing Authorization header", server_id
-            )
+            return _unauthorized_response("Missing Authorization header", server_id)
 
         if not auth_header.startswith("Bearer "):
             return _unauthorized_response(
@@ -88,9 +84,7 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Both methods failed
-        return _unauthorized_response(
-            "Invalid or expired token", server_id
-        )
+        return _unauthorized_response("Invalid or expired token", server_id)
 
     async def _validate_oauth_token(self, token: str, server_id: UUID) -> bool:
         """Validate an OAuth JWT access token."""

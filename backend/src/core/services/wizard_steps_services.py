@@ -3,6 +3,7 @@ import secrets
 from contextlib import AsyncExitStack
 from pathlib import Path
 import time
+from typing import Any
 from uuid import UUID
 
 import yaml
@@ -73,7 +74,7 @@ class EnvVarsResponse(BaseModel):
     env_vars: list[EnvVar]
 
 
-def load_prompt(filename: str, as_string=True):
+def load_prompt(filename: str, as_string: bool = True) -> str | dict[str, Any]:
     try:
         with open(PROMPTS_DIR / filename, "r") as file:
             if as_string:
@@ -82,7 +83,7 @@ def load_prompt(filename: str, as_string=True):
             return prompt_data
     except (FileNotFoundError, yaml.YAMLError) as e:
         print(f"Error loading prompt file {filename}: {e}")
-        return ""
+        return "" if as_string else {}
 
 
 class WizardStepsService:
@@ -105,8 +106,11 @@ class WizardStepsService:
         Sets status to tools_generating during LLM call, then tools_selection when done.
         """
         if mcp_server_id is None:
-            mcp_server = await Provider.mcp_server_repo().create()
+            # TODO: This create() call is missing required arguments (MCPServerCreate)
+            mcp_server = await Provider.mcp_server_repo().create()  # type: ignore[call-arg]
             mcp_server_id = mcp_server.id
+
+        assert mcp_server_id is not None  # For type narrowing
 
         # Set generating status
         await Provider.mcp_server_repo().update_setup_status(
@@ -117,9 +121,11 @@ class WizardStepsService:
             system_prompt = load_prompt(prompt_file)
 
             # Get server to access meta for technical details
-            server = await Provider.mcp_server_repo().get(mcp_server_id)
+            server = await Provider.mcp_server_repo().get(mcp_server_id)  # type: ignore[arg-type]
             technical_details = (
-                server.meta.get("technical_details", []) if server.meta else []
+                server.meta.get("technical_details", [])
+                if server and server.meta
+                else []
             )
 
             # Build user content with description and technical details
@@ -131,21 +137,17 @@ class WizardStepsService:
                 )
                 user_content = f"{description}\n\n---\n\nTECHNICAL DETAILS (use these to design tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen designing tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
 
+            messages: list[Any] = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ]
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": system_prompt,
-                    },
-                    {
-                        "role": "user",
-                        "content": user_content,
-                    },
-                ],
+                messages=messages,
                 response_format=ToolsResponse,
             )
-            parsed: list[Tool] = response.choices[0].message.parsed.tools
+            parsed_response = response.choices[0].message.parsed
+            parsed: list[Tool] = parsed_response.tools if parsed_response else []
 
             create_payloads = []
             for tool in parsed:
@@ -182,6 +184,8 @@ class WizardStepsService:
             mcp_server_id, MCPServerSetupStatus.tools_generating
         )
         server = await Provider.mcp_server_repo().get(mcp_server_id)
+        if server is None:
+            raise ValueError(f"Server {mcp_server_id} not found")
 
         try:
             server_tools = await Provider.mcp_tool_repo().get_tools_for_server(
@@ -210,21 +214,25 @@ class WizardStepsService:
                 )
                 technical_details_text = f"\n\n---\n\nTECHNICAL DETAILS (use these to refine tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen refining tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
 
-            user_content = f"Server description:\n{server.description}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}{technical_details_text}"
+            server_desc = server.description if server else ""
+            user_content = f"Server description:\n{server_desc}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}{technical_details_text}"
 
+            messages: list[Any] = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ]
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
+                messages=messages,
                 response_format=ToolsResponse,
             )
             parsed_response = response.choices[0].message.parsed
-            parsed: list[Tool] = parsed_response.tools
+            parsed: list[Tool] = parsed_response.tools if parsed_response else []
 
             # Extract and merge additional technical details
-            new_technical_details = parsed_response.technical_details
+            new_technical_details = (
+                parsed_response.technical_details if parsed_response else None
+            )
             if new_technical_details:
                 # Merge with existing technical details, avoiding duplicates
                 existing_technical_details = set(technical_details)
@@ -313,19 +321,19 @@ class WizardStepsService:
 
         try:
             system_prompt = load_prompt(prompt_file)
-            user_content = f"Server description:\n{server.description}\n"
+            server_desc = server.description if server else ""
+            user_content = f"Server description:\n{server_desc}\n"
+            messages: list[Any] = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ]
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": system_prompt,
-                    },
-                    {"role": "user", "content": user_content},
-                ],
+                messages=messages,
                 response_format=EnvVarsResponse,
             )
-            parsed: list[EnvVar] = response.choices[0].message.parsed.env_vars
+            parsed_response = response.choices[0].message.parsed
+            parsed: list[EnvVar] = parsed_response.env_vars if parsed_response else []
 
             create_payloads = []
             for var in parsed:
@@ -371,21 +379,24 @@ class WizardStepsService:
             )
 
             system_prompt = load_prompt(prompt_file)
+            server_desc = server.description if server else ""
             user_content = (
-                f"MCP description: \n{server.description}\n\n"
+                f"MCP description: \n{server_desc}\n\n"
                 f"Current environment variables:\n{vars_description}\n\n"
                 f"User feedback:\n{feedback}"
             )
 
+            messages: list[Any] = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ]
             response = await openai_client.chat.completions.parse(
                 model="google/gemini-3-pro-preview",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
+                messages=messages,
                 response_format=EnvVarsResponse,
             )
-            parsed: list[EnvVar] = response.choices[0].message.parsed.env_vars
+            parsed_response = response.choices[0].message.parsed
+            parsed: list[EnvVar] = parsed_response.env_vars if parsed_response else []
 
             await Provider.environment_variable_repo().delete_vars_for_server(
                 mcp_server_id
@@ -451,6 +462,8 @@ class WizardStepsService:
         Sets status to code_generating during LLM call, then code_gen when done.
         """
         server = await Provider.mcp_server_repo().get_by_uuid(mcp_server_id)
+        if server is None:
+            raise ValueError(f"Server {mcp_server_id} not found")
 
         if server.setup_status == MCPServerSetupStatus.code_generating:
             raise RuntimeError(
@@ -467,7 +480,9 @@ class WizardStepsService:
         # tier = Tier(customer.tier)
         tier = Tier.FREE
 
-        system_prompt = load_prompt("step_4_code_generation.yaml", as_string=False)
+        system_prompt_data = load_prompt("step_4_code_generation.yaml", as_string=False)
+        assert isinstance(system_prompt_data, dict)
+        system_prompt = system_prompt_data
 
         async def generate_code_for_tool(
             prompt_template: str, tool: MCPTool, enable_logging: bool = False
@@ -507,21 +522,24 @@ class WizardStepsService:
             if enable_logging:
                 logger_instance.info(f"[{tool.name}] Prompt: {prompt}")
 
-            messages = [
+            messages: list[dict[str, Any]] = [
                 {"role": "user", "content": prompt},
             ]
             code_validator = CodeValidator(tier)
 
             MAX_GENERATION_RETRIES = 5
+            code: str | None = None
 
             for _ in range(MAX_GENERATION_RETRIES):
                 response = await openai_client.chat.completions.create(
                     model="google/gemini-3-pro-preview",
-                    messages=messages,
+                    messages=messages,  # type: ignore[arg-type]
                 )
                 code = response.choices[0].message.content
                 if enable_logging:
                     logger_instance.info(f"[{tool.name}] Code: {code}")
+                if code is None:
+                    continue
                 errors = code_validator.validate(code)
                 if not errors:
                     break

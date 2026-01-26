@@ -17,16 +17,13 @@ from sqlalchemy.ext.asyncio import (
 from uuid import UUID, uuid4
 
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase, declarative_base, mapped_column, Mapped
 
 from settings import settings
 
 
 class CustomBase(AsyncAttrs, DeclarativeBase):
-    @declared_attr
-    def __tablename__(cls):
-        return cls.__name__.lower()
+    __abstract__ = True
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True), primary_key=True, default=uuid4
@@ -80,14 +77,15 @@ class Database:
     async def get_status(self) -> dict[str, str]:
         async with self.session() as session:
             db_status = await session.execute(
-                select(  # type: ignore[call-overload,unused-ignore]
-                    [
-                        literal("ready").label("status"),
-                        literal(self._db_alias).label("name"),
-                    ],
+                select(
+                    literal("ready").label("status"),
+                    literal(self._db_alias).label("name"),
                 ),
             )
-            return db_status.first()._asdict()  # type: ignore[union-attr,unused-ignore]
+            row = db_status.first()
+            if row is None:
+                return {"status": "unknown", "name": self._db_alias}
+            return row._asdict()
 
     @asynccontextmanager
     async def session(self, commit=True) -> AsyncGenerator[AsyncSession, None]:
@@ -108,16 +106,19 @@ class Database:
         await self._engine.dispose()
 
 
-def create_database(**overrides) -> Database:
-    kwargs = dict(
-        db_connect_url=str(settings.ASYNC_DB_DSN),
-        db_alias=settings.POSTGRES_DB,
-        connect_kwargs=Database.CONNECT_KWARGS,
-        connect_args={
-            "server_settings": {"application_name": "my_app"},
-        },
-        debug=False,
+def create_database(**overrides: Any) -> Database:
+    db_connect_url = overrides.get("db_connect_url", str(settings.ASYNC_DB_DSN))
+    db_alias = overrides.get("db_alias", settings.POSTGRES_DB)
+    connect_kwargs = overrides.get("connect_kwargs", Database.CONNECT_KWARGS)
+    connect_args = overrides.get(
+        "connect_args", {"server_settings": {"application_name": "my_app"}}
     )
-    kwargs.update(overrides)
+    debug = overrides.get("debug", False)
     logger.info("Connected to the database")
-    return Database(**kwargs)
+    return Database(
+        db_connect_url=db_connect_url,
+        db_alias=db_alias,
+        connect_kwargs=connect_kwargs,
+        connect_args=connect_args,
+        debug=debug,
+    )

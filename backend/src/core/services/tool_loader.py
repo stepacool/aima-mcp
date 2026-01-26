@@ -42,13 +42,13 @@ def make_mock_os(static_env_override: dict[str, str]) -> ModuleType:
 
     # Use DynamicEnvDict for layered env var lookup
     mock_environ = DynamicEnvDict({**os.environ, **static_env_override})
-    mock_os.environ = mock_environ
+    mock_os.environ = mock_environ  # type: ignore[attr-defined]
 
     # Override getenv to use our mock environ
     def mock_getenv(key: str, default: str | None = None) -> str | None:
         return mock_environ.get(key, default)
 
-    mock_os.getenv = mock_getenv
+    mock_os.getenv = mock_getenv  # type: ignore[attr-defined]
 
     # Override getenvb (bytes version) - falls back to real if key not in mock
     def mock_getenvb(key: bytes, default: bytes | None = None) -> bytes | None:
@@ -58,7 +58,7 @@ def make_mock_os(static_env_override: dict[str, str]) -> ModuleType:
             return result.encode("utf-8")
         return default
 
-    mock_os.getenvb = mock_getenvb
+    mock_os.getenvb = mock_getenvb  # type: ignore[attr-defined]
 
     return mock_os
 
@@ -68,7 +68,7 @@ class DynamicToolLoader:
 
     def __init__(self):
         self._compiled_tools: dict[str, FunctionTool] = {}
-        self._customer_namespaces: dict[str, dict[str, Any]] = {}
+        self._customer_namespaces: dict[UUID, dict[str, Any]] = {}
 
     def compile_tool(
         self,
@@ -278,6 +278,7 @@ class DynamicToolLoader:
 
         # Define guarded import
         allowed_imports = {"os", "httpx", "json", "datetime", "re", "pydantic"}
+
         def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
             if tier != Tier.FREE:
                 return real_import(name, globals, locals, fromlist, level)
