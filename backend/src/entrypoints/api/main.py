@@ -13,6 +13,7 @@ from opentelemetry.sdk.trace.sampling import (
 from entrypoints.api.routes.oauth import well_known_router
 from entrypoints.api.middleware import MCPAccessMiddleware, MCPEnvMiddleware
 from entrypoints.api.routes import api_router
+from entrypoints.api.routes.oauth import mcp_oauth_router
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
 from contextlib import AsyncExitStack
@@ -113,8 +114,8 @@ class Application:
         self.app.add_middleware(MCPEnvMiddleware)
 
         self.app.include_router(api_router)
-        # Per-MCP-server OAuth routes are mounted dynamically in shared_runtime.py
-        # when servers are activated at /mcp/{server_id}/oauth/*
+        # Per-MCP-server OAuth routes at /mcp/{server_id}/.well-known/* and /mcp/{server_id}/oauth/*
+        self.app.include_router(mcp_oauth_router, prefix="/mcp/{server_id}")
         self.app.include_router(well_known_router)
         
 
