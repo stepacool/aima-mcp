@@ -3,18 +3,14 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
 from pydantic import BaseModel
 
 from core.services.oauth_service import (
-    InvalidClientError,
-    InvalidGrantError,
     InvalidRequestError,
-    InvalidScopeError,
     OAuthError,
-    UnauthorizedClientError,
     oauth_service,
 )
 from settings import settings
@@ -24,6 +20,9 @@ well_known_router = APIRouter(tags=["oauth-metadata"])
 
 # Router for OAuth endpoints (mounted at /oauth)
 oauth_router = APIRouter(prefix="/oauth", tags=["oauth"])
+
+# Router for per-MCP-server OAuth endpoints (mounted at /mcp/{server_id})
+mcp_oauth_router = APIRouter(tags=["mcp-oauth"])
 
 
 # ============================================================================
@@ -384,4 +383,250 @@ async def revoke_token(
         client_id=client_id,
     )
     # Always return 200 OK per RFC 7009 (even if token not found)
+    return {}
+
+
+# ============================================================================
+# Per-MCP-Server OAuth Endpoints (mounted at /mcp/{server_id})
+# ============================================================================
+
+
+@mcp_oauth_router.get(
+    "/.well-known/oauth-protected-resource",
+    response_model=ProtectedResourceMetadata,
+)
+async def mcp_get_protected_resource_metadata(
+    server_id: UUID,
+) -> ProtectedResourceMetadata:
+    """
+    RFC 9728 Protected Resource Metadata for a specific MCP server.
+
+    Returns metadata about this protected resource (MCP server).
+    """
+    base_url = f"{settings.OAUTH_ISSUER}/mcp/{server_id}"
+    return ProtectedResourceMetadata(
+        resource=base_url,
+        authorization_servers=[base_url],
+        scopes_supported=settings.OAUTH_SCOPES.split(),
+        bearer_methods_supported=["header"],
+    )
+
+
+@mcp_oauth_router.get(
+    "/.well-known/oauth-authorization-server",
+    response_model=AuthorizationServerMetadata,
+)
+async def mcp_get_authorization_server_metadata(
+    server_id: UUID,
+) -> AuthorizationServerMetadata:
+    """
+    RFC 8414 Authorization Server Metadata for a specific MCP server.
+
+    Returns metadata about the authorization server.
+    """
+    base_url = f"{settings.OAUTH_ISSUER}/mcp/{server_id}"
+    return AuthorizationServerMetadata(
+        issuer=base_url,
+        authorization_endpoint=f"{settings.FRONTEND_URL}/oauth/authorize",
+        token_endpoint=f"{base_url}/oauth/token",
+        registration_endpoint=f"{base_url}/oauth/register",
+        scopes_supported=settings.OAUTH_SCOPES.split(),
+        response_types_supported=["code"],
+        grant_types_supported=["authorization_code", "refresh_token"],
+        code_challenge_methods_supported=["S256"],
+        token_endpoint_auth_methods_supported=["none", "client_secret_post"],
+    )
+
+
+@mcp_oauth_router.post("/oauth/token", response_model=TokenResponse)
+async def mcp_token_endpoint(
+    server_id: UUID,
+    grant_type: str = Form(...),
+    code: str | None = Form(None),
+    redirect_uri: str | None = Form(None),
+    client_id: str = Form(...),
+    client_secret: str | None = Form(None),
+    code_verifier: str | None = Form(None),
+    refresh_token: str | None = Form(None),
+    scope: str | None = Form(None),
+) -> TokenResponse | JSONResponse:
+    """
+    OAuth 2.1 Token Endpoint for a specific MCP server.
+
+    Supports:
+    - authorization_code grant with PKCE
+    - refresh_token grant
+    """
+    try:
+        if grant_type == "authorization_code":
+            if not code:
+                raise InvalidRequestError("code is required")
+            if not redirect_uri:
+                raise InvalidRequestError("redirect_uri is required")
+            if not code_verifier:
+                raise InvalidRequestError("code_verifier is required for PKCE")
+
+            result = await oauth_service.exchange_code_for_tokens(
+                code=code,
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                code_verifier=code_verifier,
+                client_secret=client_secret,
+            )
+
+            return TokenResponse(
+                access_token=result.access_token,
+                token_type=result.token_type,
+                expires_in=result.expires_in,
+                refresh_token=result.refresh_token,
+                scope=result.scope,
+            )
+
+        elif grant_type == "refresh_token":
+            if not refresh_token:
+                raise InvalidRequestError("refresh_token is required")
+
+            result = await oauth_service.refresh_tokens(
+                refresh_token=refresh_token,
+                client_id=client_id,
+                scope=scope,
+                client_secret=client_secret,
+            )
+
+            return TokenResponse(
+                access_token=result.access_token,
+                token_type=result.token_type,
+                expires_in=result.expires_in,
+                refresh_token=result.refresh_token,
+                scope=result.scope,
+            )
+
+        else:
+            raise InvalidRequestError(f"Unsupported grant_type: {grant_type}")
+
+    except OAuthError as e:
+        logger.warning(f"OAuth token error: {e.error} - {e.description}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": e.error, "error_description": e.description},
+        )
+
+
+@mcp_oauth_router.post("/oauth/register", response_model=ClientRegistrationResponse)
+async def mcp_register_client(
+    server_id: UUID,
+    request: ClientRegistrationRequest,
+) -> ClientRegistrationResponse | JSONResponse:
+    """
+    RFC 7591 Dynamic Client Registration for a specific MCP server.
+
+    Registers a new OAuth client for an MCP server.
+    """
+    try:
+        result = await oauth_service.register_client(
+            server_id=server_id,
+            redirect_uris=request.redirect_uris,
+            client_name=request.client_name,
+            grant_types=request.grant_types,
+            is_public=False,
+        )
+
+        return ClientRegistrationResponse(
+            client_id=result.client_id,
+            client_secret=result.client_secret,
+            client_id_issued_at=result.client_id_issued_at,
+            client_secret_expires_at=result.client_secret_expires_at,
+            redirect_uris=result.redirect_uris,
+            grant_types=result.grant_types,
+            token_endpoint_auth_method=result.token_endpoint_auth_method,
+            client_name=result.client_name,
+        )
+
+    except OAuthError as e:
+        logger.warning(f"OAuth registration error: {e.error} - {e.description}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": e.error, "error_description": e.description},
+        )
+
+
+@mcp_oauth_router.post(
+    "/oauth/authorize/create-code", response_model=CreateCodeResponse
+)
+async def mcp_create_authorization_code(
+    server_id: UUID,
+    request: CreateCodeRequest,
+) -> CreateCodeResponse | JSONResponse:
+    """
+    Internal API for frontend consent page for a specific MCP server.
+
+    Creates an authorization code after user has given consent.
+    This endpoint should be called by the frontend after the user approves.
+    """
+    try:
+        code = await oauth_service.create_authorization_code(
+            client_id=request.client_id,
+            user_id=request.user_id,
+            redirect_uri=request.redirect_uri,
+            scope=request.scope,
+            code_challenge=request.code_challenge,
+            code_challenge_method=request.code_challenge_method,
+            server_id=server_id,
+            state=request.state,
+        )
+
+        return CreateCodeResponse(code=code, state=request.state)
+
+    except OAuthError as e:
+        logger.warning(f"OAuth code creation error: {e.error} - {e.description}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": e.error, "error_description": e.description},
+        )
+
+
+@mcp_oauth_router.get("/oauth/client/{client_id}", response_model=ClientInfoResponse)
+async def mcp_get_client_info(
+    server_id: UUID,
+    client_id: str,
+) -> ClientInfoResponse:
+    """
+    Get client information for displaying on consent page for a specific MCP server.
+    """
+    from infrastructure.repositories.repo_provider import Provider
+
+    client = await Provider.oauth_client_repo().get_by_client_id(client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Verify client belongs to this server
+    if client.server_id != server_id:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    return ClientInfoResponse(
+        client_id=client.client_id,
+        client_name=client.name,
+        redirect_uris=client.redirect_uris,
+        scopes=client.scopes,
+        server_id=str(client.server_id),
+    )
+
+
+@mcp_oauth_router.post("/oauth/revoke")
+async def mcp_revoke_token(
+    server_id: UUID,
+    token: str = Form(...),
+    token_type_hint: str | None = Form(None),
+    client_id: str | None = Form(None),
+) -> dict[str, Any]:
+    """
+    RFC 7009 Token Revocation for a specific MCP server.
+
+    Revokes an access token or refresh token.
+    """
+    await oauth_service.revoke_token(
+        token=token,
+        token_type_hint=token_type_hint,
+        client_id=client_id,
+    )
     return {}

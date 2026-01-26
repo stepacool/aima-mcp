@@ -13,7 +13,7 @@ from opentelemetry.sdk.trace.sampling import (
 
 from entrypoints.api.middleware import MCPAccessMiddleware, MCPEnvMiddleware
 from entrypoints.api.routes import api_router
-from entrypoints.api.routes.oauth import oauth_router, well_known_router
+from entrypoints.api.routes.oauth import mcp_oauth_router
 from infrastructure.repositories.repo_provider import Provider
 from settings import settings
 from contextlib import AsyncExitStack
@@ -114,9 +114,8 @@ class Application:
         self.app.add_middleware(MCPEnvMiddleware)
 
         self.app.include_router(api_router)
-        # OAuth routes: well-known at root level, oauth routes at /oauth
-        self.app.include_router(well_known_router)
-        self.app.include_router(oauth_router)
+        # Per-MCP-server OAuth routes at /mcp/{server_id}/.well-known/* and /mcp/{server_id}/oauth/*
+        self.app.include_router(mcp_oauth_router, prefix="/mcp/{server_id}")
 
     def create_database_pool(self) -> None:
         Provider.get_db(

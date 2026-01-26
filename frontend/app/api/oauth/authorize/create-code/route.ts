@@ -65,9 +65,9 @@ export async function POST(req: Request): Promise<Response> {
 	}
 
 	try {
-		// Forward request to backend
+		// Forward request to backend (per-MCP-server OAuth endpoint)
 		const response = await pythonBackendClient.post(
-			"/oauth/authorize/create-code",
+			`/mcp/${body.serverId}/oauth/authorize/create-code`,
 			{
 				clientId: body.clientId,
 				userId: body.userId,
