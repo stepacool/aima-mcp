@@ -10,7 +10,7 @@ from loguru import logger
 
 from core.services.request_context import DynamicEnvDict
 from core.services.tier_service import CodeValidator, Tier
-
+from core.services.tier_service import CURATED_LIBRARIES
 
 class ToolCompilationError(Exception):
     """Raised when tool compilation fails."""
@@ -277,7 +277,7 @@ class DynamicToolLoader:
             builtins_dict.pop(bad, None)
 
         # Define guarded import
-        allowed_imports = {"os", "httpx", "json", "datetime", "re", "pydantic"}
+        allowed_imports = CURATED_LIBRARIES.keys()
 
         def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
             if tier != Tier.FREE:
