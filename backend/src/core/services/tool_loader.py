@@ -1,5 +1,5 @@
 ## Dynamic tool loader for shared MCP runtime.
-
+import importlib
 import os
 from types import ModuleType
 from typing import Any, Callable
@@ -9,8 +9,7 @@ from fastmcp.tools.tool import FunctionTool
 from loguru import logger
 
 from core.services.request_context import DynamicEnvDict
-from core.services.tier_service import CodeValidator, Tier
-from core.services.tier_service import CURATED_LIBRARIES
+from core.services.tier_service import CodeValidator, Tier, CURATED_LIBRARIES
 
 class ToolCompilationError(Exception):
     """Raised when tool compilation fails."""
@@ -61,6 +60,11 @@ def make_mock_os(static_env_override: dict[str, str]) -> ModuleType:
     mock_os.getenvb = mock_getenvb  # type: ignore[attr-defined]
 
     return mock_os
+
+
+def _import_module(path: str):
+    """Import a module from a dotted path."""
+    return importlib.import_module(path)
 
 
 class DynamicToolLoader:
@@ -185,45 +189,31 @@ class DynamicToolLoader:
             del self._customer_namespaces[customer_id]
 
     def _create_safe_namespace(self) -> dict[str, Any]:
-        """Create a namespace with allowed imports for free tier."""
-        namespace = {}
+        namespace: dict[str, Any] = {}
 
-        # Pre-import curated libraries
-        try:
-            import httpx
+        # ⚠️ You can further restrict this if needed
+        namespace["__builtins__"] = {}
 
-            namespace["httpx"] = httpx
-        except ImportError:
-            pass
+        for module_path, symbols in CURATED_LIBRARIES.items():
+            try:
+                module = _import_module(module_path)
 
-        try:
-            import json
+                # Expose the module itself (e.g. json, itertools)
+                module_name = module_path.split(".")[0]
+                namespace[module_name] = module
 
-            namespace["json"] = json
-        except ImportError:
-            pass
+                if not symbols:
+                    # symbols=None → allow full module usage
+                    continue
+                for symbol in symbols:
+                    try:
+                        namespace[symbol] = getattr(module, symbol)
+                    except AttributeError:
+                        pass
 
-        try:
-            import datetime
-
-            namespace["datetime"] = datetime
-        except ImportError:
-            pass
-
-        try:
-            import re
-
-            namespace["re"] = re
-        except ImportError:
-            pass
-
-        try:
-            from pydantic import BaseModel, Field
-
-            namespace["BaseModel"] = BaseModel
-            namespace["Field"] = Field
-        except ImportError:
-            pass
+            except ImportError:
+                # Silently ignore unavailable libraries (free tier behavior)
+                continue
 
         return namespace
 
