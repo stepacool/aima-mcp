@@ -627,6 +627,13 @@ class WizardStepsService:
         compiled_tools = []
         code_validator = CodeValidator(Tier.FREE)
 
+        # Get environment variables for this server
+        env_var_repo = Provider.environment_variable_repo()
+        env_var_records = await env_var_repo.get_vars_for_server(mcp_server_id)
+        env_vars = {
+            var.name: var.value for var in env_var_records if var.value is not None
+        }
+
         for tool in server.tools:
             if not tool.code:
                 raise ValueError(
@@ -648,6 +655,7 @@ class WizardStepsService:
                     code=tool.code,
                     customer_id=server.customer_id,
                     tier=Tier.FREE,
+                    env_vars=env_vars,
                 )
                 compiled_tools.append(compiled)
             except Exception as e:
