@@ -16,3 +16,6 @@ build/
 .env
 .env.local
 .env.*.local
+
+backend-appspec.yaml
+frontend-appspec.yaml
