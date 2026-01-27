@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	BookOpenCheckIcon,
 	BotIcon,
 	ChevronRight,
 	CoinsIcon,
@@ -10,7 +11,6 @@ import {
 	ServerIcon,
 	SettingsIcon,
 	UserSearchIcon,
-	BookOpenCheckIcon,
 	UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -66,12 +66,12 @@ export function OrganizationMenuItems(): React.JSX.Element {
 		{
 			label: "Application",
 			items: [
-				{
-					label: "Dashboard",
-					href: basePath,
-					icon: LayoutDashboardIcon,
-					exactMatch: true,
-				},
+				// {
+				// 	label: "Dashboard",
+				// 	href: basePath,
+				// 	icon: LayoutDashboardIcon,
+				// 	exactMatch: true,
+				// },
 				// {
 				// 	label: "Leads",
 				// 	href: `${basePath}/leads`,
@@ -91,11 +91,6 @@ export function OrganizationMenuItems(): React.JSX.Element {
 					label: "Create New MCP Server",
 					href: `${basePath}/new-mcp-server`,
 					icon: PlusIcon,
-				},
-				{
-					label: "Documentation",
-					href: `/docs`,
-					icon: BookOpenCheckIcon,
 				},
 			],
 			collapsible: false,
@@ -125,6 +120,16 @@ export function OrganizationMenuItems(): React.JSX.Element {
 				},
 			],
 			collapsible: false,
+		},
+		{
+			label: "Documentation",
+			items: [
+				{
+					label: "MCP Hero Docs",
+					href: `/docs`,
+					icon: BookOpenCheckIcon,
+				},
+			],
 		},
 	];
 
