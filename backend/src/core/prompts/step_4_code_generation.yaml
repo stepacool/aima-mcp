@@ -4,6 +4,7 @@ prompt: |
   Start your response with "async def".
   Do not use code formatting with "```python".
   Do not list all tools in the application description in docstring.
+  Import all used libraries inline, no top-level imports.
 
   # Available libraries:
   {AVAILABLE_LIBRARIES}
@@ -33,7 +34,6 @@ prompt: |
     {ARGUMENTS_DOCSTRING}
 
   """
-
 
 examples:
   - input: "stub"
