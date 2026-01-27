@@ -196,7 +196,7 @@ export function getDatabaseUrl(): string {
 	const isLocalhost =
 		env.POSTGRES_HOST === "localhost" || env.POSTGRES_HOST === "127.0.0.1";
 	const sslMode = isLocalhost ? "disable" : "require";
-	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}?sslmode=${sslMode}`;
+	return `postgresql://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${env.POSTGRES_HOST}:${env.POSTGRES_PORT}/${env.POSTGRES_DB}`;
 }
 
 /**
