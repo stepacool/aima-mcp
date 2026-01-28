@@ -7,6 +7,7 @@ from sqlalchemy import pool
 from alembic import context
 from sqlalchemy.ext.asyncio import AsyncEngine
 import sys
+
 sys.path.append("src")
 from infrastructure import (
     db,  # type: ignore
@@ -27,7 +28,9 @@ target_metadata = db.CustomBase.metadata
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    context.configure(
+        connection=connection, target_metadata=target_metadata, compare_type=True
+    )
     with context.begin_transaction():
         context.run_migrations()
 

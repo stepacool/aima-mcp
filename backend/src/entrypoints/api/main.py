@@ -117,7 +117,6 @@ class Application:
         # Per-MCP-server OAuth routes at /mcp/{server_id}/.well-known/* and /mcp/{server_id}/oauth/*
         self.app.include_router(mcp_oauth_router, prefix="/mcp/{server_id}")
         self.app.include_router(well_known_router)
-        
 
     def create_database_pool(self) -> None:
         Provider.get_db(

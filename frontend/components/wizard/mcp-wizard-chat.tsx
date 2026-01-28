@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
-import { AuthStep } from "@/components/wizard/auth-step";
 import { CompleteStep } from "@/components/wizard/complete-step";
 import { DeployStep } from "@/components/wizard/deploy-step";
 import { EnvVarsStep } from "@/components/wizard/env-vars-step";
@@ -173,35 +172,27 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		});
 	}, []);
 
-	// Handle env vars submitted - transition to AUTH
+	// Handle env vars submitted - skip auth and trigger code generation
 	const handleEnvVarsSubmitted = useCallback(() => {
-		refetch().then(() => {
-			setCurrentStep(WizardStep.auth);
-		});
-	}, []);
-
-	// Handle auth configured - transition to DEPLOY
-	const handleAuthConfigured = useCallback(
-		async (token: string) => {
-			if (!serverId) {
-				return;
-			}
-			setBearerToken(token);
-			generateCodeMutation.mutateAsync({ serverId }).then(() => {
-				refetch().then(() => {
-					setCurrentStep(WizardStep.deploy);
-				});
+		if (!serverId) {
+			return;
+		}
+		// Skip auth step - directly generate code and transition to deploy
+		generateCodeMutation.mutateAsync({ serverId }).then(() => {
+			refetch().then(() => {
+				setCurrentStep(WizardStep.deploy);
 			});
-		},
-		[serverId, generateCodeMutation, refetch],
-	);
+		});
+	}, [serverId, generateCodeMutation, refetch]);
 
 	// Handle server activated - transition to COMPLETE
-	const handleServerActivated = useCallback((url: string) => {
+	// Now receives bearer token from deploy step
+	const handleServerActivated = useCallback((url: string, token: string) => {
 		setServerUrl(url);
+		setBearerToken(token);
 		refetch();
 		setCurrentStep(WizardStep.complete);
-	}, []);
+	}, [refetch]);
 
 	// Handle retry after failure
 	const handleRetry = useCallback(async () => {
@@ -305,25 +296,14 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 					/>
 				)}
 
-				{currentStep === WizardStep.auth && serverId && (
-					<AuthStep
-						serverId={serverId}
-						selectedToolIds={selectedToolIds}
-						suggestedTools={suggestedTools}
-						onAuthConfigured={handleAuthConfigured}
-					/>
-				)}
-
 				{currentStep === WizardStep.deploy &&
 					serverId &&
-					bearerToken &&
 					wizardState?.tools && (
 						<DeployStep
 							serverId={serverId}
 							selectedToolIds={selectedToolIds}
 							suggestedTools={suggestedTools}
 							toolsWithCode={wizardState.tools}
-							bearerToken={bearerToken}
 							isProcessing={isProcessing}
 							processingError={hasFailed ? processingError : null}
 							deployment={wizardState.deployment ?? null}
@@ -332,11 +312,11 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						/>
 					)}
 
-				{currentStep === WizardStep.complete && serverUrl && (
+				{currentStep === WizardStep.complete && serverUrl && bearerToken && (
 					<CompleteStep
 						serverUrl={serverUrl}
 						deployment={wizardState?.deployment ?? null}
-						bearerToken={wizardState?.bearerToken ?? null}
+						bearerToken={bearerToken}
 						serverName={wizardState?.description ?? undefined}
 					/>
 				)}

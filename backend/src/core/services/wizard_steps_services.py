@@ -428,6 +428,8 @@ class WizardStepsService:
         Set setup-status accordingly here.
         Values are sent as pairs of variable ID (in db) and values, update each var.
 
+        Skips auth_selection and transitions directly to code_generating.
+
         Parameters:
         - mcp_server_id: UUID - The ID of the MCP server
         - values: dict[UUID, str] - A dictionary of variable IDs and their values
@@ -435,8 +437,9 @@ class WizardStepsService:
         for var_id, value in values.items():
             await Provider.environment_variable_repo().update_value(var_id, value)
 
+        # Skip auth_selection - auth is now generated during deployment
         await Provider.mcp_server_repo().update_setup_status(
-            mcp_server_id, MCPServerSetupStatus.auth_selection
+            mcp_server_id, MCPServerSetupStatus.code_generating
         )
 
     async def step_3_set_header_auth(
@@ -593,14 +596,14 @@ class WizardStepsService:
         mcp_server_id: UUID,
         app: FastAPI,
         stack: AsyncExitStack,
-    ) -> str:
+    ) -> tuple[str, str]:
         """
         Deploy MCP server to the shared runtime.
 
         Validates tools, compiles them, registers with shared runtime,
-        creates deployment record, and updates server status to ready.
+        creates deployment record, generates API key, and updates server status to ready.
 
-        Returns the endpoint URL.
+        Returns tuple of (endpoint_url, bearer_token).
         """
         server_repo = Provider.mcp_server_repo()
         deployment_repo = Provider.deployment_repo()
@@ -683,8 +686,13 @@ class WizardStepsService:
             # Set deployed_at
             await deployment_repo.activate(deployment.id, endpoint_url)
 
+        # Generate API key during deployment
+        token = secrets.token_urlsafe(32)
+        await Provider.static_api_key_repo().create_for_server(mcp_server_id, token)
+        await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
+
         # Update server setup status to READY
         await server_repo.update_setup_status(mcp_server_id, MCPServerSetupStatus.ready)
 
         logger.success(f"Server {mcp_server_id} deployed to shared runtime")
-        return endpoint_url
+        return endpoint_url, token

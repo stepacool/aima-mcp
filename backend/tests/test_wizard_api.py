@@ -1,7 +1,7 @@
 """Tests for wizard API endpoints."""
 
 from typing import Type
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -226,7 +226,10 @@ class TestSubmitTools:
 
     @pytest.mark.anyio
     async def test_submit_tools_exceeds_free_tier_limit(
-        self, api_client: AsyncClient, wizard_server: MCPServer, provider: Type[Provider]
+        self,
+        api_client: AsyncClient,
+        wizard_server: MCPServer,
+        provider: Type[Provider],
     ) -> None:
         """Test that exceeding free tier tool limit fails."""
         # Create 5 tools
@@ -264,9 +267,7 @@ class TestGetTools:
         provider: Type[Provider],
     ) -> None:
         """Test that get tools returns list of tools."""
-        response = await api_client.get(
-            f"/api/wizard/{server_with_tools.id}/tools"
-        )
+        response = await api_client.get(f"/api/wizard/{server_with_tools.id}/tools")
 
         assert response.status_code == 200
         data = response.json()
@@ -361,9 +362,7 @@ class TestSetAuth:
         provider: Type[Provider],
     ) -> None:
         """Test that set auth returns a bearer token."""
-        response = await api_client.post(
-            f"/api/wizard/{wizard_server.id}/auth"
-        )
+        response = await api_client.post(f"/api/wizard/{wizard_server.id}/auth")
 
         assert response.status_code == 200
         data = response.json()
@@ -387,9 +386,7 @@ class TestGetWizardState:
         provider: Type[Provider],
     ) -> None:
         """Test that get state returns aggregated wizard state."""
-        response = await api_client.get(
-            f"/api/wizard/{server_with_tools.id}/state"
-        )
+        response = await api_client.get(f"/api/wizard/{server_with_tools.id}/state")
 
         assert response.status_code == 200
         data = response.json()
@@ -413,9 +410,7 @@ class TestGetWizardState:
         await api_client.post(f"/api/wizard/{wizard_server.id}/auth")
 
         # Then get state
-        response = await api_client.get(
-            f"/api/wizard/{wizard_server.id}/state"
-        )
+        response = await api_client.get(f"/api/wizard/{wizard_server.id}/state")
 
         assert response.status_code == 200
         data = response.json()

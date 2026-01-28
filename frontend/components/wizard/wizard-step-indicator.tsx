@@ -27,11 +27,6 @@ const STEPS = [
 		description: "Configure environment variables",
 	},
 	{
-		key: WizardStep.auth,
-		label: "Authentication",
-		description: "Generate API key",
-	},
-	{
 		key: WizardStep.deploy,
 		label: "Deploy",
 		description: "Review and deploy your server",

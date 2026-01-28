@@ -1,4 +1,4 @@
-""" rename apikey table to api_keys
+"""rename apikey table to api_keys
 
 Revision ID: f2feae715014
 Revises: a3c8f5e7b123

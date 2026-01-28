@@ -191,7 +191,7 @@ export function EnvVarsStep({
 							onClick={handleContinue}
 							loading={submitEnvVarsMutation.isPending}
 						>
-							Continue to Authentication
+							Continue to Deploy
 						</Button>
 					</div>
 				</div>
@@ -301,7 +301,7 @@ export function EnvVarsStep({
 						loading={submitEnvVarsMutation.isPending}
 						disabled={!areAllEnvVarsFilled()}
 					>
-						Continue to Authentication
+						Continue to Deploy
 					</Button>
 				</div>
 			</div>

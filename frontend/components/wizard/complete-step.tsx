@@ -3,12 +3,17 @@
 import {
 	AlertCircleIcon,
 	CheckCircleIcon,
+	CheckIcon,
 	CopyIcon,
 	DownloadIcon,
 	ExternalLinkIcon,
+	EyeIcon,
+	EyeOffIcon,
+	KeyIcon,
 	PlusIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +40,7 @@ interface CompleteStepProps {
 	serverUrl: string;
 	serverName?: string;
 	deployment?: WizardDeployment | null;
-	bearerToken?: string | null;
+	bearerToken: string;
 }
 
 export function CompleteStep({
@@ -47,6 +52,8 @@ export function CompleteStep({
 	const router = useRouter();
 	const fullUrl = getFullBackendUrl(serverUrl);
 	const displayName = serverName || "MCP Server";
+	const [showToken, setShowToken] = useState(false);
+	const [tokenCopied, setTokenCopied] = useState(false);
 
 	const handleCopyUrl = async () => {
 		try {
@@ -54,6 +61,17 @@ export function CompleteStep({
 			toast.success("Server URL copied to clipboard");
 		} catch (_error) {
 			toast.error("Failed to copy URL");
+		}
+	};
+
+	const handleCopyToken = async () => {
+		try {
+			await navigator.clipboard.writeText(bearerToken);
+			setTokenCopied(true);
+			toast.success("API key copied to clipboard");
+			setTimeout(() => setTokenCopied(false), 2000);
+		} catch (_error) {
+			toast.error("Failed to copy API key");
 		}
 	};
 
@@ -184,13 +202,65 @@ export function CompleteStep({
 
 				{/* Success Message */}
 				<div>
-					<h2 className="font-semibold text-2xl">Your MCP Server is Live!</h2>
+					<h2 className="font-semibold text-2xl">Your MCP Server is Ready!</h2>
 					<p className="mt-2 text-muted-foreground">
 						{serverName
 							? `${serverName.slice(0, 50)}... has been deployed and is ready to use.`
 							: "Your server has been deployed and is ready to use."}
 					</p>
 				</div>
+
+				{/* API Key Card */}
+				<Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
+					<CardHeader className="pb-2">
+						<CardTitle className="flex items-center gap-2 text-base">
+							<KeyIcon className="size-4" />
+							API Key
+						</CardTitle>
+						<CardDescription>
+							Save this key securely. It will not be shown again.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						<div className="flex gap-2">
+							<Input
+								readOnly
+								type={showToken ? "text" : "password"}
+								value={bearerToken}
+								className="font-mono text-sm"
+							/>
+							<Button
+								variant="outline"
+								size="icon"
+								onClick={() => setShowToken(!showToken)}
+							>
+								{showToken ? (
+									<EyeOffIcon className="size-4" />
+								) : (
+									<EyeIcon className="size-4" />
+								)}
+								<span className="sr-only">
+									{showToken ? "Hide" : "Show"} API key
+								</span>
+							</Button>
+							<Button
+								variant="outline"
+								size="icon"
+								onClick={handleCopyToken}
+							>
+								{tokenCopied ? (
+									<CheckIcon className="size-4 text-green-500" />
+								) : (
+									<CopyIcon className="size-4" />
+								)}
+								<span className="sr-only">Copy API key</span>
+							</Button>
+						</div>
+						<p className="text-xs text-amber-700 dark:text-amber-400">
+							This is the only time you'll see this API key. Make sure to copy and store it securely.
+						</p>
+					</CardContent>
+				</Card>
 
 				{/* Server URL Card */}
 				<Card>

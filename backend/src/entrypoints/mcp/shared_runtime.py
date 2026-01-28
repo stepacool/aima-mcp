@@ -13,6 +13,7 @@ from fastmcp import FastMCP
 from loguru import logger
 from entrypoints.api.routes.oauth import mcp_oauth_router
 
+
 def build_mcp_server(server_id: UUID, tools: list) -> FastMCP:
     return FastMCP(
         f"MCPServer({server_id})",

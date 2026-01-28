@@ -1,4 +1,5 @@
 """Tests for shared MCP runtime - lifespan loading and dynamic registration."""
+
 from contextlib import AsyncExitStack
 from typing import Type
 
@@ -186,7 +187,9 @@ class TestDynamicMCPRegistration:
             tier=Tier.FREE,
         )
         async with AsyncExitStack() as stack:
-            mcp_server = await register_new_customer_app(app, server.id, [compiled_tool], stack)
+            mcp_server = await register_new_customer_app(
+                app, server.id, [compiled_tool], stack
+            )
 
         # Verify the server has tools via FastMCP Client
         async with Client(mcp_server) as client:
@@ -216,7 +219,9 @@ class TestDynamicMCPRegistration:
             tier=Tier.FREE,
         )
         async with AsyncExitStack() as stack:
-            mcp_server = await register_new_customer_app(app, server.id, [compiled_tool], stack)
+            mcp_server = await register_new_customer_app(
+                app, server.id, [compiled_tool], stack
+            )
 
         # Verify the tool is callable via FastMCP Client
         async with Client(mcp_server) as client:

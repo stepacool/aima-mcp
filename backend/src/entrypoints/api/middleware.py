@@ -13,14 +13,14 @@ from infrastructure.repositories.repo_provider import Provider
 from settings import settings
 
 
-def _build_www_authenticate_header(server_id: UUID | None = None) -> str:                                                                                                                                          
-      """Build WWW-Authenticate header per MCP Authorization spec."""                                                                                                                                                
-      if server_id:                                                                                                                                                                                                  
-          resource_url = f"{settings.OAUTH_ISSUER}/.well-known/oauth-protected-resource/mcp/{server_id}/mcp"                                                                                                         
-      else:                                                                                                                                                                                                          
-          resource_url = f"{settings.OAUTH_ISSUER}/.well-known/oauth-protected-resource"                                                                                                                             
-      scope = settings.OAUTH_SCOPES                                                                                                                                                                                  
-      return f'Bearer resource_metadata="{resource_url}", scope="{scope}"'
+def _build_www_authenticate_header(server_id: UUID | None = None) -> str:
+    """Build WWW-Authenticate header per MCP Authorization spec."""
+    if server_id:
+        resource_url = f"{settings.OAUTH_ISSUER}/.well-known/oauth-protected-resource/mcp/{server_id}/mcp"
+    else:
+        resource_url = f"{settings.OAUTH_ISSUER}/.well-known/oauth-protected-resource"
+    scope = settings.OAUTH_SCOPES
+    return f'Bearer resource_metadata="{resource_url}", scope="{scope}"'
 
 
 def _unauthorized_response(detail: str, server_id: UUID | None = None) -> JSONResponse:

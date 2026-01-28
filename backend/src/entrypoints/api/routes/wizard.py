@@ -109,7 +109,8 @@ def map_setup_status_to_wizard_step(setup_status: MCPServerSetupStatus) -> Wizar
         MCPServerSetupStatus.tools_selection: WizardStep.TOOLS,
         MCPServerSetupStatus.env_vars_generating: WizardStep.ENV_VARS,
         MCPServerSetupStatus.env_vars_setup: WizardStep.ENV_VARS,
-        MCPServerSetupStatus.auth_selection: WizardStep.AUTH,
+        # Auth step is skipped - auth_selection now maps to DEPLOY
+        MCPServerSetupStatus.auth_selection: WizardStep.DEPLOY,
         MCPServerSetupStatus.code_generating: WizardStep.DEPLOY,
         MCPServerSetupStatus.code_gen: WizardStep.DEPLOY,
         MCPServerSetupStatus.deployment_selection: WizardStep.DEPLOY,
@@ -508,6 +509,7 @@ async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
 
 class DeployToSharedResponse(BaseModel):
     server_url: str
+    bearer_token: str
     step: str = "complete"
 
 
@@ -544,9 +546,13 @@ async def deploy_to_shared(server_id: UUID, request: Request) -> DeployToSharedR
 
     try:
         service = get_wizard_service()
-        endpoint_url = await service.step_5_deploy_to_shared(server_id, app, stack)
+        endpoint_url, bearer_token = await service.step_5_deploy_to_shared(
+            server_id, app, stack
+        )
 
-        return DeployToSharedResponse(server_url=endpoint_url, step="complete")
+        return DeployToSharedResponse(
+            server_url=endpoint_url, bearer_token=bearer_token, step="complete"
+        )
     except ValueError as e:
         logger.error(f"Deployment failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))

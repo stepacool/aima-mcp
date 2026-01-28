@@ -78,7 +78,9 @@ def upgrade() -> None:
         sa.Column("redirect_uri", sa.String(2048), nullable=False),
         sa.Column("scope", sa.String(1024), nullable=False),
         sa.Column("code_challenge", sa.String(255), nullable=False),
-        sa.Column("code_challenge_method", sa.String(10), default="S256", nullable=False),
+        sa.Column(
+            "code_challenge_method", sa.String(10), default="S256", nullable=False
+        ),
         sa.Column(
             "server_id",
             postgresql.UUID(as_uuid=True),
@@ -107,7 +109,9 @@ def upgrade() -> None:
         sa.Column(
             "id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False
         ),
-        sa.Column("token_hash", sa.String(255), unique=True, nullable=False, index=True),
+        sa.Column(
+            "token_hash", sa.String(255), unique=True, nullable=False, index=True
+        ),
         sa.Column("jti", sa.String(255), unique=True, nullable=False, index=True),
         sa.Column(
             "client_id",
@@ -146,7 +150,9 @@ def upgrade() -> None:
         sa.Column(
             "id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False
         ),
-        sa.Column("token_hash", sa.String(255), unique=True, nullable=False, index=True),
+        sa.Column(
+            "token_hash", sa.String(255), unique=True, nullable=False, index=True
+        ),
         sa.Column(
             "client_id",
             postgresql.UUID(as_uuid=True),

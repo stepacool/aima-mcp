@@ -11,6 +11,7 @@ from loguru import logger
 from core.services.request_context import DynamicEnvDict
 from core.services.tier_service import CodeValidator, Tier, CURATED_LIBRARIES
 
+
 class ToolCompilationError(Exception):
     """Raised when tool compilation fails."""
 

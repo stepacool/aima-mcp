@@ -1,11 +1,9 @@
 "use client";
 
 import {
-	CheckIcon,
 	ChevronDownIcon,
 	ChevronUpIcon,
 	CopyIcon,
-	KeyIcon,
 	RocketIcon,
 	WrenchIcon,
 } from "lucide-react";
@@ -127,11 +125,10 @@ interface DeployStepProps {
 	selectedToolIds: string[];
 	suggestedTools: WizardTool[];
 	toolsWithCode: WizardToolWithCode[];
-	bearerToken: string;
 	isProcessing: boolean;
 	processingError: string | null;
 	deployment?: WizardDeployment | null;
-	onServerActivated: (serverUrl: string) => void;
+	onServerActivated: (serverUrl: string, bearerToken: string) => void;
 	onRetry?: () => void;
 }
 
@@ -140,7 +137,6 @@ export function DeployStep({
 	selectedToolIds,
 	suggestedTools,
 	toolsWithCode,
-	bearerToken,
 	isProcessing,
 	processingError,
 	deployment,
@@ -149,7 +145,6 @@ export function DeployStep({
 }: DeployStepProps) {
 	// All hooks must be called before any early returns
 	const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
-	const [tokenCopied, setTokenCopied] = useState(false);
 	const activateServerMutation =
 		trpc.organization.wizard.activate.useMutation();
 
@@ -225,21 +220,10 @@ export function DeployStep({
 	const handleDeploy = async () => {
 		try {
 			const result = await activateServerMutation.mutateAsync({ serverId });
-			onServerActivated(result.serverUrl);
+			onServerActivated(result.serverUrl, result.bearerToken);
 			toast.success("Server deployed successfully");
 		} catch (_error) {
 			toast.error("Failed to deploy server");
-		}
-	};
-
-	const handleCopyToken = async () => {
-		try {
-			await navigator.clipboard.writeText(bearerToken);
-			setTokenCopied(true);
-			toast.success("API key copied to clipboard");
-			setTimeout(() => setTokenCopied(false), 2000);
-		} catch (_error) {
-			toast.error("Failed to copy to clipboard");
 		}
 	};
 
@@ -256,7 +240,7 @@ export function DeployStep({
 					</div>
 
 					{/* Configuration Summary */}
-					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+					<div className="grid gap-4 md:grid-cols-2">
 						<Card>
 							<CardHeader className="pb-2">
 								<CardTitle className="flex items-center gap-2 text-base">
@@ -274,35 +258,6 @@ export function DeployStep({
 											{tool.name}
 										</span>
 									))}
-								</div>
-							</CardContent>
-						</Card>
-
-						<Card>
-							<CardHeader className="pb-2">
-								<CardTitle className="flex items-center gap-2 text-base">
-									<KeyIcon className="size-4" />
-									Authentication
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className="flex items-center justify-between">
-									<span className="text-muted-foreground">API Key</span>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={handleCopyToken}
-										className="h-7 px-2"
-									>
-										{tokenCopied ? (
-											<CheckIcon className="size-3 text-green-500" />
-										) : (
-											<CopyIcon className="size-3" />
-										)}
-										<span className="ml-1 text-xs">
-											{tokenCopied ? "Copied" : "Copy Key"}
-										</span>
-									</Button>
 								</div>
 							</CardContent>
 						</Card>

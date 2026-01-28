@@ -21,9 +21,7 @@ def upgrade() -> None:
     """Upgrade schema."""
     op.rename_table("api_keys", "static_api_keys")
     # Rename index to match new table name
-    op.execute(
-        "ALTER INDEX IF EXISTS ix_api_keys_key RENAME TO ix_static_api_keys_key"
-    )
+    op.execute("ALTER INDEX IF EXISTS ix_api_keys_key RENAME TO ix_static_api_keys_key")
     op.execute(
         "ALTER INDEX IF EXISTS ix_api_keys_server_id "
         "RENAME TO ix_static_api_keys_server_id"
@@ -33,9 +31,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.rename_table("static_api_keys", "api_keys")
-    op.execute(
-        "ALTER INDEX IF EXISTS ix_static_api_keys_key RENAME TO ix_api_keys_key"
-    )
+    op.execute("ALTER INDEX IF EXISTS ix_static_api_keys_key RENAME TO ix_api_keys_key")
     op.execute(
         "ALTER INDEX IF EXISTS ix_static_api_keys_server_id "
         "RENAME TO ix_api_keys_server_id"
