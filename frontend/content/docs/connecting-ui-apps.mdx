@@ -1,0 +1,145 @@
+---
+title: Connecting UI Applications
+description: Connect your MCP server to Claude Desktop, Cursor, and other AI apps
+---
+
+## Overview
+
+After deploying your MCP server, you can connect it to AI applications in two ways:
+
+- **One-Click Install**: Use deeplinks or CLI commands with your Bearer token
+- **OAuth 2.1**: Full OAuth flow for apps that support it (Claude Desktop)
+
+---
+
+## One-Click Integrations
+
+MCPHero provides one-click setup buttons for popular MCP clients on your server dashboard.
+
+### Claude Code (CLI)
+
+Add your MCP server to Claude Code with a single command:
+
+```bash
+claude mcp add --transport http <server-name> https://mcphero.app/mcp/{server_id} \
+  --header "Authorization: Bearer <your-api-key>"
+```
+
+### Cursor
+
+Cursor supports MCP server installation via deeplinks. Click the "Add to Cursor" button on your server dashboard, or use this format:
+
+```
+cursor://anysphere.cursor-deeplink/mcp/install?name=<server-name>&config=<base64-config>
+```
+
+The deeplink automatically configures the Authorization header with your API key.
+
+### LM Studio
+
+LM Studio uses deeplinks for MCP server installation:
+
+```
+lmstudio://add_mcp?url=https://mcphero.app/mcp/{server_id}&name=<server-name>
+```
+
+### VS Code
+
+Add to your VS Code settings JSON:
+
+```json
+{
+  "mcp.servers": {
+    "my-server": {
+      "url": "https://mcphero.app/mcp/{server_id}",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+Add to your Windsurf MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "url": "https://mcphero.app/mcp/{server_id}",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Claude Desktop with OAuth
+
+Claude Desktop supports OAuth 2.1, providing a more secure authentication flow for long-running sessions.
+
+### Why OAuth?
+
+- **More secure**: Tokens expire and refresh automatically
+- **No manual key management**: Claude handles token lifecycle
+- **Standard protocol**: Industry-standard OAuth 2.1 with PKCE
+
+### Step 1: OAuth Client Registration
+
+MCPHero automatically registers OAuth clients for your server. Your server's OAuth metadata is available at:
+
+```
+https://mcphero.app/.well-known/oauth-authorization-server/mcp/{server_id}
+```
+
+### Step 2: Add to Claude Desktop
+
+1. Open Claude Desktop
+2. Go to **Settings** → **MCP Servers**
+3. Click **Add Server**
+4. Enter your server URL: `https://mcphero.app/mcp/{server_id}`
+5. Claude will redirect to MCPHero for authorization
+6. Approve the connection
+7. Claude receives and manages tokens automatically
+
+### Manual JSON Configuration
+
+For Claude Desktop or other apps that require manual configuration:
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "url": "https://mcphero.app/mcp/{server_id}"
+    }
+  }
+}
+```
+
+When OAuth is configured, Claude Desktop will automatically initiate the OAuth flow when connecting.
+
+---
+
+## Using Bearer Token Instead
+
+If your app doesn't support OAuth, use Bearer token authentication:
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "url": "https://mcphero.app/mcp/{server_id}",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
+    }
+  }
+}
+```
+
+Find your API key on the server dashboard after deployment.

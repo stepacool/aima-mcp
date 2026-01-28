@@ -1,0 +1,46 @@
+---
+title: MCP with httpx
+description: Call MCP tools directly using raw HTTP requests
+---
+
+## Overview
+
+You can access your MCP server directly over HTTP using standard Python clients.
+This approach gives you full control and zero framework overhead.
+
+---
+
+## Authentication
+
+All requests must include your API key as a Bearer token:
+
+```
+Authorization: Bearer <your-api-key>
+```
+
+---
+
+## Calling Tools
+
+```python
+import httpx
+
+MCP_URL = "https://mcphero.app/mcp/{server_id}"
+API_KEY = "your-api-key"
+
+async def call_mcp_tool(tool_name: str, arguments: dict):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{MCP_URL}/tools/call",
+            headers={"Authorization": f"Bearer {API_KEY}"},
+            json={"name": tool_name, "arguments": arguments},
+        )
+        return response.json()
+
+result = await call_mcp_tool(
+    "get_customer_by_name",
+    {"name": "John Smith"}
+)
+
+print(result)
+```

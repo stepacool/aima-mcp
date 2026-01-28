@@ -75,23 +75,7 @@ This confirmation step prevents accidental or unused tools from being generated.
 
 ---
 
-## Step 3: Authentication Configuration
-
-Next, you configure how the MCP server authenticates incoming requests.
-
-Common options include:
-- Static API key via request header
-- OAuth2 provider
-- No authentication (internal usage)
-
-**Example configuration:**
-- Header name: `X-API-Key`
-
-The generated server will automatically enforce this authentication for every request.
-
----
-
-## Step 4: Runtime Values & Database Credentials
+## Step 3: Runtime Values & Database Credentials
 
 Because this server connects to PostgreSQL, MCPHero explicitly asks for the required runtime values.
 
@@ -109,15 +93,19 @@ These values are:
 
 ---
 
-## Step 5: Deploy the Server
+## Step 4: Deploy the Server
 
 Before any tools are exposed, the **server itself is deployed first**.
 
 Once deployment completes, MCPHero provides:
 
 - A **server URL**
-- Authentication instructions (header name + value)
+- An auto-generated **API key** for Bearer token authentication
 - Environment status and logs
+
+Your server supports two authentication methods:
+- **Bearer Token**: Use the auto-generated API key for simple integrations
+- **OAuth 2.1**: Full OAuth flow with PKCE for apps like Claude Desktop
 
 At this point, the MCP is already live
 

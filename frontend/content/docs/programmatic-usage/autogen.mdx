@@ -1,0 +1,51 @@
+---
+title: MCP with AutoGen
+description: Use MCP tools inside AutoGen multi-agent systems
+---
+
+## Overview
+
+AutoGen supports external tool execution, making it a good fit for MCP-powered
+multi-agent workflows.
+
+---
+
+## MCP Tool Wrapper
+
+```python
+from autogen import ConversableAgent
+import httpx
+
+MCP_URL = "https://mcphero.app/mcp/{server_id}"
+API_KEY = "<your-api-key>"
+
+def call_mcp_tool(name: str, arguments: dict):
+    response = httpx.post(
+        f"{MCP_URL}/tools/call",
+        headers={"Authorization": f"Bearer {API_KEY}"},
+        json={"name": name, "arguments": arguments},
+    )
+    return response.json()
+```
+
+---
+
+## Agent Setup
+
+```python
+agent = ConversableAgent(
+    name="assistant",
+    llm_config={"model": "gpt-4"},
+    tools={
+        "call_mcp_tool": call_mcp_tool
+    },
+)
+```
+
+---
+
+## When to Use AutoGen
+
+- Multi-agent collaboration
+- Tool delegation
+- Research or planning workflows

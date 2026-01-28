@@ -1,0 +1,39 @@
+---
+title: Usage Overview
+description: How to use MCP servers from code or chat UIs
+---
+
+MCP (Model Context Protocol) servers are **client-agnostic**.
+
+You can connect them to main AI services like ChatGPT, Claude, Grok and Gemini.
+
+OR use them from code with a structure like:
+
+```python
+from ai_framework import Agent, MCPServer
+
+agent = Agent(
+    mcp_servers=[
+        MCPServer(url="your-mcphero.app-server"),
+    ]
+)
+Agent.run()
+```
+
+---
+
+## How to Use MCP
+
+## Clients & Guides
+
+| Usage | Client | Guide |
+|-----|-------|------|
+| Chat UI | ChatGPT | [/docs/chat-ui/chatgpt](/docs/chat-ui/chatgpt) |
+| Chat UI | Claude | [/docs/chat-ui/claude](/docs/chat-ui/claude) |
+| Chat UI | Grok | [/docs/chat-ui/grok](/docs/chat-ui/grok) |
+| Programmatic | LangChain | [/docs/programmatic-usage/langchain](/docs/programmatic-usage/langchain) |
+| Programmatic | CrewAI | [/docs/programmatic-usage/crewai](/docs/programmatic-usage/crewai) |
+| Programmatic | OpenAI Agents | [/docs/programmatic-usage/openai-agents](/docs/programmatic-usage/openai-agents) |
+| Programmatic | PydanticAI | [/docs/programmatic-usage/pydantic-ai](/docs/programmatic-usage/pydantic-ai) |
+| Programmatic | HTTPX | [/docs/programmatic-usage/httpx](/docs/programmatic-usage/httpx) |
+| Programmatic | AutoGen | [/docs/programmatic-usage/autogen](/docs/programmatic-usage/autogen) |

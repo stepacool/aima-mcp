@@ -1,0 +1,49 @@
+---
+title: MCP with OpenAI Agents
+description: Use MCP tools with the OpenAI Responses / Agents API
+---
+
+## Overview
+
+MCP integrates cleanly with OpenAI Agents, allowing models to call your MCP tools
+as native function calls via the Responses API.
+
+---
+
+## Connecting MCP
+
+```python
+from openai import OpenAI
+from mcp import MCPClient
+
+client = OpenAI()
+
+mcp = MCPClient(
+    server_url="https://mcphero.app/mcp/{server_id}",
+    headers={
+        "Authorization": "Bearer <your-api-key>"
+    },
+)
+```
+
+---
+
+## Running an Agent
+
+```python
+response = client.responses.create(
+    model="gpt-4.1",
+    tools=mcp.tools(),
+    input="Find customer John Smith and summarize their account"
+)
+
+print(response.output_text)
+```
+
+---
+
+## Why OpenAI Agents
+
+- Native function calling
+- Best-in-class model support
+- Ideal for tool-heavy workflows

@@ -1,0 +1,50 @@
+---
+title: MCP with CrewAI
+description: Use MCP tools inside CrewAI agents
+---
+
+## Overview
+
+CrewAI agents can use MCP tools by registering them as callable functions.
+
+---
+
+## MCP Tool Definition
+
+```python
+import httpx
+
+MCP_URL = "https://mcphero.app/mcp/{server_id}"
+API_KEY = "<your-api-key>"
+
+def mcp_tool(tool_name: str, arguments: dict):
+    response = httpx.post(
+        f"{MCP_URL}/tools/call",
+        headers={"Authorization": f"Bearer {API_KEY}"},
+        json={"name": tool_name, "arguments": arguments},
+    )
+    return response.json()
+```
+
+---
+
+## Registering the Tool
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Data Assistant",
+    goal="Retrieve customer data",
+    tools=[mcp_tool],
+    verbose=True,
+)
+```
+
+---
+
+## Why CrewAI
+
+- Role-based agents
+- Task orchestration
+- Simple mental model

@@ -1,0 +1,34 @@
+---
+title: MCP with LangChain
+description: Integrate MCP tools into LangChain agents
+---
+
+## Overview
+
+MCP tools can be loaded into LangChain using a toolkit adapter,
+making them available to any LangChain agent.
+
+---
+
+## Setup
+
+```bash
+pip install langchain-mcp
+```
+
+---
+
+## Loading MCP Tools
+
+```python
+from langchain_mcp import MCPToolkit
+
+toolkit = MCPToolkit(
+    server_url="https://mcphero.app/mcp/{server_id}",
+    headers={
+        "Authorization": "Bearer <your-api-key>"
+    },
+)
+
+tools = toolkit.get_tools()
+```

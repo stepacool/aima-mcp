@@ -1,0 +1,42 @@
+---
+title: ChatGPT
+description: How to connect an MCP server to ChatGPT
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Card, Cards } from 'fumadocs-ui/components/card';
+
+## Quick Overview
+
+This is a guide on how to connect an MCP server to ChatGPT.
+Official documentation available [here](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt-beta).
+
+## Prerequisites
+
+- ChatGPT plan: Plus, Pro, Business, Enterprise or Edu
+- MCP server [Create one now](https://mcphero.app/dashboard).
+
+## Instruction
+<Steps>
+<Step>
+### Step 1: Get your MCP Server url
+You can see your MCP servers [here](https://mcphero.app/dashboard/organization/mcp-servers). Or you can [create](/docs/creating-an-mcp-server) a new server [here](https://mcphero.app/dashboard/organization/new-mcp-server).
+
+The URL should look like:
+```
+https://api.mcphero.app/mcp/849a4ffc-2012-4b74-ada6-135e3318a36e/mcp
+```
+</Step>
+<Step>
+### Step 2: Create the App
+Go to Workspace/User Settings → Apps → Create. Enter your MCPHero endpoint. Authorize and it's ready.
+</Step>
+<Step>
+### Step 3: Test It Out
+In a new chat, pick the draft from tools (+) or prompt it. Test prompts, especially writes (confirm modals pop up).
+</Step>
+
+</Steps>
+
+For more, see [full OpenAI guide](https://help.openai.com/en/articles/12584461) or [Connected Apps](https://help.openai.com/en/collections/12923329).

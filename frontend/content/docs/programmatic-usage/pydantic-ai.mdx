@@ -1,0 +1,48 @@
+---
+title: MCP with Pydantic AI
+description: Use MCP tools inside Pydantic AI agents
+---
+
+## Overview
+
+Pydantic AI has native MCP support, allowing agents to automatically discover
+and invoke tools exposed by your MCP server.
+
+---
+
+## Connecting to MCP
+
+```python
+from pydantic_ai import Agent
+from pydantic_ai.mcp import MCPServerHTTP
+
+mcp_server = MCPServerHTTP(
+    url="https://mcphero.app/mcp/{server_id}",
+    headers={
+        "Authorization": "Bearer <your-api-key>"
+    },
+)
+```
+
+---
+
+## Creating an Agent
+
+```python
+agent = Agent(
+    model="openai:gpt-4",
+    mcp_servers=[mcp_server],
+)
+```
+
+---
+
+## Running the Agent
+
+```python
+result = await agent.run(
+    "Find customer John Smith and return their last order"
+)
+
+print(result.data)
+```

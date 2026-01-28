@@ -5,6 +5,13 @@
 		"[House][Homepage](/)",
 		"---Introduction---",
 		"index",
-		"creating-an-mcp-server"
+		"creating-an-mcp-server",
+		"---Usage---",
+        "usage-overview.mdx",
+        "chatgpt.mdx",
+        "claude.mdx",
+        "grok.mdx",
+        "gemini.mdx",
+		"programmatic-usage"
 	]
 }
