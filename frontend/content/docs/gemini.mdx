@@ -1,7 +1,299 @@
 ---
 title: Gemini
-description: How to connect MCP Servers to ChatGPT
+description: How to connect MCP Servers to Google Gemini
 ---
 
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Card, Cards } from 'fumadocs-ui/components/card';
 
-## Overview
+## Quick Overview
+
+Connect your MCPHero servers to Google's Gemini ecosystem, including Gemini in Google AI Studio, the Gemini API, and Gemini integrations in IDEs. Google has adopted MCP as part of their agentic AI strategy.
+
+<Callout type="info">
+MCP support in Gemini is available through Google AI Studio and the Gemini API. Consumer Gemini (gemini.google.com) does not yet support custom MCP servers.
+</Callout>
+
+## Prerequisites
+
+- A Google Cloud account with Gemini API access
+- Google AI Studio access: [aistudio.google.com](https://aistudio.google.com)
+- An MCPHero server. [Create one now](https://mcphero.app/dashboard).
+
+---
+
+## Option 1: Google AI Studio
+
+Google AI Studio provides a web-based interface for testing Gemini with MCP tools.
+
+<Steps>
+<Step>
+### Step 1: Get Your MCP Server Credentials
+
+From your [MCPHero dashboard](https://mcphero.app/dashboard/organization/mcp-servers):
+- Copy your server URL: `https://api.mcphero.app/mcp/{server_id}/mcp`
+- Generate an API key from the **Keys** tab
+</Step>
+
+<Step>
+### Step 2: Open Google AI Studio
+
+Navigate to [aistudio.google.com](https://aistudio.google.com) and sign in with your Google account.
+</Step>
+
+<Step>
+### Step 3: Configure MCP Server
+
+1. Create a new prompt or open an existing one
+2. Click **Tools** in the right sidebar
+3. Select **Add MCP Server**
+4. Enter your server details:
+   - **URL**: `https://api.mcphero.app/mcp/{server_id}/mcp`
+   - **Authentication**: Bearer Token
+   - **Token**: Your MCPHero API key
+5. Click **Connect**
+</Step>
+
+<Step>
+### Step 4: Verify Tools
+
+Once connected, your MCP tools appear in the Tools panel. You can:
+- View available tools and their schemas
+- Test individual tools
+- Use tools in conversations with Gemini
+</Step>
+</Steps>
+
+---
+
+## Option 2: Gemini API (Programmatic)
+
+Use MCP tools with the Gemini API for building applications.
+
+<Steps>
+<Step>
+### Step 1: Install Dependencies
+
+```bash
+pip install google-genai mcp
+```
+</Step>
+
+<Step>
+### Step 2: Configure the MCP Client
+
+Create an MCP client that connects to your MCPHero server:
+
+```python
+import asyncio
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+async def create_mcp_client():
+    async with streamablehttp_client(
+        url="https://api.mcphero.app/mcp/{server_id}/mcp",
+        headers={"Authorization": "Bearer YOUR_API_KEY"}
+    ) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            # List available tools
+            tools = await session.list_tools()
+            return tools
+```
+</Step>
+
+<Step>
+### Step 3: Convert Tools to Gemini Format
+
+Transform MCP tool definitions to Gemini's function calling format:
+
+```python
+from google import genai
+from google.genai import types
+
+def mcp_to_gemini_tools(mcp_tools):
+    """Convert MCP tools to Gemini function declarations."""
+    declarations = []
+    for tool in mcp_tools.tools:
+        declarations.append(types.FunctionDeclaration(
+            name=tool.name,
+            description=tool.description,
+            parameters=tool.inputSchema
+        ))
+    return declarations
+
+# Create Gemini client with tools
+client = genai.Client(api_key="YOUR_GEMINI_API_KEY")
+
+gemini_tools = mcp_to_gemini_tools(mcp_tools)
+config = types.GenerateContentConfig(
+    tools=[types.Tool(function_declarations=gemini_tools)]
+)
+```
+</Step>
+
+<Step>
+### Step 4: Handle Tool Calls
+
+Process Gemini's function calls through MCP:
+
+```python
+async def handle_gemini_response(response, mcp_session):
+    """Execute MCP tools when Gemini requests them."""
+    for candidate in response.candidates:
+        for part in candidate.content.parts:
+            if part.function_call:
+                # Execute via MCP
+                result = await mcp_session.call_tool(
+                    part.function_call.name,
+                    arguments=dict(part.function_call.args)
+                )
+                return result
+    return None
+```
+</Step>
+</Steps>
+
+---
+
+## Option 3: Gemini in IDX
+
+Google's Project IDX (cloud IDE) supports MCP servers for AI-assisted development.
+
+<Steps>
+<Step>
+### Step 1: Open IDX Settings
+
+In your IDX workspace:
+1. Click the gear icon to open Settings
+2. Navigate to **AI** → **MCP Servers**
+</Step>
+
+<Step>
+### Step 2: Add MCPHero Server
+
+Add a new server configuration:
+
+```json
+{
+  "servers": {
+    "mcphero": {
+      "url": "https://api.mcphero.app/mcp/{server_id}/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+</Step>
+
+<Step>
+### Step 3: Use in Gemini Chat
+
+Open Gemini in IDX and your MCP tools will be available for code generation, file operations, and other tasks defined in your server.
+</Step>
+</Steps>
+
+---
+
+## Full Example: Gemini + MCP Chat
+
+A complete example integrating Gemini with MCPHero:
+
+```python
+import asyncio
+from google import genai
+from google.genai import types
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+MCPHERO_URL = "https://api.mcphero.app/mcp/{server_id}/mcp"
+MCPHERO_KEY = "YOUR_API_KEY"
+GEMINI_KEY = "YOUR_GEMINI_API_KEY"
+
+async def chat_with_tools(user_message: str):
+    # Connect to MCP server
+    async with streamablehttp_client(
+        url=MCPHERO_URL,
+        headers={"Authorization": f"Bearer {MCPHERO_KEY}"}
+    ) as (read, write, _):
+        async with ClientSession(read, write) as mcp:
+            await mcp.initialize()
+            mcp_tools = await mcp.list_tools()
+
+            # Convert to Gemini format
+            declarations = [
+                types.FunctionDeclaration(
+                    name=t.name,
+                    description=t.description,
+                    parameters=t.inputSchema
+                )
+                for t in mcp_tools.tools
+            ]
+
+            # Create Gemini client
+            client = genai.Client(api_key=GEMINI_KEY)
+
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=user_message,
+                config=types.GenerateContentConfig(
+                    tools=[types.Tool(function_declarations=declarations)]
+                )
+            )
+
+            # Handle function calls
+            for part in response.candidates[0].content.parts:
+                if part.function_call:
+                    result = await mcp.call_tool(
+                        part.function_call.name,
+                        arguments=dict(part.function_call.args)
+                    )
+                    print(f"Tool result: {result}")
+
+            return response.text
+
+# Run
+asyncio.run(chat_with_tools("What tools do you have available?"))
+```
+
+---
+
+## Troubleshooting
+
+### Connection Refused
+
+1. Verify your API key is valid and not expired
+2. Check the server URL includes the full path ending in `/mcp`
+3. Ensure your MCPHero server is deployed and running
+
+### Tools Not Appearing in AI Studio
+
+1. Refresh the Tools panel
+2. Check the browser console for connection errors
+3. Verify the MCP server responds to the `tools/list` method
+
+### Function Call Errors
+
+1. Ensure tool input schemas match expected parameters
+2. Check Gemini's function calling documentation for schema requirements
+3. Validate JSON schema compatibility between MCP and Gemini formats
+
+### Rate Limiting
+
+Both Gemini API and MCPHero have rate limits:
+- Use exponential backoff for retries
+- Cache tool definitions to reduce MCP calls
+- Consider batching operations
+
+---
+
+## Further Reading
+
+- [Google AI Studio Documentation](https://ai.google.dev/gemini-api/docs/ai-studio-quickstart)
+- [Gemini Function Calling Guide](https://ai.google.dev/gemini-api/docs/function-calling)
+- [Google's MCP Announcement](https://developers.googleblog.com/en/gemini-2-5-pro-io-and-2-0-flash-thinking-now-available-plus-new-pricing/)
+- [MCP Protocol Specification](https://modelcontextprotocol.io)

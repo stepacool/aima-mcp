@@ -1,7 +1,243 @@
 ---
 title: Claude
-description: How to connect MCP Servers to ChatGPT
+description: How to connect MCP Servers to Claude Desktop and Claude Code
 ---
 
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Card, Cards } from 'fumadocs-ui/components/card';
 
-## Overview
+## Quick Overview
+
+Connect your MCPHero servers to Claude Desktop (GUI) or Claude Code (CLI). Claude has native MCP support with OAuth 2.1 authentication, making it one of the most seamless MCP integrations available.
+
+<Callout type="info">
+Claude Desktop supports full OAuth 2.1 authentication with PKCE, eliminating manual token management. Claude Code uses Bearer token authentication via command-line flags.
+</Callout>
+
+## Prerequisites
+
+- **Claude Desktop**: Download from [claude.ai/download](https://claude.ai/download) (macOS, Windows, Linux)
+- **Claude Code**: Install via `npm install -g @anthropic-ai/claude-code`
+- An MCPHero server. [Create one now](https://mcphero.app/dashboard).
+
+---
+
+## Option 1: Claude Desktop (OAuth)
+
+Claude Desktop supports OAuth 2.1 with PKCE, providing the most secure and user-friendly authentication experience.
+
+<Steps>
+<Step>
+### Step 1: Get Your MCP Server URL
+
+Navigate to your [MCPHero dashboard](https://mcphero.app/dashboard/organization/mcp-servers) and copy your server URL:
+
+```
+https://api.mcphero.app/mcp/{server_id}/mcp
+```
+</Step>
+
+<Step>
+### Step 2: Open Claude Desktop Settings
+
+1. Launch Claude Desktop
+2. Click on the **Claude** menu (macOS) or **File** menu (Windows)
+3. Select **Settings** → **Developer** → **Edit Config**
+
+This opens your `claude_desktop_config.json` file.
+</Step>
+
+<Step>
+### Step 3: Add Your MCP Server
+
+Add your MCPHero server to the configuration:
+
+```json
+{
+  "mcpServers": {
+    "mcphero": {
+      "url": "https://api.mcphero.app/mcp/{server_id}/mcp"
+    }
+  }
+}
+```
+
+Save the file and restart Claude Desktop.
+</Step>
+
+<Step>
+### Step 4: Authorize the Connection
+
+When Claude Desktop connects to your server:
+1. A browser window opens to MCPHero's authorization page
+2. Review the requested permissions
+3. Click **Authorize**
+4. Claude automatically receives and manages tokens
+
+You'll see your MCP tools appear in Claude's tool picker (hammer icon).
+</Step>
+</Steps>
+
+---
+
+## Option 2: Claude Code (CLI)
+
+Claude Code is Anthropic's official CLI for agentic coding. It supports MCP servers via the `mcp add` command.
+
+<Steps>
+<Step>
+### Step 1: Get Your Server URL and API Key
+
+From your [MCPHero dashboard](https://mcphero.app/dashboard/organization/mcp-servers):
+- Copy the server URL
+- Generate or copy your API key from the **Keys** tab
+</Step>
+
+<Step>
+### Step 2: Add the MCP Server
+
+Run this command, replacing the placeholders:
+
+```bash
+claude mcp add --transport http mcphero \
+  https://api.mcphero.app/mcp/{server_id}/mcp \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+The server name (`mcphero` in this example) can be any identifier you choose.
+</Step>
+
+<Step>
+### Step 3: Verify the Connection
+
+List your configured MCP servers:
+
+```bash
+claude mcp list
+```
+
+You should see your MCPHero server listed with its available tools.
+</Step>
+
+<Step>
+### Step 4: Use Your Tools
+
+Start a Claude Code session and your MCP tools will be available:
+
+```bash
+claude
+```
+
+Claude Code will automatically discover and use your MCP tools when relevant to your task.
+</Step>
+</Steps>
+
+---
+
+## Option 3: Manual JSON Configuration
+
+For Claude Desktop users who prefer direct config file editing.
+
+### Config File Locations
+
+| Platform | Path |
+|----------|------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Linux | `~/.config/Claude/claude_desktop_config.json` |
+
+### With OAuth (Recommended)
+
+```json
+{
+  "mcpServers": {
+    "mcphero": {
+      "url": "https://api.mcphero.app/mcp/{server_id}/mcp"
+    }
+  }
+}
+```
+
+### With Bearer Token
+
+Use this if OAuth isn't working or you prefer explicit token management:
+
+```json
+{
+  "mcpServers": {
+    "mcphero": {
+      "url": "https://api.mcphero.app/mcp/{server_id}/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### Server Not Appearing
+
+1. **Restart Claude Desktop** after config changes
+2. **Check JSON syntax** - use a validator like [jsonlint.com](https://jsonlint.com)
+3. **Verify the URL** - ensure it ends with `/mcp`
+
+### OAuth Flow Fails
+
+1. Check your browser isn't blocking popups
+2. Clear Claude Desktop's auth cache: **Settings** → **Developer** → **Clear OAuth Tokens**
+3. Try Bearer token auth as a fallback
+
+### Tools Not Loading
+
+1. Open Claude Desktop's developer console: **View** → **Developer** → **Developer Tools**
+2. Check the Console tab for MCP connection errors
+3. Verify your server is running on the MCPHero dashboard
+
+### Claude Code Connection Issues
+
+```bash
+# View detailed logs
+claude mcp list --verbose
+
+# Remove and re-add the server
+claude mcp remove mcphero
+claude mcp add --transport http mcphero https://api.mcphero.app/mcp/{server_id}/mcp \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+---
+
+## Advanced: Multiple Servers
+
+You can connect multiple MCP servers:
+
+```json
+{
+  "mcpServers": {
+    "production": {
+      "url": "https://api.mcphero.app/mcp/{prod_server_id}/mcp"
+    },
+    "staging": {
+      "url": "https://api.mcphero.app/mcp/{staging_server_id}/mcp"
+    },
+    "local-dev": {
+      "url": "http://localhost:3001/mcp"
+    }
+  }
+}
+```
+
+Claude will aggregate tools from all connected servers.
+
+---
+
+## Further Reading
+
+- [Claude Desktop Documentation](https://docs.anthropic.com/en/docs/agents-and-tools/claude-for-desktop/claude-for-desktop-mcp)
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview)
+- [MCP Protocol Specification](https://modelcontextprotocol.io)

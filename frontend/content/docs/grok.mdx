@@ -1,7 +1,392 @@
 ---
 title: Grok
-description: How to connect MCP Servers to ChatGPT
+description: How to connect MCP Servers to xAI's Grok
 ---
 
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Card, Cards } from 'fumadocs-ui/components/card';
 
-## Overview
+## Quick Overview
+
+Connect your MCPHero servers to xAI's Grok models. Grok supports MCP through the xAI API, enabling tool use and function calling with external services.
+
+<Callout type="info">
+Grok MCP integration is available through the xAI API. The Grok web interface (grok.x.ai) and X.com integration do not currently support custom MCP servers.
+</Callout>
+
+## Prerequisites
+
+- An xAI API key from [console.x.ai](https://console.x.ai)
+- Python 3.10+ or Node.js 18+
+- An MCPHero server. [Create one now](https://mcphero.app/dashboard).
+
+---
+
+## Option 1: xAI API with Python
+
+Integrate MCPHero tools with Grok using the xAI Python SDK.
+
+<Steps>
+<Step>
+### Step 1: Install Dependencies
+
+```bash
+pip install openai mcp
+```
+
+The xAI API is compatible with OpenAI's SDK.
+</Step>
+
+<Step>
+### Step 2: Get Your Credentials
+
+From your [MCPHero dashboard](https://mcphero.app/dashboard/organization/mcp-servers):
+- Server URL: `https://api.mcphero.app/mcp/{server_id}/mcp`
+- API key from the **Keys** tab
+
+From [console.x.ai](https://console.x.ai):
+- Your xAI API key
+</Step>
+
+<Step>
+### Step 3: Connect to MCP and Fetch Tools
+
+```python
+import asyncio
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+async def get_mcp_tools():
+    async with streamablehttp_client(
+        url="https://api.mcphero.app/mcp/{server_id}/mcp",
+        headers={"Authorization": "Bearer YOUR_MCPHERO_KEY"}
+    ) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            return tools, session
+```
+</Step>
+
+<Step>
+### Step 4: Convert to OpenAI Tool Format
+
+Transform MCP tools to the format Grok expects:
+
+```python
+def mcp_to_openai_tools(mcp_tools):
+    """Convert MCP tool definitions to OpenAI/xAI format."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.inputSchema
+            }
+        }
+        for tool in mcp_tools.tools
+    ]
+```
+</Step>
+
+<Step>
+### Step 5: Make Grok API Calls
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="YOUR_XAI_API_KEY",
+    base_url="https://api.x.ai/v1"
+)
+
+openai_tools = mcp_to_openai_tools(mcp_tools)
+
+response = client.chat.completions.create(
+    model="grok-2-latest",
+    messages=[
+        {"role": "user", "content": "What tools do you have?"}
+    ],
+    tools=openai_tools,
+    tool_choice="auto"
+)
+```
+</Step>
+
+<Step>
+### Step 6: Handle Tool Calls
+
+Execute MCP tools when Grok requests them:
+
+```python
+async def process_tool_calls(response, mcp_session):
+    """Process Grok's tool calls through MCP."""
+    message = response.choices[0].message
+
+    if message.tool_calls:
+        results = []
+        for tool_call in message.tool_calls:
+            result = await mcp_session.call_tool(
+                tool_call.function.name,
+                arguments=json.loads(tool_call.function.arguments)
+            )
+            results.append({
+                "tool_call_id": tool_call.id,
+                "role": "tool",
+                "content": str(result.content)
+            })
+        return results
+    return None
+```
+</Step>
+</Steps>
+
+---
+
+## Option 2: Node.js Integration
+
+Use Grok with MCP in Node.js/TypeScript applications.
+
+<Steps>
+<Step>
+### Step 1: Install Dependencies
+
+```bash
+npm install openai @modelcontextprotocol/sdk
+```
+</Step>
+
+<Step>
+### Step 2: Create MCP Client
+
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+
+async function createMCPClient() {
+  const transport = new StreamableHTTPClientTransport(
+    new URL("https://api.mcphero.app/mcp/{server_id}/mcp"),
+    {
+      requestInit: {
+        headers: {
+          Authorization: "Bearer YOUR_MCPHERO_KEY",
+        },
+      },
+    }
+  );
+
+  const client = new Client(
+    { name: "grok-mcp-client", version: "1.0.0" },
+    { capabilities: {} }
+  );
+
+  await client.connect(transport);
+  return client;
+}
+```
+</Step>
+
+<Step>
+### Step 3: Integrate with Grok
+
+```typescript
+import OpenAI from "openai";
+
+const xai = new OpenAI({
+  apiKey: "YOUR_XAI_API_KEY",
+  baseURL: "https://api.x.ai/v1",
+});
+
+async function chatWithGrok(message: string, mcpClient: Client) {
+  // Get MCP tools
+  const { tools } = await mcpClient.listTools();
+
+  // Convert to OpenAI format
+  const openaiTools = tools.map((tool) => ({
+    type: "function" as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    },
+  }));
+
+  // Call Grok
+  const response = await xai.chat.completions.create({
+    model: "grok-2-latest",
+    messages: [{ role: "user", content: message }],
+    tools: openaiTools,
+    tool_choice: "auto",
+  });
+
+  // Handle tool calls
+  const toolCalls = response.choices[0].message.tool_calls;
+  if (toolCalls) {
+    for (const call of toolCalls) {
+      const result = await mcpClient.callTool({
+        name: call.function.name,
+        arguments: JSON.parse(call.function.arguments),
+      });
+      console.log(`Tool ${call.function.name}:`, result);
+    }
+  }
+
+  return response;
+}
+```
+</Step>
+</Steps>
+
+---
+
+## Full Example: Grok Agent with MCP
+
+A complete agentic loop that allows Grok to use MCP tools iteratively:
+
+```python
+import asyncio
+import json
+from openai import OpenAI
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+XAI_KEY = "YOUR_XAI_API_KEY"
+MCPHERO_URL = "https://api.mcphero.app/mcp/{server_id}/mcp"
+MCPHERO_KEY = "YOUR_MCPHERO_KEY"
+
+async def grok_agent(user_message: str, max_iterations: int = 5):
+    """Run a Grok agent with MCP tool access."""
+
+    xai = OpenAI(api_key=XAI_KEY, base_url="https://api.x.ai/v1")
+
+    async with streamablehttp_client(
+        url=MCPHERO_URL,
+        headers={"Authorization": f"Bearer {MCPHERO_KEY}"}
+    ) as (read, write, _):
+        async with ClientSession(read, write) as mcp:
+            await mcp.initialize()
+            mcp_tools = await mcp.list_tools()
+
+            # Convert tools
+            openai_tools = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.inputSchema
+                    }
+                }
+                for t in mcp_tools.tools
+            ]
+
+            messages = [{"role": "user", "content": user_message}]
+
+            for i in range(max_iterations):
+                response = xai.chat.completions.create(
+                    model="grok-2-latest",
+                    messages=messages,
+                    tools=openai_tools,
+                    tool_choice="auto"
+                )
+
+                assistant_message = response.choices[0].message
+                messages.append(assistant_message.model_dump())
+
+                # Check for tool calls
+                if not assistant_message.tool_calls:
+                    # No more tool calls, return final response
+                    return assistant_message.content
+
+                # Execute each tool call
+                for tool_call in assistant_message.tool_calls:
+                    print(f"Calling: {tool_call.function.name}")
+
+                    result = await mcp.call_tool(
+                        tool_call.function.name,
+                        arguments=json.loads(tool_call.function.arguments)
+                    )
+
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": json.dumps(result.content)
+                    })
+
+            return "Max iterations reached"
+
+# Run the agent
+result = asyncio.run(grok_agent("Look up information using the available tools"))
+print(result)
+```
+
+---
+
+## Model Selection
+
+Grok offers several models with tool support:
+
+| Model | Best For | Context |
+|-------|----------|---------|
+| `grok-2-latest` | General tasks, reasoning | 128K |
+| `grok-2-vision-latest` | Image understanding + tools | 32K |
+| `grok-3-latest` | Complex reasoning, coding | 128K |
+
+All models support function calling / tool use.
+
+---
+
+## Troubleshooting
+
+### Authentication Errors
+
+1. Verify your xAI API key at [console.x.ai](https://console.x.ai)
+2. Check your MCPHero API key hasn't expired
+3. Ensure the `Authorization` header format is correct: `Bearer <token>`
+
+### Tool Schema Errors
+
+Grok uses OpenAI-compatible tool schemas. Common issues:
+
+```python
+# ❌ Wrong: MCP uses inputSchema
+{"parameters": tool.parameters}
+
+# ✅ Correct: Use inputSchema from MCP
+{"parameters": tool.inputSchema}
+```
+
+### Tool Calls Not Executing
+
+1. Ensure `tool_choice` is set to `"auto"` or `"required"`
+2. Check tool descriptions are clear enough for the model
+3. Verify your prompt encourages tool use when appropriate
+
+### Rate Limits
+
+The xAI API has rate limits based on your plan:
+- Implement exponential backoff
+- Cache tool definitions between requests
+- Batch operations when possible
+
+### Empty Tool Responses
+
+```python
+# Always stringify tool results for the API
+messages.append({
+    "role": "tool",
+    "tool_call_id": tool_call.id,
+    "content": json.dumps(result.content)  # Must be string
+})
+```
+
+---
+
+## Further Reading
+
+- [xAI API Documentation](https://docs.x.ai/docs)
+- [xAI Console](https://console.x.ai)
+- [OpenAI SDK Compatibility](https://docs.x.ai/docs/overview#openai-sdk-compatibility)
+- [MCP Protocol Specification](https://modelcontextprotocol.io)
