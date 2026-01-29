@@ -12,15 +12,15 @@ export const billingConfig = {
 		// Basic tier - no Stripe price needed
 		basic: {
 			id: "basic",
-			name: "Basic",
-			description: "Get started with shared MCP infrastructure",
+			name: "Free",
+			description: "Experiment with MCP servers on shared infrastructure",
 			isFree: true,
 			features: [
-				"Shared MCP servers",
-				"Static environment variables",
-				"Up to 3 MCP connections",
+				"Shared runtime environment",
+				"Up to 3 tools per server",
+				"1 MCP server",
+				"Limited usage",
 				"Community support",
-				"Basic analytics",
 			],
 			limits: {
 				maxMembers: 3,
@@ -31,17 +31,16 @@ export const billingConfig = {
 		pro: {
 			id: "pro",
 			name: "Pro",
-			description: "Dedicated infrastructure for production MCPs",
+			description: "Dedicated deployment for production-grade MCP servers",
 			recommended: true,
 			features: [
-				"Dedicated MCP servers",
-				"Ephemeral variables (send-per-request)",
-				"Social authentication (OAuth)",
-				"Unlimited MCP connections",
+				"Dedicated VPS deployment",
+				"Unlimited tools per server",
+				"Up to 5 MCP servers",
+				"Ephemeral environment variables",
+				"OAuth authentication",
 				"Priority support",
 				"Advanced analytics",
-				"Custom integrations",
-				"API access",
 			],
 			limits: {
 				maxMembers: -1, // unlimited
@@ -54,11 +53,9 @@ export const billingConfig = {
 					type: "recurring",
 					interval: "month",
 					intervalCount: 1,
-					amount: 2900, // $29.00 in cents
+					amount: 5900, // $59.00 in cents
 					currency: "usd",
-					// Per-seat pricing: charge per team member
-					seatBased: true,
-					// Trial period
+					seatBased: false,
 					trialDays: 14,
 				},
 				{
@@ -67,9 +64,9 @@ export const billingConfig = {
 					type: "recurring",
 					interval: "year",
 					intervalCount: 1,
-					amount: 27800, // $278.00 in cents (~20% savings)
+					amount: 56600, // $566.00 in cents (~20% savings)
 					currency: "usd",
-					seatBased: true,
+					seatBased: false,
 					trialDays: 14,
 				},
 			],
@@ -78,17 +75,17 @@ export const billingConfig = {
 		enterprise: {
 			id: "enterprise",
 			name: "Enterprise",
-			description: "Custom MCP solutions for large organizations",
+			description: "Custom MCP infrastructure for teams with compliance needs",
 			isEnterprise: true,
 			features: [
 				"Everything in Pro",
-				"Dedicated account manager",
+				"Unlimited MCP servers",
 				"Custom SLA",
-				"Unlimited storage",
+				"HIPAA compliance",
 				"SSO / SAML authentication",
+				"Full API access",
 				"Audit logs",
-				"On-premise deployment options",
-				"Custom contracts",
+				"Dedicated account manager",
 			],
 			limits: {
 				maxMembers: -1,

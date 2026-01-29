@@ -2,14 +2,14 @@ import { getBaseUrl } from "@/lib/utils";
 
 export const appConfig = {
 	appName: "MCP Hero",
-	description: `MCP Hero's description`,
+	description: `Build, deploy, and manage MCP servers with AI. Connect any database, API, or tool to ChatGPT, Claude, Cursor, and more — no code required.`,
 	baseUrl: getBaseUrl(),
 	// Contact information (displayed on contact page)
 	contact: {
 		enabled: true,
-		email: "hello@yourdomain.com",
-		phone: "(123) 456-7890",
-		address: "123 Main St, San Francisco, CA",
+		email: "stepan@aimalabs.io",
+		phone: "",
+		address: "Jalan Ampang 1, Kuala-Lumpur, Malaysia",
 	},
 	// Site sections - enable/disable major parts of the site
 	site: {

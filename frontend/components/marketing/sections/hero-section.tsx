@@ -65,7 +65,7 @@ export function HeroSection() {
 					<div className="flex flex-col items-start gap-6">
 						{/* Announcement Pill */}
 						<Link
-							href="#"
+							href="/docs"
 							className={cn(
 								"relative inline-flex max-w-full items-center gap-3 overflow-hidden rounded-md px-3.5 py-2 text-sm",
 								"bg-marketing-card",
@@ -79,7 +79,7 @@ export function HeroSection() {
 							</span>
 							<span className="hidden h-3 w-px bg-marketing-card-hover sm:block" />
 							<span className="inline-flex shrink-0 items-center gap-1 font-semibold">
-								Learn more
+								Read the docs
 								<ChevronRightIcon className="size-3" />
 							</span>
 						</Link>
@@ -93,15 +93,13 @@ export function HeroSection() {
 								"lg:text-[5rem] lg:leading-20",
 							)}
 						>
-							Ship MCPs fast. Deploy in one click.
+							Ship MCPs in minutes. Give your AI superpowers.
 						</h1>
 
 						{/* Description */}
 						<div className="flex max-w-3xl flex-col gap-4 text-lg leading-8 text-marketing-fg-muted">
 							<p>
-								"Loveable for MCP servers" lets you use natural language to
-								build MCP servers. All things considered from oAuth to ephemeral
-								state and advanced monitoring.
+								Connect your AI to anything. APIs, databases, excel sheets or websites - connect to anything in minutes.
 							</p>
 						</div>
 

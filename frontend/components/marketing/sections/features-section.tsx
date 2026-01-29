@@ -72,12 +72,12 @@ function FeatureCard({ feature }: { feature: Feature }) {
 export function FeaturesSection() {
 	const features: Feature[] = [
 		{
-			title: "Text to MCP Builder",
+			title: "Connect Your AI to Anything",
 			description:
-				"Use Natural language to describe what you want your AI to use. Be it SQL database, excel sheet or API, our AI will build you a zero config MCP server with one-click deployment.",
-			link: "#",
-			linkText: "Explore Auth",
-			color: "blue",
+				"Databases, REST APIs, spreadsheets, internal tools — if it has an interface, MCPHero can connect it to your AI. Works with ChatGPT, Claude, Cursor, Grok, and any MCP-compatible client.",
+			link: "/docs/usage-overview",
+			linkText: "See integrations",
+			color: "green",
 			placement: "bottom-right",
 			image: {
 				light: "/marketing/placeholders/placeholder-light.webp",
@@ -87,13 +87,28 @@ export function FeaturesSection() {
 			},
 		},
 		{
-			title: "AI & Credits System",
+			title: "Code First. Built for developers.",
 			description:
-				"Launch AI-powered features instantly. Includes a complete chatbot UI, OpenAI integration and a flexible credit consumption system.",
-			link: "#",
-			linkText: "Review Stack",
-			color: "purple",
+				"Use in AI libraries in minutes. Focus on building your AI, forget about the glue.",
+			link: "/docs/usage-overview",
+			linkText: "See code examples",
+			color: "blue",
 			placement: "bottom-left",
+			image: {
+				light: "/marketing/placeholders/placeholder-light.webp",
+				dark: "/marketing/placeholders/placeholder-dark.webp",
+				width: 600,
+				height: 400,
+			},
+		},
+		{
+			title: "Infrastructure Managed for You",
+			description:
+				"Stop wrestling with deployment scripts and server configs. MCPHero handles hosting, scaling, OAuth, and monitoring so you can focus on building AI workflows, not glue code.",
+			link: "/docs",
+			linkText: "Learn more",
+			color: "purple",
+			placement: "bottom-right",
 			image: {
 				light: "/marketing/placeholders/placeholder-light.webp",
 				dark: "/marketing/placeholders/placeholder-dark.webp",
@@ -119,20 +134,20 @@ export function FeaturesSection() {
 								"sm:text-5xl sm:leading-14",
 							)}
 						>
-							Build, scale, and manage your MCP servers with zero configuration
+							Everything you need to go from idea to live MCP server
 						</h2>
 					</div>
 					<div className="text-base leading-7 text-marketing-fg-muted text-pretty">
 						<p>
-							Everything you need to build a production-ready application. From
-							authentication to payments, it's all included.
+							MCPHero handles the entire lifecycle — from building your MCP
+							server with AI, to deploying and managing it in production.
 						</p>
 					</div>
 				</div>
 
 				{/* Features Grid */}
 				<div>
-					<div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+					<div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
 						{features.map((feature) => (
 							<FeatureCard key={feature.title} feature={feature} />
 						))}

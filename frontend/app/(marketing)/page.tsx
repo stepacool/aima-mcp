@@ -68,38 +68,44 @@ export default async function HomePage() {
 		headline: "Questions & Answers",
 		items: [
 			{
-				question: "How do I get started?",
+				question: "What is MCPHero?",
 				answer:
-					"Getting started is simple. Sign up for a free account, complete the onboarding process and you'll be ready to go in minutes.",
+					"MCPHero is a managed platform for building, deploying, and managing MCP (Model Context Protocol) servers. You describe what you need in natural language, and our AI builds a production-ready MCP server that connects your databases, APIs, and tools to AI clients like ChatGPT, Claude, Cursor, and more.",
 			},
 			{
-				question: "Is there a free trial available?",
+				question: "What is an MCP server?",
 				answer:
-					"Yes, we offer a 14-day free trial with full access to all features. No credit card required to start.",
+					"MCP (Model Context Protocol) is an open standard that lets AI assistants call external tools and access data sources. An MCP server exposes a set of tools — like querying a database or calling an API — that any MCP-compatible AI client can use. MCPHero makes building and hosting these servers effortless.",
 			},
 			{
-				question: "Can I cancel my subscription anytime?",
+				question: "Do I need to write code?",
 				answer:
-					"Absolutely. You can cancel your subscription at any time from your account settings. No questions asked.",
+					"No. MCPHero uses a guided AI chat flow to understand what you need, propose the right tools, collect any required credentials, and deploy your server automatically. You can go from idea to a live MCP server without writing a single line of code.",
 			},
 			{
-				question: "Do you offer customer support?",
+				question: "What AI clients can I connect my MCP server to?",
 				answer:
-					"We provide dedicated customer support via email and live chat. Our team typically responds within a few hours.",
+					"MCPHero servers work with any MCP-compatible client, including ChatGPT, Claude, Grok, Gemini, and Cursor. You can also connect programmatically using frameworks like LangChain, PydanticAI, CrewAI, and OpenAI Agents SDK.",
 			},
 			{
-				question: "Is my data secure?",
+				question: "What's the difference between the Free and Pro plans?",
 				answer:
-					"Security is our top priority. We use industry-standard encryption and follow best practices to keep your data safe.",
+					"The Free plan runs on shared infrastructure with up to 3 tools and limited usage — great for experimenting. The Pro plan gives you dedicated VPS deployment, unlimited tools, up to 5 MCP servers, ephemeral environment variables, and OAuth authentication for production use cases.",
+			},
+            {
+				question: "What are 'ephemeral environment variables'?",
+				answer:
+					"It's variables you send per-request, meaning we don't store them on our server and you can dynamically send API keys or other credentials in each request for the tool.",
 			},
 		],
 	};
 
 	const ctaContent = {
-		headline: "Ready to get started?",
-		description: "Create your free account today. No credit card required.",
+		headline: "Ready to connect your AI to everything?",
+		description:
+			"Build your first MCP server in minutes. Free plan available — no credit card required.",
 		primaryCta: {
-			text: "Start Free Trial",
+			text: "Get Started Free",
 			href: "/auth/sign-up",
 		},
 		secondaryCta: {
@@ -117,7 +123,7 @@ export default async function HomePage() {
 			<StatsSection />
 			<FaqSection content={faqContent} />
 			<PricingSection showEnterprisePlans={true} />
-			<LatestArticlesSection posts={posts} />
+			{/*<LatestArticlesSection posts={posts} />*/}
 			<CtaSection content={ctaContent} />
 		</>
 	);

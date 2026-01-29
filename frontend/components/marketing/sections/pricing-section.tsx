@@ -229,7 +229,7 @@ interface PricingSectionProps {
 }
 
 export function PricingSection({
-	headline = "Pricing to fit your business needs.",
+	headline = "Simple pricing. Start free, scale as you grow.",
 	onSelectPlan,
 	loadingPriceId,
 	currentPlanId,

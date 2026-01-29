@@ -13,17 +13,17 @@ export function StatsSection() {
 		{
 			value: "1-Click",
 			label: "Deployment",
-			description: "Deploy MCP servers instantly",
+			description: "Go from conversation to a live MCP server instantly",
 		},
 		{
 			value: "Zero",
-			label: "Configuration",
-			description: "Natural language to production",
+			label: "Config Required",
+			description: "AI handles code, dependencies, and deployment for you",
 		},
 		{
-			value: "100+",
-			label: "Integrations",
-			description: "Databases, APIs, spreadsheets",
+			value: "Any",
+			label: "AI Client",
+			description: "ChatGPT, Claude, Cursor, Grok, Gemini, and more",
 		},
 	];
 
@@ -48,8 +48,9 @@ export function StatsSection() {
 					</div>
 					<div className="text-base leading-7 text-marketing-fg-muted text-pretty">
 						<p>
-							The fastest way to build, deploy, and manage MCP servers for your
-							AI assistants.
+							MCPHero is the fastest way to give your AI real-world
+							capabilities. Build, deploy, and manage MCP servers without
+							touching infrastructure.
 						</p>
 					</div>
 				</div>
