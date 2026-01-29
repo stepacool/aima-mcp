@@ -5,41 +5,65 @@ description: Use MCP tools inside AutoGen multi-agent systems
 
 ## Overview
 
-AutoGen supports external tool execution, making it a good fit for MCP-powered
-multi-agent workflows.
+AutoGen supports MCP through `McpWorkbench`, which connects to MCP servers
+and exposes their tools to `AssistantAgent` instances.
 
 ---
 
-## MCP Tool Wrapper
+## Setup
 
-```python
-from autogen import ConversableAgent
-import httpx
-
-MCP_URL = "https://mcphero.app/mcp/{server_id}"
-API_KEY = "<your-api-key>"
-
-def call_mcp_tool(name: str, arguments: dict):
-    response = httpx.post(
-        f"{MCP_URL}/tools/call",
-        headers={"Authorization": f"Bearer {API_KEY}"},
-        json={"name": name, "arguments": arguments},
-    )
-    return response.json()
+```bash
+pip install autogen-agentchat autogen-ext[openai,mcp]
 ```
 
 ---
 
-## Agent Setup
+## Step 1: Create the MCP Workbench
 
 ```python
-agent = ConversableAgent(
-    name="assistant",
-    llm_config={"model": "gpt-4"},
-    tools={
-        "call_mcp_tool": call_mcp_tool
-    },
+from autogen_ext.tools.mcp import McpWorkbench, SseServerParams
+
+server_params = SseServerParams(
+    url="https://api.mcphero.app/mcp/{server_id}/sse",
+    headers={"Authorization": "Bearer <your-api-key>"},
 )
+```
+
+---
+
+## Step 2: Create an Agent
+
+```python
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+model_client = OpenAIChatCompletionClient(model="gpt-4o")
+```
+
+---
+
+## Step 3: Run the Agent
+
+```python
+import asyncio
+
+async def main():
+    async with McpWorkbench(server_params) as workbench:
+        agent = AssistantAgent(
+            name="assistant",
+            model_client=model_client,
+            workbench=workbench,
+            reflect_on_tool_use=True,
+        )
+
+        result = await agent.run(
+            task="Find customer John Smith and return their last order"
+        )
+        print(result.messages[-1].content)
+
+    await model_client.close()
+
+asyncio.run(main())
 ```
 
 ---
@@ -47,5 +71,5 @@ agent = ConversableAgent(
 ## When to Use AutoGen
 
 - Multi-agent collaboration
-- Tool delegation
+- Tool delegation across agent teams
 - Research or planning workflows

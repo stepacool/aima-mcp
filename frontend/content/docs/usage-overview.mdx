@@ -10,14 +10,15 @@ You can connect them to main AI services like ChatGPT, Claude, Grok and Gemini.
 OR use them from code with a structure like:
 
 ```python
-from ai_framework import Agent, MCPServer
+from pydantic_ai import Agent
+from pydantic_ai.mcp import MCPServerStreamableHTTP
 
-agent = Agent(
-    mcp_servers=[
-        MCPServer(url="your-mcphero.app-server"),
-    ]
-)
-Agent.run()
+server = MCPServerStreamableHTTP("https://api.mcphero.app/mcp/{server_id}/mcp")
+
+agent = Agent("openai:gpt-4o", toolsets=[server])
+
+result = await agent.run("your instruction")
+print(result.output)
 ```
 
 ---

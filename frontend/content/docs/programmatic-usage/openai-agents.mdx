@@ -1,49 +1,76 @@
 ---
 title: MCP with OpenAI Agents
-description: Use MCP tools with the OpenAI Responses / Agents API
+description: Use MCP tools with the OpenAI Agents SDK
 ---
 
 ## Overview
 
-MCP integrates cleanly with OpenAI Agents, allowing models to call your MCP tools
-as native function calls via the Responses API.
+The OpenAI Agents SDK has built-in MCP support via `MCPServerStreamableHttp`,
+allowing agents to discover and call your MCP tools natively.
 
 ---
 
-## Connecting MCP
+## Setup
+
+```bash
+pip install openai-agents mcp
+```
+
+---
+
+## Step 1: Create the MCP Server Abstraction
 
 ```python
-from openai import OpenAI
-from mcp import MCPClient
+from agents.mcp import MCPServerStreamableHttp
 
-client = OpenAI()
-
-mcp = MCPClient(
-    server_url="https://mcphero.app/mcp/{server_id}",
-    headers={
-        "Authorization": "Bearer <your-api-key>"
+server = MCPServerStreamableHttp(
+    name="mcphero",
+    params={
+        "url": "https://api.mcphero.app/mcp/{server_id}/mcp",
+        "headers": {"Authorization": "Bearer <your-api-key>"},
     },
+    cache_tools_list=True,
 )
 ```
 
 ---
 
-## Running an Agent
+## Step 2: Create an Agent
 
 ```python
-response = client.responses.create(
-    model="gpt-4.1",
-    tools=mcp.tools(),
-    input="Find customer John Smith and summarize their account"
-)
+from agents import Agent
 
-print(response.output_text)
+agent = Agent(
+    name="Assistant",
+    instructions="Use the MCP tools to answer questions.",
+    mcp_servers=[server],
+)
+```
+
+---
+
+## Step 3: Run the Agent
+
+```python
+import asyncio
+from agents import Runner
+
+async def main():
+    async with server:
+        result = await Runner.run(
+            agent,
+            "Find customer John Smith and summarize their account",
+        )
+        print(result.final_output)
+
+asyncio.run(main())
 ```
 
 ---
 
 ## Why OpenAI Agents
 
-- Native function calling
-- Best-in-class model support
-- Ideal for tool-heavy workflows
+- Native MCP integration
+- Built-in tool calling and agent loop
+- Supports handoffs between multiple agents
+- Built-in tracing for debugging

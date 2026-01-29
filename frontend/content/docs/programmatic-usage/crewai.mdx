@@ -5,46 +5,71 @@ description: Use MCP tools inside CrewAI agents
 
 ## Overview
 
-CrewAI agents can use MCP tools by registering them as callable functions.
+CrewAI has native MCP support via `MCPServerAdapter` from `crewai-tools`,
+which converts MCP tools into CrewAI tools automatically.
 
 ---
 
-## MCP Tool Definition
+## Setup
 
-```python
-import httpx
-
-MCP_URL = "https://mcphero.app/mcp/{server_id}"
-API_KEY = "<your-api-key>"
-
-def mcp_tool(tool_name: str, arguments: dict):
-    response = httpx.post(
-        f"{MCP_URL}/tools/call",
-        headers={"Authorization": f"Bearer {API_KEY}"},
-        json={"name": tool_name, "arguments": arguments},
-    )
-    return response.json()
+```bash
+pip install crewai crewai-tools mcp
 ```
 
 ---
 
-## Registering the Tool
+## Step 1: Create the MCP Server Adapter
 
 ```python
-from crewai import Agent
+from crewai_tools import MCPServerAdapter
 
-agent = Agent(
-    role="Data Assistant",
-    goal="Retrieve customer data",
-    tools=[mcp_tool],
-    verbose=True,
-)
+server_params = {
+    "url": "https://api.mcphero.app/mcp/{server_id}/mcp",
+    "transport": "streamable-http",
+    "headers": {
+        "Authorization": "Bearer <your-api-key>"
+    },
+}
+```
+
+---
+
+## Step 2: Create Agent, Task, and Crew
+
+```python
+from crewai import Agent, Task, Crew
+
+with MCPServerAdapter(server_params) as mcp_tools:
+    agent = Agent(
+        role="Data Assistant",
+        goal="Retrieve and summarize customer data",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=mcp_tools,
+        verbose=True,
+    )
+
+    task = Task(
+        description="Find customer John Smith and return their last order",
+        expected_output="A summary of the customer's most recent order",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+```
+
+---
+
+## Step 3: Run the Crew
+
+```python
+    result = crew.kickoff()
+    print(result)
 ```
 
 ---
 
 ## Why CrewAI
 
-- Role-based agents
-- Task orchestration
-- Simple mental model
+- Role-based agents with goals and backstories
+- Task orchestration with expected outputs
+- Automatic MCP tool lifecycle management via `with` block

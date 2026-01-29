@@ -5,30 +5,58 @@ description: Integrate MCP tools into LangChain agents
 
 ## Overview
 
-MCP tools can be loaded into LangChain using a toolkit adapter,
-making them available to any LangChain agent.
+MCP tools can be loaded into LangChain using the `langchain-mcp-adapters` package,
+making them available to any LangChain agent via `MultiServerMCPClient`.
 
 ---
 
 ## Setup
 
 ```bash
-pip install langchain-mcp
+pip install langchain-mcp-adapters langchain-openai
 ```
 
 ---
 
-## Loading MCP Tools
+## Step 1: Create the MCP Client
 
 ```python
-from langchain_mcp import MCPToolkit
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
-toolkit = MCPToolkit(
-    server_url="https://mcphero.app/mcp/{server_id}",
-    headers={
-        "Authorization": "Bearer <your-api-key>"
-    },
-)
+client = MultiServerMCPClient({
+    "mcphero": {
+        "transport": "http",
+        "url": "https://api.mcphero.app/mcp/{server_id}/mcp",
+        "headers": {
+            "Authorization": "Bearer <your-api-key>"
+        },
+    }
+})
+```
 
-tools = toolkit.get_tools()
+---
+
+## Step 2: Create an Agent
+
+```python
+from langchain.agents import create_agent
+
+tools = await client.get_tools()
+
+agent = create_agent("openai:gpt-4o", tools)
+```
+
+---
+
+## Step 3: Run the Agent
+
+```python
+result = agent.invoke({
+    "messages": [
+        {"role": "user", "content": "Find customer John Smith and return their last order"}
+    ]
+})
+
+for message in result["messages"]:
+    message.pretty_print()
 ```
