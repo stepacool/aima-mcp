@@ -142,7 +142,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model="google/gemini-3-pro-preview",
+                model=settings.DEFAULT_MODEL,
                 messages=messages,
                 response_format=ToolsResponse,
             )
@@ -222,7 +222,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model="google/gemini-3-pro-preview",
+                model=settings.DEFAULT_MODEL,
                 messages=messages,
                 response_format=ToolsResponse,
             )
@@ -328,7 +328,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model="google/gemini-3-pro-preview",
+                model=settings.DEFAULT_MODEL,
                 messages=messages,
                 response_format=EnvVarsResponse,
             )
@@ -391,7 +391,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model="google/gemini-3-pro-preview",
+                model=settings.DEFAULT_MODEL,
                 messages=messages,
                 response_format=EnvVarsResponse,
             )
@@ -437,10 +437,6 @@ class WizardStepsService:
         for var_id, value in values.items():
             await Provider.environment_variable_repo().update_value(var_id, value)
 
-        # Skip auth_selection - auth is now generated during deployment
-        await Provider.mcp_server_repo().update_setup_status(
-            mcp_server_id, MCPServerSetupStatus.code_generating
-        )
 
     async def step_3_set_header_auth(
         self,
@@ -535,7 +531,7 @@ class WizardStepsService:
 
             for _ in range(MAX_GENERATION_RETRIES):
                 response = await openai_client.chat.completions.create(
-                    model="google/gemini-3-pro-preview",
+                    model=settings.DEFAULT_MODEL,
                     messages=messages,  # type: ignore[arg-type]
                 )
                 code = response.choices[0].message.content
