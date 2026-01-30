@@ -12,6 +12,7 @@ export {
 	type ServerListItem,
 	type ServerListResponse,
 	type ServerTool,
+	updateServer,
 } from "./servers";
 export {
 	type ActivateServerResponse,

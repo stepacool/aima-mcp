@@ -4,6 +4,7 @@ import {
 	deleteServer,
 	getServerDetails,
 	listServers,
+	updateServer,
 } from "@/lib/python-backend";
 import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
 
@@ -49,6 +50,27 @@ export const organizationServerRouter = createTRPCRouter({
 			logger.info(
 				{ serverId: input.serverId, organizationId: ctx.organization.id },
 				"Deleted MCP server",
+			);
+
+			return result;
+		}),
+
+	// Update a server
+	update: protectedOrganizationProcedure
+		.input(
+			z.object({
+				serverId: z.string().uuid(),
+				name: z.string().optional(),
+				description: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { serverId, ...data } = input;
+			const result = await updateServer(serverId, data);
+
+			logger.info(
+				{ serverId, organizationId: ctx.organization.id },
+				"Updated MCP server",
 			);
 
 			return result;

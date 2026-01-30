@@ -51,6 +51,12 @@ class DeployResponse(BaseModel):
     message: str
 
 
+class UpdateServerRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+
 @router.get("/tier-info/{tier}", response_model=TierInfoResponse)
 async def get_tier_info(tier: str) -> TierInfoResponse:
     """Get information about tier limits."""
@@ -390,3 +396,34 @@ async def delete_server(server_id: UUID, request: Request) -> dict:
         "status": "deleted",
         "server_id": str(server_id),
     }
+
+
+@router.patch("/{server_id}", response_model=ServerListItem)
+async def update_server(
+    server_id: UUID, request: UpdateServerRequest
+) -> ServerListItem:
+    """
+    Update an MCP server's name and description.
+    """
+    server_repo = Provider.mcp_server_repo()
+    
+    # Check if server exists
+    server = await server_repo.get_by_uuid(server_id)
+    if not server:
+        raise HTTPException(404, f"Server {server_id} not found")
+        
+    # Prepare update data
+    from infrastructure.repositories.mcp_server import MCPServerUpdate
+
+    update_data = MCPServerUpdate()
+    if request.name is not None:
+        update_data.name = request.name
+    if request.description is not None:
+        update_data.description = request.description
+        
+    await server_repo.update(server_id, update_data)
+    
+    # Fetch full details to return consistent response format
+    server_details = await server_repo.get_with_full_details(server_id)
+    
+    return ServerListItem.model_validate(server_details)
