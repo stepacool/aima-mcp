@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { EditMcpServerModal } from "@/components/organization/edit-mcp-server-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -344,6 +345,19 @@ export function McpServerDetail({
 							)}
 						</div>
 						<div className="flex gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() =>
+									NiceModal.show(EditMcpServerModal, {
+										serverId: server.id,
+										initialName: server.name,
+										initialDescription: server.description || undefined,
+									})
+								}
+							>
+								Edit
+							</Button>
 							<Badge
 								variant="outline"
 								className={cn("border-none", status.color)}
