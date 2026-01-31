@@ -129,22 +129,21 @@ export async function deleteServer(
  * Updates an MCP server's name and description.
  */
 export async function updateServer(
-    serverId: string,
-    data: { name?: string; description?: string },
+	serverId: string,
+	data: { name?: string; description?: string },
 ): Promise<ServerDetails> {
-    try {
-        const response = await pythonBackendClient.patch<ServerDetails>(
-            `/api/servers/${serverId}`,
-            data,
-        );
-        logger.info({ serverId }, "Updated server details in Python backend");
-        return response.data;
-    } catch (error) {
-        logger.error(
-            { serverId, error },
-            "Failed to update server details in Python backend",
-        );
-        throw error;
-    }
+	try {
+		const response = await pythonBackendClient.patch<ServerDetails>(
+			`/api/servers/${serverId}`,
+			data,
+		);
+		logger.info({ serverId }, "Updated server details in Python backend");
+		return response.data;
+	} catch (error) {
+		logger.error(
+			{ serverId, error },
+			"Failed to update server details in Python backend",
+		);
+		throw error;
+	}
 }
-

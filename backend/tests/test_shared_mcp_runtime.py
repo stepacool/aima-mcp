@@ -16,7 +16,7 @@ from entrypoints.mcp.shared_runtime import (
 from fixtures import make_simple_tool_code
 from infrastructure.models import Customer
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
-from infrastructure.models.mcp_server import MCPServer, MCPTool
+from infrastructure.models.mcp_server import MCPServer, MCPServerSetupStatus, MCPTool
 from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.mcp_server import MCPServerCreate, MCPToolCreate
 from infrastructure.repositories.repo_provider import Provider
@@ -58,7 +58,9 @@ async def active_server_with_tool(
             endpoint_url=f"/mcp/{server.id}",
         )
     )
-    await Provider.mcp_server_repo().update_status(server.id, MCPServerStatus.READY)
+    await Provider.mcp_server_repo().update_setup_status(
+        server.id, MCPServerSetupStatus.ready
+    )
     server = await Provider.mcp_server_repo().get_by_uuid(server.id)
     return server, tool
 
@@ -274,8 +276,8 @@ class TestMultipleServers:
                     endpoint_url=f"/mcp/{server.id}",
                 )
             )
-            await Provider.mcp_server_repo().update_status(
-                server.id, MCPServerStatus.READY
+            await Provider.mcp_server_repo().update_setup_status(
+                server.id, MCPServerSetupStatus.ready
             )
             servers.append(server)
 
@@ -330,8 +332,8 @@ class TestMultipleServers:
                 endpoint_url=f"/mcp/{deployed_server.id}",
             )
         )
-        await Provider.mcp_server_repo().update_status(
-            deployed_server.id, MCPServerStatus.READY
+        await Provider.mcp_server_repo().update_setup_status(
+            deployed_server.id, MCPServerSetupStatus.ready
         )
 
         draft_server = await Provider.mcp_server_repo().create(
@@ -370,8 +372,8 @@ class TestMultipleServers:
                 is_validated=True,
             )
         )
-        await Provider.mcp_server_repo().update_status(
-            ready_server.id, MCPServerStatus.READY
+        await Provider.mcp_server_repo().update_setup_status(
+            ready_server.id, MCPServerSetupStatus.ready
         )
         # ready_server is READY but has no deployment
 

@@ -187,12 +187,15 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 
 	// Handle server activated - transition to COMPLETE
 	// Now receives bearer token from deploy step
-	const handleServerActivated = useCallback((url: string, token: string) => {
-		setServerUrl(url);
-		setBearerToken(token);
-		refetch();
-		setCurrentStep(WizardStep.complete);
-	}, [refetch]);
+	const handleServerActivated = useCallback(
+		(url: string, token: string) => {
+			setServerUrl(url);
+			setBearerToken(token);
+			refetch();
+			setCurrentStep(WizardStep.complete);
+		},
+		[refetch],
+	);
 
 	// Handle retry after failure
 	const handleRetry = useCallback(async () => {

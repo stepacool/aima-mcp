@@ -99,7 +99,8 @@ export function HeroSection() {
 						{/* Description */}
 						<div className="flex max-w-3xl flex-col gap-4 text-lg leading-8 text-marketing-fg-muted">
 							<p>
-								Connect your AI to anything. APIs, databases, excel sheets or websites - connect to anything in minutes.
+								Connect your AI to anything. APIs, databases, excel sheets or
+								websites - connect to anything in minutes.
 							</p>
 						</div>
 

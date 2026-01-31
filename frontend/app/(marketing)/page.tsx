@@ -92,7 +92,7 @@ export default async function HomePage() {
 				answer:
 					"The Free plan runs on shared infrastructure with up to 3 tools and limited usage — great for experimenting. The Pro plan gives you dedicated VPS deployment, unlimited tools, up to 5 MCP servers, ephemeral environment variables, and OAuth authentication for production use cases.",
 			},
-            {
+			{
 				question: "What are 'ephemeral environment variables'?",
 				answer:
 					"It's variables you send per-request, meaning we don't store them on our server and you can dynamically send API keys or other credentials in each request for the tool.",

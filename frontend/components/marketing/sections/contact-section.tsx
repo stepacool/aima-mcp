@@ -135,11 +135,12 @@ export function ContactSection() {
 									Contact details
 								</h3>
 								<div className="flex flex-col gap-3">
-									{appConfig.contact.phone && (<ContactInfo
-										icon={PhoneIcon}
-										text={appConfig.contact.phone}
-									/>
-                                    )}
+									{appConfig.contact.phone && (
+										<ContactInfo
+											icon={PhoneIcon}
+											text={appConfig.contact.phone}
+										/>
+									)}
 									{appConfig.contact.email && (
 										<ContactInfo
 											icon={MailIcon}

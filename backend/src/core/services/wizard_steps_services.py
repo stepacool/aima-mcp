@@ -437,7 +437,6 @@ class WizardStepsService:
         for var_id, value in values.items():
             await Provider.environment_variable_repo().update_value(var_id, value)
 
-
     async def step_3_set_header_auth(
         self,
         mcp_server_id: UUID,

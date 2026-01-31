@@ -56,7 +56,6 @@ class UpdateServerRequest(BaseModel):
     description: Optional[str] = None
 
 
-
 @router.get("/tier-info/{tier}", response_model=TierInfoResponse)
 async def get_tier_info(tier: str) -> TierInfoResponse:
     """Get information about tier limits."""
@@ -406,12 +405,12 @@ async def update_server(
     Update an MCP server's name and description.
     """
     server_repo = Provider.mcp_server_repo()
-    
+
     # Check if server exists
     server = await server_repo.get_by_uuid(server_id)
     if not server:
         raise HTTPException(404, f"Server {server_id} not found")
-        
+
     # Prepare update data
     from infrastructure.repositories.mcp_server import MCPServerUpdate
 
@@ -420,10 +419,10 @@ async def update_server(
         update_data.name = request.name
     if request.description is not None:
         update_data.description = request.description
-        
+
     await server_repo.update(server_id, update_data)
-    
+
     # Fetch full details to return consistent response format
     server_details = await server_repo.get_with_full_details(server_id)
-    
+
     return ServerListItem.model_validate(server_details)
