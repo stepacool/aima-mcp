@@ -82,9 +82,10 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
 
         token = auth_header[7:]  # Strip "Bearer " prefix
 
-        # Try OAuth JWT validation first
-        if await self._validate_oauth_token(token, server_id):
-            return await call_next(request)
+        # Try OAuth JWT validation first (only if token looks like a JWT)
+        if token.count(".") == 2:
+            if await self._validate_oauth_token(token, server_id):
+                return await call_next(request)
 
         # Fall back to static API key validation
         if await self._validate_static_api_key(token, server_id):
