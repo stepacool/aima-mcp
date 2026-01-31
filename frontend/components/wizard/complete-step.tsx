@@ -191,7 +191,8 @@ export function CompleteStep({
 	};
 
 	return (
-		<div className="flex h-full flex-col items-center justify-center p-6">
+		<div className="h-full overflow-y-auto">
+			<div className="flex min-h-full flex-col items-center justify-center p-6">
 			<div className="w-full max-w-lg space-y-6 text-center">
 				{/* Success Icon */}
 				<div className="flex justify-center">
@@ -390,6 +391,7 @@ export function CompleteStep({
 						Create Another Server
 					</Button>
 				</div>
+			</div>
 			</div>
 		</div>
 	);
