@@ -1,0 +1,175 @@
+---
+title: How to use MCP servers with openai python library
+description: Use MCP tools with the native OpenAI Python client using the mcphero adapter
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Overview
+
+The native [OpenAI Python library](https://github.com/openai/openai-python) doesn't have built-in MCP support — it only supports tool/function calling.
+The [`mcphero`](https://pypi.org/project/mcphero/) package bridges this gap by converting MCP tool definitions into OpenAI-compatible tool schemas and handling tool call execution against the MCP server.
+
+<Callout type="info">
+This guide covers the native `openai` Python client. If you're using the OpenAI Agents SDK (which has built-in MCP support), see [MCP with OpenAI Agents](/docs/programmatic-usage/openai-agents).
+</Callout>
+
+---
+
+## Setup
+
+```bash
+pip install mcphero openai
+```
+
+---
+
+## Step 1: Create the MCP Adapter
+
+```python
+from mcphero.adapters.openai import MCPToolAdapterOpenAI
+
+adapter = MCPToolAdapterOpenAI(
+    "https://api.mcphero.app/mcp/{server_id}",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+)
+```
+
+Replace `{server_id}` with your server ID from the [MCPHero dashboard](https://mcphero.app/dashboard/organization/mcp-servers), and `YOUR_API_KEY` with your API key from the **Keys** tab.
+
+---
+
+## Step 2: Fetch Tool Definitions
+
+```python
+tools = await adapter.get_tool_definitions()
+```
+
+This calls the MCP server's `tools/list` endpoint and returns the tools as OpenAI-compatible `ChatCompletionToolParam` objects, ready to pass into `chat.completions.create`.
+
+---
+
+## Step 3: Make a Request with Tools
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+
+messages = [{"role": "user", "content": "Find customer John Smith"}]
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=messages,
+    tools=tools,
+)
+```
+
+---
+
+## Step 4: Process Tool Calls
+
+When the model decides to call a tool, pass the tool calls to the adapter. It sends the requests to the MCP server and returns results formatted as OpenAI tool messages:
+
+```python
+if response.choices[0].message.tool_calls:
+    tool_results = await adapter.process_tool_calls(
+        response.choices[0].message.tool_calls
+    )
+
+    messages.append(response.choices[0].message)
+    messages.extend(tool_results)
+
+    final_response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+        tools=tools,
+    )
+    print(final_response.choices[0].message.content)
+```
+
+---
+
+## Full Example
+
+```python
+import asyncio
+from openai import OpenAI
+from mcphero.adapters.openai import MCPToolAdapterOpenAI
+
+async def main():
+    adapter = MCPToolAdapterOpenAI(
+        "https://api.mcphero.app/mcp/{server_id}",
+        headers={"Authorization": "Bearer YOUR_API_KEY"},
+    )
+    client = OpenAI()
+
+    tools = await adapter.get_tool_definitions()
+
+    messages = [{"role": "user", "content": "Find customer John Smith"}]
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+        tools=tools,
+    )
+
+    if response.choices[0].message.tool_calls:
+        tool_results = await adapter.process_tool_calls(
+            response.choices[0].message.tool_calls
+        )
+
+        messages.append(response.choices[0].message)
+        messages.extend(tool_results)
+
+        final_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            tools=tools,
+        )
+        print(final_response.choices[0].message.content)
+    else:
+        print(response.choices[0].message.content)
+
+asyncio.run(main())
+```
+
+---
+
+## Error Handling
+
+By default, failed tool calls return error messages that the model can interpret and recover from:
+
+```python
+# Default: errors are returned as tool messages
+results = await adapter.process_tool_calls(tool_calls, return_errors=True)
+# [{"role": "tool", "tool_call_id": "...", "content": "{\"error\": \"HTTP error...\"}"}]
+
+# Skip failed calls entirely
+results = await adapter.process_tool_calls(tool_calls, return_errors=False)
+```
+
+---
+
+## Adapter Reference
+
+```python
+MCPToolAdapterOpenAI(
+    base_url="https://api.mcphero.app/mcp/{server_id}",
+    timeout=30.0,       # optional, request timeout in seconds
+    headers={...},       # optional, custom headers (e.g. Authorization)
+)
+```
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_tool_definitions()` | `list[ChatCompletionToolParam]` | Fetch tools from MCP server as OpenAI tool schemas |
+| `process_tool_calls(tool_calls, return_errors=True)` | `list[ChatCompletionToolMessageParam]` | Execute tool calls and return results for the conversation |
+
+---
+
+## Further Reading
+
+- [mcphero on PyPI](https://pypi.org/project/mcphero/)
+- [mcphero on GitHub](https://github.com/stepacool/mcphero)
+- [OpenAI Function Calling docs](https://platform.openai.com/docs/guides/function-calling)
+- [MCP with OpenAI Agents](/docs/programmatic-usage/openai-agents) — for the OpenAI Agents SDK (has native MCP support)

@@ -14,6 +14,7 @@ import {
 	NavigationMenuTrigger,
 	navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import { GitHubIcon } from "@/components/marketing/icons/social-icons";
 import { appConfig } from "@/config/app.config";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
@@ -192,7 +193,16 @@ export function Header() {
 					{/* Right Side - Auth & Mobile Menu */}
 					<div className="flex items-center justify-end gap-4">
 						{/* Desktop Auth */}
-						<div className="hidden shrink-0 items-center gap-5 lg:flex">
+						<div className="hidden shrink-0 items-center gap-3 lg:flex">
+							<a
+								href="https://github.com/stepacool/mcphero"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="inline-flex items-center justify-center rounded-full p-1.5 text-marketing-fg transition-colors hover:bg-marketing-card-hover"
+								aria-label="GitHub"
+							>
+								<GitHubIcon className="size-5" />
+							</a>
 							{loaded && user ? (
 								<Link
 									href="/dashboard"
@@ -340,6 +350,18 @@ export function Header() {
 									</Link>
 								))}
 							</div>
+
+							<hr className="border-marketing-border" />
+
+							<a
+								href="https://github.com/stepacool/mcphero"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="inline-flex items-center gap-3 rounded-full px-4 -mx-4 py-2 text-xl font-medium text-marketing-fg transition-colors hover:bg-marketing-card-hover"
+							>
+								<GitHubIcon className="size-6" />
+								GitHub
+							</a>
 						</div>
 					</div>
 				)}
