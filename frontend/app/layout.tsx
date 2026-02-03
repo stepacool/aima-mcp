@@ -45,6 +45,17 @@ export const metadata: Metadata = {
 		index: true,
 		follow: true,
 	},
+	keywords: [
+		"Auto MCP",
+		"MCP Generator",
+		"MCP from OpenAPI",
+		"Managed MCP",
+		"Model Context Protocol",
+		"AI Tools",
+		"ChatGPT MCP",
+		"Claude MCP",
+		"Cursor MCP",
+	],
 };
 
 /**

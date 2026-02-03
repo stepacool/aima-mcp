@@ -1,4 +1,4 @@
-import { allPosts } from "content-collections";
+import { allDocs, allPosts } from "content-collections";
 import { getAllLegalPages } from "@/lib/marketing/legal/pages";
 import { getBaseUrl } from "@/lib/utils";
 
@@ -78,6 +78,14 @@ export default async function Sitemap(): Promise<SitemapEntry[]> {
 		changeFreq: "monthly",
 	}));
 
+	// Documentation
+	const documentation: SitemapEntry[] = allDocs.map((doc) => ({
+		url: `${baseUrl}/docs/${doc._meta.path.replace(/\.mdx$/, "").replace(/\/index$/, "")}`,
+		lastModified: new Date(),
+		priority: 0.8,
+		changeFreq: "weekly",
+	}));
+
 	// Legal pages
 	const legalPages = await getAllLegalPages();
 	const legalEntries: SitemapEntry[] = legalPages.map((page) => ({
@@ -87,5 +95,5 @@ export default async function Sitemap(): Promise<SitemapEntry[]> {
 		changeFreq: "yearly",
 	}));
 
-	return [...staticPages, ...blogPosts, ...legalEntries];
+	return [...staticPages, ...blogPosts, ...documentation, ...legalEntries];
 }

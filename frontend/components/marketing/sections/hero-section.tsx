@@ -95,7 +95,7 @@ export function HeroSection() {
 								"lg:text-[5.5rem] lg:leading-20",
 							)}
 						>
-							Build & Deploy MCP Servers with Natural Language
+							Auto MCP & MCP Generator built with AI
 						</h1>
 
 						{/* Description */}

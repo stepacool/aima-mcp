@@ -6,6 +6,7 @@
 		"---Introduction---",
 		"index",
 		"creating-an-mcp-server",
+		"mcp-from-openapi",
 		"---Usage---",
 		"usage-overview.mdx",
 		"chatgpt.mdx",

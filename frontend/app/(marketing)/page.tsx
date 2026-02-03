@@ -71,7 +71,7 @@ export default async function HomePage() {
 			{
 				question: "What is MCPHero?",
 				answer:
-					"MCPHero is a managed platform for building, deploying, and managing MCP (Model Context Protocol) servers. You describe what you need in natural language, and our AI builds a production-ready MCP server that connects your databases, APIs, and tools to AI clients like ChatGPT, Claude, Cursor, and more.",
+					"MCPHero is the ultimate **Auto MCP** and **MCP Generator** platform. You describe what you need in natural language, and our AI builds a production-ready MCP server that connects your databases, APIs (including **MCP from OpenAPI**), and tools to AI clients like ChatGPT, Claude, Cursor, and more.",
 			},
 			{
 				question: "What is an MCP server?",
@@ -79,9 +79,9 @@ export default async function HomePage() {
 					"MCP (Model Context Protocol) is an open standard that lets AI assistants call external tools and access data sources. An MCP server exposes a set of tools — like querying a database or calling an API — that any MCP-compatible AI client can use. MCPHero makes building and hosting these servers effortless.",
 			},
 			{
-				question: "Do I need to write code?",
+				question: "Do I need to write code to use this Auto MCP tool?",
 				answer:
-					"No. MCPHero uses a guided AI chat flow to understand what you need, propose the right tools, collect any required credentials, and deploy your server automatically. You can go from idea to a live MCP server without writing a single line of code.",
+					"No. As a no-code **MCP Generator**, MCPHero uses a guided AI chat flow to understand what you need, propose the right tools, collect any required credentials, and deploy your server automatically. You can go from idea to a live MCP server without writing a single line of code.",
 			},
 			{
 				question: "What AI clients can I connect my MCP server to?",

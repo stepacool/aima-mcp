@@ -2,7 +2,7 @@ import { getBaseUrl } from "@/lib/utils";
 
 export const appConfig = {
 	appName: "MCP Hero",
-	description: `Build, deploy, and manage MCP servers with AI. Connect any database, API, or tool to ChatGPT, Claude, Cursor, and more — no code required.`,
+	description: `Auto MCP & MCP Generator: Build, deploy, and manage MCP servers with AI. Connect any database, API, or tool to ChatGPT, Claude, Cursor, and more — no code required.`,
 	baseUrl: getBaseUrl(),
 	// Contact information (displayed on contact page)
 	contact: {
