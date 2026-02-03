@@ -1,0 +1,116 @@
+---
+title: "How AIMA labs Replaced Custom Integrations with MCP Servers"
+date: "2026-01-28"
+authorName: MCPHero Team
+excerpt: "AIMA labs was building custom tool definitions for every enterprise customer. With MCPHero, they generate an MCP server per customer and plug it into their agent runtime with three lines of code."
+tags:
+  - case-study
+published: true
+---
+
+# How AIMA labs Replaced Custom Integrations with MCP Servers
+
+[AIMA labs](https://aimalabs.io) builds voice and WhatsApp AI agents for enterprises. Their agents handle customer support calls, schedule appointments, process orders over WhatsApp, and automate internal workflows.
+
+Every new enterprise customer meant writing and maintaining custom tool definitions by hand.
+
+## The Problem: Hard-coded Tool Definitions
+
+AIMA labs' agents use OpenAI function calling under the hood. For each customer, the engineering team had to manually define every tool the agent could use — calendar booking, CRM lookups, ticket creation — as raw JSON schema dictionaries:
+
+```python
+class ToolsManager:
+    CALENDAR_GET_AVAILABLE_SLOTS_TOOL_DEFINITION = {
+        "type": "function",
+        "function": {
+            "name": "get_available_slots",
+            "strict": True,
+            "description": "Get available time slots for scheduling appointments.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_date": {
+                        "type": "string",
+                        "description": "Start date in YYYY-MM-DD format (inclusive)",
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "description": "End date in YYYY-MM-DD format (inclusive).",
+                    },
+                },
+                "required": ["start_date"],
+            },
+        },
+    }
+
+    CALENDAR_CREATE_APPOINTMENT_TOOL_DEFINITION = {
+        "type": "function",
+        "function": {
+            "name": "create_calendar_event",
+            "strict": True,
+            "description": "Schedule an appointment in the company's calendar.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "type": "string",
+                        "description": "Title of the event",
+                    },
+                    "start_time": {
+                        "type": "string",
+                        "description": "Start time in ISO 8601 format",
+                    },
+                    "end_time": {
+                        "type": "string",
+                        "description": "End time in ISO 8601 format",
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "default": "UTC",
+                        "description": "IANA timezone, e.g. America/New_York",
+                    },
+                },
+                "required": ["summary", "start_time", "end_time"],
+            },
+        },
+    }
+
+    # ... CRM tools, ticketing tools, ERP tools — per customer
+```
+
+This is just the calendar. Each customer also needed CRM tools, ticketing tools, and whatever internal systems they ran. Every tool definition was hand-written JSON, duplicated and tweaked per customer, with its own execution logic wired up separately.
+
+When a customer changed their CRM or added a new internal tool, an engineer had to write a new definition, implement the handler, test it, and deploy — for that one customer.
+
+## The MCPHero Solution
+
+With MCPHero, AIMA labs generates an MCP server for each customer's stack through the dashboard — connecting their calendar, CRM, ticketing system, and internal tools. Then in their agent code, the entire `ToolsManager` class gets replaced with:
+
+```python
+from mcphero import MCPToolAdapterOpenAI
+
+# Create adapter for the customer's MCP server
+adapter = MCPToolAdapterOpenAI("https://api.mcphero.app/mcp/customer-server")
+
+# Fetch tools directly in OpenAI format
+tools = await adapter.get_tools()
+
+# Use in chat completion — that's it
+response = await client.chat.completions.create(
+    model="gpt-4o",
+    messages=messages,
+    tools=tools
+)
+```
+
+No hand-written JSON schemas. No per-customer tool classes. The MCP server exposes all of the customer's tools through a standard protocol, and the `mcphero` Python library (`pip install mcphero`) converts them into the exact format OpenAI expects.
+
+When a customer adds a new system or changes a tool, AIMA labs updates the MCP server config in the MCPHero dashboard. The agent picks up the new tools automatically on the next call to `get_tools()` — no code changes, no redeployment.
+
+## The Result
+
+- **Onboarding dropped from weeks to days.** Spinning up an MCP server for a new customer's systems is configuration, not engineering.
+- **One protocol across all customers.** When AIMA labs updates their agent runtime, it works with every customer's MCP server without per-customer patches.
+- **No more tool definition maintenance.** The hundreds of hand-written `TOOL_DEFINITION` dictionaries are gone. Tools are defined once in the MCP server and served dynamically.
+
+If your AI agents need to connect to customer systems at scale, [try MCPHero](https://mcphero.com) and see how MCP servers can replace your custom integration layer.

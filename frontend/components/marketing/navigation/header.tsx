@@ -34,9 +34,9 @@ const PRODUCT_LINKS = [
 
 const RESOURCE_LINKS = [
 	{
-		title: "Blog",
+		title: "Blog & Case Studies",
 		href: "/blog",
-		description: "Stay up to date with the latest news and articles.",
+		description: "Stay up to date with the latest news, articles and case studies.",
 	},
 	{
 		title: "Documentation",
@@ -145,6 +145,20 @@ export function Header() {
 											)}
 										>
 											Pricing
+										</Link>
+									</NavigationMenuLink>
+								</NavigationMenuItem>
+
+								<NavigationMenuItem>
+									<NavigationMenuLink asChild>
+										<Link
+											href="/blog"
+											className={cn(
+												navigationMenuTriggerStyle(),
+												"rounded-full bg-transparent text-marketing-fg hover:bg-marketing-card-hover hover:text-marketing-fg focus:bg-marketing-card-hover focus:text-marketing-fg",
+											)}
+										>
+											Case Studies
 										</Link>
 									</NavigationMenuLink>
 								</NavigationMenuItem>
@@ -316,6 +330,13 @@ export function Header() {
 									className="inline-flex rounded-full px-4 -mx-4 py-2 text-3xl font-medium text-marketing-fg hover:bg-marketing-card-hover transition-colors"
 								>
 									Pricing
+								</Link>
+								<Link
+									href="/blog"
+									onClick={() => setMenuOpen(false)}
+									className="inline-flex rounded-full px-4 -mx-4 py-2 text-3xl font-medium text-marketing-fg hover:bg-marketing-card-hover transition-colors"
+								>
+									Case Studies
 								</Link>
 							</div>
 

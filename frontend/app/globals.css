@@ -364,4 +364,12 @@ input[cmdk-input] {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Fix for Shiki code blocks: ensure code tags inside pre don't have conflicting global backgrounds */
+  pre code {
+    background-color: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    padding: 0 !important;
+  }
 }

@@ -25,10 +25,10 @@ export function BlogSection({ posts }: BlogSectionProps) {
 							"sm:text-[5rem] sm:leading-20",
 						)}
 					>
-						Blog
+						Blog & Case Studies
 					</h1>
 					<div className="max-w-3xl text-lg leading-8 text-marketing-fg-muted">
-						<p>Insights, updates and stories from our team.</p>
+						<p>Insights, updates and case studies.</p>
 					</div>
 				</div>
 			</section>
