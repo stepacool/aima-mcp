@@ -43,7 +43,7 @@ export function StatsSection() {
 								"sm:text-5xl sm:leading-14",
 							)}
 						>
-							Built for MCP Developers
+							Built for development teams to accelerate delivery
 						</h2>
 					</div>
 					<div className="text-base leading-7 text-marketing-fg-muted text-pretty">

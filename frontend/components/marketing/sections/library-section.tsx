@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export function LibrarySection() {
     const [copied, setCopied] = useState(false);
-    const installCommand = "pip install mcphero";
+    const installCommand = "uv add mcphero";
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(installCommand);

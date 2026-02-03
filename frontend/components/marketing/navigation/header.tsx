@@ -15,7 +15,6 @@ import {
 	navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { GitHubIcon } from "@/components/marketing/icons/social-icons";
-import { appConfig } from "@/config/app.config";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
 
@@ -29,37 +28,6 @@ const PRODUCT_LINKS = [
 		title: "FAQ",
 		href: "/#faq",
 		description: "Find answers to frequently asked questions.",
-	},
-];
-
-const RESOURCE_LINKS = [
-	{
-		title: "Blog & Case Studies",
-		href: "/blog",
-		description: "Stay up to date with the latest news, articles and case studies.",
-	},
-	{
-		title: "Documentation",
-		href: "/docs",
-		description: "Learn how to use our platform with detailed guides.",
-	},
-	{
-		title: "Changelog",
-		href: "/changelog",
-		description: "Discover the latest features and improvements.",
-	},
-];
-
-const COMPANY_LINKS = [
-	{
-		title: "About",
-		href: "/about",
-		description: "Learn more about our mission and the team.",
-	},
-	{
-		title: "Careers",
-		href: "/careers",
-		description: "Join us in building the future.",
 	},
 ];
 
@@ -84,19 +52,6 @@ export function Header() {
 			document.body.style.overflow = "";
 		};
 	}, [menuOpen]);
-
-	const companyLinks = [
-		...COMPANY_LINKS,
-		...(appConfig.contact.enabled
-			? [
-					{
-						title: "Contact",
-						href: "/contact",
-						description: "Get in touch with our support team.",
-					},
-				]
-			: []),
-	];
 
 	return (
 		<header
@@ -164,41 +119,17 @@ export function Header() {
 								</NavigationMenuItem>
 
 								<NavigationMenuItem>
-									<NavigationMenuTrigger className="rounded-full bg-transparent text-marketing-fg hover:bg-marketing-card-hover hover:text-marketing-fg data-[state=open]:bg-marketing-card-hover">
-										Resources
-									</NavigationMenuTrigger>
-									<NavigationMenuContent>
-										<ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-											{RESOURCE_LINKS.map((link) => (
-												<ListItem
-													key={link.title}
-													title={link.title}
-													href={link.href}
-												>
-													{link.description}
-												</ListItem>
-											))}
-										</ul>
-									</NavigationMenuContent>
-								</NavigationMenuItem>
-
-								<NavigationMenuItem>
-									<NavigationMenuTrigger className="rounded-full bg-transparent text-marketing-fg hover:bg-marketing-card-hover hover:text-marketing-fg data-[state=open]:bg-marketing-card-hover">
-										Company
-									</NavigationMenuTrigger>
-									<NavigationMenuContent>
-										<ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-											{companyLinks.map((link) => (
-												<ListItem
-													key={link.title}
-													title={link.title}
-													href={link.href}
-												>
-													{link.description}
-												</ListItem>
-											))}
-										</ul>
-									</NavigationMenuContent>
+									<NavigationMenuLink asChild>
+										<Link
+											href="/docs"
+											className={cn(
+												navigationMenuTriggerStyle(),
+												"rounded-full bg-transparent text-marketing-fg hover:bg-marketing-card-hover hover:text-marketing-fg focus:bg-marketing-card-hover focus:text-marketing-fg",
+											)}
+										>
+											Documentation
+										</Link>
+									</NavigationMenuLink>
 								</NavigationMenuItem>
 							</NavigationMenuList>
 						</NavigationMenu>
@@ -338,38 +269,13 @@ export function Header() {
 								>
 									Case Studies
 								</Link>
-							</div>
-
-							<div className="flex flex-col gap-4">
-								<p className="text-xs font-semibold tracking-wider text-marketing-fg-subtle uppercase">
-									Resources
-								</p>
-								{RESOURCE_LINKS.map((link) => (
-									<Link
-										key={link.title}
-										href={link.href}
-										onClick={() => setMenuOpen(false)}
-										className="inline-flex rounded-full px-4 -mx-4 py-2 text-3xl font-medium text-marketing-fg hover:bg-marketing-card-hover transition-colors"
-									>
-										{link.title}
-									</Link>
-								))}
-							</div>
-
-							<div className="flex flex-col gap-4">
-								<p className="text-xs font-semibold tracking-wider text-marketing-fg-subtle uppercase">
-									Company
-								</p>
-								{companyLinks.map((link) => (
-									<Link
-										key={link.title}
-										href={link.href}
-										onClick={() => setMenuOpen(false)}
-										className="inline-flex rounded-full px-4 -mx-4 py-2 text-3xl font-medium text-marketing-fg hover:bg-marketing-card-hover transition-colors"
-									>
-										{link.title}
-									</Link>
-								))}
+								<Link
+									href="/docs"
+									onClick={() => setMenuOpen(false)}
+									className="inline-flex rounded-full px-4 -mx-4 py-2 text-3xl font-medium text-marketing-fg hover:bg-marketing-card-hover transition-colors"
+								>
+									Documentation
+								</Link>
 							</div>
 
 							<hr className="border-marketing-border" />
