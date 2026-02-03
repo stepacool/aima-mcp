@@ -65,11 +65,13 @@ export function HeroSection() {
 					<div className="flex flex-col items-start gap-6">
 						{/* Announcement Pill */}
 						<Link
-							href="/docs"
+							href="https://pypi.org/project/mcphero/"
+							target="_blank"
+							rel="noopener noreferrer"
 							className={cn(
 								"relative inline-flex max-w-full items-center gap-3 overflow-hidden rounded-md px-3.5 py-2 text-sm",
 								"bg-marketing-card",
-								"hover:bg-marketing-card-hover",
+								"hover:bg-marketing-card-hover border border-white/10",
 								"dark:ring-inset dark:ring-1 dark:ring-white/5",
 								"sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:px-3 sm:py-0.5",
 							)}
@@ -79,7 +81,7 @@ export function HeroSection() {
 							</span>
 							<span className="hidden h-3 w-px bg-marketing-card-hover sm:block" />
 							<span className="inline-flex shrink-0 items-center gap-1 font-semibold">
-								Read the docs
+								View on PyPI
 								<ChevronRightIcon className="size-3" />
 							</span>
 						</Link>

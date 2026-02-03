@@ -76,7 +76,7 @@ export function FeaturesSection() {
 		{
 			title: "Natural Language to MCP",
 			description:
-				"Don't waste days reading API docs. Describe what you want in plain English, and our AI builds the OpenAPI schemas and MCP tools for you instantly.",
+				"Don't waste days reading API docs. Describe what you want in plain English, show cURL examples, OpenAPI spec or table definitions, AI will create an MCP for that.",
 			link: "/docs/usage-overview",
 			linkText: "Explore AI Generation",
 			color: "green",

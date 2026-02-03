@@ -2,6 +2,7 @@ import { CtaSection } from "@/components/marketing/sections/cta-section";
 import { FaqSection } from "@/components/marketing/sections/faq-section";
 import { FeaturesSection } from "@/components/marketing/sections/features-section";
 import { HeroSection } from "@/components/marketing/sections/hero-section";
+import { LibrarySection } from "@/components/marketing/sections/library-section";
 import { LatestArticlesSection } from "@/components/marketing/sections/latest-articles-section";
 import { PricingSection } from "@/components/marketing/sections/pricing-section";
 import { StatsSection } from "@/components/marketing/sections/stats-section";
@@ -120,6 +121,7 @@ export default async function HomePage() {
 			<WebSiteJsonLd />
 			<HeroSection />
 			<FeaturesSection />
+			<LibrarySection />
 			<StatsSection />
 			<FaqSection content={faqContent} />
 			<PricingSection showEnterprisePlans={true} />
