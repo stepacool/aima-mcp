@@ -56,6 +56,15 @@ class UpdateServerRequest(BaseModel):
     description: Optional[str] = None
 
 
+class ApiKeyResponse(BaseModel):
+    api_key: str | None
+    auth_type: str
+
+
+class UpdateEnvVarRequest(BaseModel):
+    value: str
+
+
 @router.get("/tier-info/{tier}", response_model=TierInfoResponse)
 async def get_tier_info(tier: str) -> TierInfoResponse:
     """Get information about tier limits."""
@@ -426,3 +435,42 @@ async def update_server(
     server_details = await server_repo.get_with_full_details(server_id)
 
     return ServerListItem.model_validate(server_details)
+
+
+@router.get("/{server_id}/api-key", response_model=ApiKeyResponse)
+async def get_server_api_key(server_id: UUID) -> ApiKeyResponse:
+    """Get the API key for a server."""
+    server_repo = Provider.mcp_server_repo()
+    server = await server_repo.get_by_uuid(server_id)
+    if not server:
+        raise HTTPException(404, f"Server {server_id} not found")
+
+    api_key_repo = Provider.static_api_key_repo()
+    api_key_record = await api_key_repo.get_by_server_id(server_id)
+
+    return ApiKeyResponse(
+        api_key=api_key_record.key if api_key_record else None,
+        auth_type=server.auth_type,
+    )
+
+
+@router.patch("/{server_id}/env-vars/{var_id}")
+async def update_env_var(
+    server_id: UUID, var_id: UUID, request: UpdateEnvVarRequest
+) -> dict:
+    """Update the value of an environment variable."""
+    env_var_repo = Provider.environment_variable_repo()
+
+    # Verify the variable exists and belongs to this server
+    env_vars = await env_var_repo.get_vars_for_server(server_id)
+    if not any(var.id == var_id for var in env_vars):
+        raise HTTPException(
+            404,
+            f"Environment variable {var_id} not found for server {server_id}",
+        )
+
+    updated = await env_var_repo.update_value(var_id, request.value)
+    if not updated:
+        raise HTTPException(500, "Failed to update environment variable")
+
+    return {"status": "updated", "var_id": str(var_id)}

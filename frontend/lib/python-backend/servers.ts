@@ -58,6 +58,16 @@ export interface ServerListResponse {
 // ServerDetails is the same as ServerListItem (backend returns same model)
 export type ServerDetails = ServerListItem;
 
+export interface ServerApiKeyResponse {
+	apiKey: string | null;
+	authType: string;
+}
+
+export interface UpdateEnvVarResponse {
+	status: string;
+	varId: string;
+}
+
 /**
  * Lists all MCP servers for a customer.
  */
@@ -143,6 +153,51 @@ export async function updateServer(
 		logger.error(
 			{ serverId, error },
 			"Failed to update server details in Python backend",
+		);
+		throw error;
+	}
+}
+
+/**
+ * Gets the API key for a server.
+ */
+export async function getServerApiKey(
+	serverId: string,
+): Promise<ServerApiKeyResponse> {
+	try {
+		const response = await pythonBackendClient.get<ServerApiKeyResponse>(
+			`/api/servers/${serverId}/api-key`,
+		);
+		logger.info({ serverId }, "Fetched server API key from Python backend");
+		return response.data;
+	} catch (error) {
+		logger.error(
+			{ serverId, error },
+			"Failed to get server API key from Python backend",
+		);
+		throw error;
+	}
+}
+
+/**
+ * Updates the value of an environment variable.
+ */
+export async function updateEnvVarValue(
+	serverId: string,
+	varId: string,
+	value: string,
+): Promise<UpdateEnvVarResponse> {
+	try {
+		const response = await pythonBackendClient.patch<UpdateEnvVarResponse>(
+			`/api/servers/${serverId}/env-vars/${varId}`,
+			{ value },
+		);
+		logger.info({ serverId, varId }, "Updated env var value in Python backend");
+		return response.data;
+	} catch (error) {
+		logger.error(
+			{ serverId, varId, error },
+			"Failed to update env var value in Python backend",
 		);
 		throw error;
 	}

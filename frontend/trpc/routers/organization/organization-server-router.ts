@@ -2,8 +2,10 @@ import { z } from "zod/v4";
 import { logger } from "@/lib/logger";
 import {
 	deleteServer,
+	getServerApiKey,
 	getServerDetails,
 	listServers,
+	updateEnvVarValue,
 	updateServer,
 } from "@/lib/python-backend";
 import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
@@ -71,6 +73,48 @@ export const organizationServerRouter = createTRPCRouter({
 			logger.info(
 				{ serverId, organizationId: ctx.organization.id },
 				"Updated MCP server",
+			);
+
+			return result;
+		}),
+
+	// Get API key for a server
+	getApiKey: protectedOrganizationProcedure
+		.input(z.object({ serverId: z.string().uuid() }))
+		.query(async ({ ctx, input }) => {
+			const result = await getServerApiKey(input.serverId);
+
+			logger.info(
+				{ serverId: input.serverId, organizationId: ctx.organization.id },
+				"Fetched MCP server API key",
+			);
+
+			return result;
+		}),
+
+	// Update an environment variable value
+	updateEnvVar: protectedOrganizationProcedure
+		.input(
+			z.object({
+				serverId: z.string().uuid(),
+				varId: z.string().uuid(),
+				value: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const result = await updateEnvVarValue(
+				input.serverId,
+				input.varId,
+				input.value,
+			);
+
+			logger.info(
+				{
+					serverId: input.serverId,
+					varId: input.varId,
+					organizationId: ctx.organization.id,
+				},
+				"Updated MCP server env var",
 			);
 
 			return result;

@@ -165,7 +165,7 @@ export function McpServersGrid(): React.JSX.Element {
 				return (
 					<Card
 						key={server.id}
-						className="group relative transition-shadow hover:shadow-md"
+						className="group relative overflow-hidden transition-shadow hover:shadow-md"
 					>
 						<CardHeader className="pb-3">
 							<div className="flex items-start justify-between">
@@ -244,9 +244,9 @@ export function McpServersGrid(): React.JSX.Element {
 										{server.toolsCount}
 									</p>
 								</div>
-								<div>
+								<div className="min-w-0">
 									<p className="text-muted-foreground">Step</p>
-									<p className="font-medium">
+									<p className="truncate font-medium">
 										{setupStatusLabels[server.setupStatus] ||
 											server.setupStatus}
 									</p>
@@ -267,7 +267,7 @@ export function McpServersGrid(): React.JSX.Element {
 						</CardContent>
 
 						<CardFooter className="border-t pt-3">
-							<div className="flex w-full items-center justify-between">
+							<div className="flex w-full items-center justify-between overflow-hidden">
 								<p className="text-xs text-muted-foreground">
 									{isValidDate
 										? `Created ${format(createdAt, "MMM d, yyyy")}`

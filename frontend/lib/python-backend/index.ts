@@ -6,12 +6,16 @@ export {
 export { createCustomer } from "./customers";
 export {
 	deleteServer,
+	getServerApiKey,
 	getServerDetails,
 	listServers,
+	type ServerApiKeyResponse,
 	type ServerDetails,
 	type ServerListItem,
 	type ServerListResponse,
 	type ServerTool,
+	type UpdateEnvVarResponse,
+	updateEnvVarValue,
 	updateServer,
 } from "./servers";
 export {

@@ -3,7 +3,9 @@
 import NiceModal from "@ebay/nice-modal-react";
 import { format } from "date-fns";
 import {
+	BracesIcon,
 	CheckCircle2Icon,
+	CheckIcon,
 	CircleDotIcon,
 	ClipboardCopyIcon,
 	ClockIcon,
@@ -11,14 +13,18 @@ import {
 	DownloadIcon,
 	ExternalLinkIcon,
 	KeyIcon,
+	PencilIcon,
 	ServerIcon,
 	ShieldIcon,
 	Trash2Icon,
+	VariableIcon,
 	WrenchIcon,
+	XIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { EditMcpServerModal } from "@/components/organization/edit-mcp-server-modal";
@@ -32,6 +38,8 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
+import { InputPassword } from "@/components/ui/custom/input-password";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
 	createMcpConfig,
@@ -112,6 +120,104 @@ const authTypeLabels: Record<string, AuthConfigItem> = {
 	oauth: { label: "OAuth 2.0", icon: ShieldIcon },
 };
 
+interface EnvVarRowProps {
+	envVar: {
+		id: string;
+		name: string;
+		description: string;
+		value: string | null;
+	};
+	serverId: string;
+	onUpdate: (varId: string, value: string) => void;
+	isUpdating: boolean;
+}
+
+function EnvVarRow({ envVar, onUpdate, isUpdating }: EnvVarRowProps) {
+	const [isEditing, setIsEditing] = React.useState(false);
+	const [editValue, setEditValue] = React.useState(envVar.value ?? "");
+
+	const handleSave = () => {
+		onUpdate(envVar.id, editValue);
+		setIsEditing(false);
+	};
+
+	const handleCancel = () => {
+		setEditValue(envVar.value ?? "");
+		setIsEditing(false);
+	};
+
+	return (
+		<div className="py-2">
+			<div className="flex items-start justify-between gap-4">
+				<div className="min-w-0 flex-1">
+					<p className="font-mono text-sm font-bold">{envVar.name}</p>
+					{envVar.description && (
+						<p className="mt-0.5 text-xs text-muted-foreground">
+							{envVar.description}
+						</p>
+					)}
+				</div>
+				{!isEditing && (
+					<Button
+						variant="ghost"
+						size="icon"
+						className="shrink-0"
+						onClick={() => setIsEditing(true)}
+					>
+						<PencilIcon className="size-4" />
+					</Button>
+				)}
+			</div>
+			<div className="mt-2">
+				{isEditing ? (
+					<div className="flex items-center gap-2">
+						<Input
+							value={editValue}
+							onChange={(e) => setEditValue(e.target.value)}
+							className="flex-1 font-mono text-sm"
+							autoFocus
+							onKeyDown={(e) => {
+								if (e.key === "Enter") handleSave();
+								if (e.key === "Escape") handleCancel();
+							}}
+						/>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={handleSave}
+							disabled={isUpdating}
+						>
+							<CheckIcon className="size-4" />
+						</Button>
+						<Button variant="ghost" size="icon" onClick={handleCancel}>
+							<XIcon className="size-4" />
+						</Button>
+					</div>
+				) : (
+					<div className="flex items-center gap-2">
+						<InputPassword
+							readOnly
+							value={envVar.value ?? ""}
+							className="flex-1 font-mono text-sm"
+						/>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="shrink-0"
+							onClick={() => {
+								navigator.clipboard.writeText(envVar.value ?? "");
+								toast.success(`${envVar.name} copied to clipboard`);
+							}}
+						>
+							<CopyIcon className="size-4" />
+						</Button>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
 export function McpServerDetail({
 	serverId,
 }: McpServerDetailProps): React.JSX.Element {
@@ -127,6 +233,11 @@ export function McpServerDetail({
 		{ enabled: !!serverId },
 	);
 
+	const { data: apiKeyData } = trpc.organization.server.getApiKey.useQuery(
+		{ serverId },
+		{ enabled: !!serverId && !!server && server.authType !== "none" },
+	);
+
 	const deleteServerMutation = trpc.organization.server.delete.useMutation({
 		onSuccess: () => {
 			toast.success("Server deleted successfully");
@@ -137,6 +248,17 @@ export function McpServerDetail({
 			toast.error(error.message || "Failed to delete server");
 		},
 	});
+
+	const updateEnvVarMutation =
+		trpc.organization.server.updateEnvVar.useMutation({
+			onSuccess: () => {
+				toast.success("Environment variable updated");
+				utils.organization.server.getDetails.invalidate({ serverId });
+			},
+			onError: (error) => {
+				toast.error(error.message || "Failed to update environment variable");
+			},
+		});
 
 	const handleDeleteServer = () => {
 		if (!server) return;
@@ -161,8 +283,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const deeplink = generateCursorDeeplink(server.name, config);
 			window.location.href = deeplink;
 			toast.success("Opening Cursor to install MCP server...");
@@ -178,8 +299,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const deeplink = generateLmStudioDeeplink(server.name, config);
 			window.location.href = deeplink;
 			toast.success("Opening LM Studio to install MCP server...");
@@ -195,8 +315,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const deeplink = generateVSCodeDeeplink(server.name, config);
 			window.location.href = deeplink;
 			toast.success("Opening VS Code to install MCP server...");
@@ -212,8 +331,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const deeplink = generateRaycastDeeplink(server.name, config);
 			window.location.href = deeplink;
 			toast.success("Opening Raycast to install MCP server...");
@@ -237,8 +355,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const command = generateClaudeCodeCommand(server.name, config);
 			await navigator.clipboard.writeText(command);
 			toast.success("Claude Code command copied to clipboard");
@@ -254,8 +371,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const jsonConfig = generateMcpJsonConfig(server.name, config);
 			await navigator.clipboard.writeText(jsonConfig);
 			toast.success("Windsurf configuration copied to clipboard");
@@ -271,8 +387,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const jsonConfig = generateMcpJsonConfig(server.name, config);
 			await navigator.clipboard.writeText(jsonConfig);
 			toast.success("Claude Desktop configuration copied to clipboard");
@@ -288,8 +403,7 @@ export function McpServerDetail({
 		}
 		try {
 			const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-			// Note: bearer token not available in server details, user may need to configure auth manually
-			const config = createMcpConfig(endpointUrl, null);
+			const config = createMcpConfig(endpointUrl, apiKeyData?.apiKey ?? null);
 			const jsonConfig = generateMcpJsonConfig(server.name, config);
 			await navigator.clipboard.writeText(jsonConfig);
 			toast.success("MCP configuration copied to clipboard");
@@ -339,9 +453,9 @@ export function McpServerDetail({
 						<div>
 							<CardTitle className="text-xl">{server.name}</CardTitle>
 							{server.description && (
-								<CardDescription className="mt-2">
-									{server.description}
-								</CardDescription>
+								<div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+									<ReactMarkdown>{server.description}</ReactMarkdown>
+								</div>
 							)}
 						</div>
 						<div className="flex gap-2">
@@ -530,7 +644,7 @@ export function McpServerDetail({
 									Copy Config for Other Tools
 								</Button>
 							</div>
-							{server.authType !== "none" && (
+							{server.authType !== "none" && !apiKeyData?.apiKey && (
 								<p className="text-xs text-muted-foreground">
 									Note: If your server requires authentication, you may need to
 									configure it manually in your MCP client settings.
@@ -540,6 +654,153 @@ export function McpServerDetail({
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Connection Definition Card - Only show if deployed */}
+			{server.mcpEndpoint && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center text-base">
+							<BracesIcon className="mr-2 size-4" />
+							Connection Definition
+						</CardTitle>
+						<CardDescription>
+							Connection details and JSON configuration for this MCP server.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						{/* Connection sub-section */}
+						<div className="space-y-3">
+							<p className="text-sm font-medium">Connection</p>
+							<div className="space-y-2">
+								<div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+									<div className="min-w-0 flex-1">
+										<p className="text-xs text-muted-foreground">Endpoint</p>
+										<code className="block truncate font-mono text-sm">
+											{getFullBackendUrl(server.mcpEndpoint)}
+										</code>
+									</div>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="shrink-0"
+										onClick={() =>
+											copyToClipboard(
+												getFullBackendUrl(server.mcpEndpoint),
+												"Endpoint URL",
+											)
+										}
+									>
+										<CopyIcon className="size-4" />
+									</Button>
+								</div>
+								{server.authType !== "none" && (
+									<div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+										<div className="min-w-0 flex-1">
+											<p className="text-xs text-muted-foreground">API Key</p>
+											<InputPassword
+												readOnly
+												value={apiKeyData?.apiKey ?? ""}
+												className="mt-1 border-none bg-transparent p-0 shadow-none"
+											/>
+										</div>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="shrink-0"
+											onClick={() =>
+												copyToClipboard(apiKeyData?.apiKey ?? "", "API Key")
+											}
+										>
+											<CopyIcon className="size-4" />
+										</Button>
+									</div>
+								)}
+							</div>
+						</div>
+
+						<Separator />
+
+						{/* Raw JSON config */}
+						<div className="space-y-3">
+							<p className="text-sm font-medium">Raw JSON Config</p>
+							<div className="relative rounded-lg border bg-muted/50 p-4">
+								<Button
+									variant="outline"
+									size="sm"
+									className="absolute top-3 right-3"
+									onClick={() => {
+										const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+										const config = createMcpConfig(
+											endpointUrl,
+											apiKeyData?.apiKey ?? null,
+										);
+										const jsonConfig = generateMcpJsonConfig(
+											server.name,
+											config,
+										);
+										copyToClipboard(jsonConfig, "Connection definition");
+									}}
+								>
+									<CopyIcon className="mr-2 size-4" />
+									Copy
+								</Button>
+								<pre className="overflow-x-auto">
+									<code className="font-mono text-sm">
+										{(() => {
+											const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
+											const config = createMcpConfig(
+												endpointUrl,
+												apiKeyData?.apiKey ?? null,
+											);
+											return generateMcpJsonConfig(server.name, config);
+										})()}
+									</code>
+								</pre>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			)}
+
+			{/* Environment Variables Card */}
+			<Card>
+				<CardHeader>
+					<CardTitle className="flex items-center text-base">
+						<VariableIcon className="mr-2 size-4" />
+						Environment Variables ({server.environmentVariables.length})
+					</CardTitle>
+					<CardDescription>
+						Environment variables configured for this MCP server.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{server.environmentVariables.length === 0 ? (
+						<p className="py-4 text-center text-sm text-muted-foreground">
+							No environment variables configured.
+						</p>
+					) : (
+						<div className="space-y-3">
+							{server.environmentVariables.map((envVar, index) => (
+								<React.Fragment key={envVar.id}>
+									{index > 0 && <Separator />}
+									<EnvVarRow
+										envVar={envVar}
+										serverId={serverId}
+										onUpdate={(varId, value) =>
+											updateEnvVarMutation.mutate({
+												serverId,
+												varId,
+												value,
+											})
+										}
+										isUpdating={updateEnvVarMutation.isPending}
+									/>
+								</React.Fragment>
+							))}
+						</div>
+					)}
+				</CardContent>
+			</Card>
 
 			{/* Tools Card */}
 			<Card>
