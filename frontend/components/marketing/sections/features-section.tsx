@@ -22,47 +22,49 @@ interface Feature {
 
 function FeatureCard({ feature }: { feature: Feature }) {
 	return (
-		<div className="overflow-hidden rounded-lg bg-marketing-card p-2">
+		<div className="group relative overflow-hidden rounded-2xl bg-marketing-card transition-all hover:bg-marketing-card-hover hover:shadow-2xl hover:-translate-y-1">
 			{/* Screenshot */}
-			<div className="relative overflow-hidden rounded-sm dark:after:absolute dark:after:inset-0 dark:after:rounded-sm dark:after:outline dark:after:outline-1 dark:after:-outline-offset-1 dark:after:outline-white/10 dark:after:content-['']">
-				<GradientCard
-					color={feature.color}
-					placement={feature.placement}
-					rounded="sm"
-				>
-					<img
-						src={feature.image.light}
-						alt={feature.title}
-						width={feature.image.width}
-						height={feature.image.height}
-						className="dark:hidden w-full h-auto"
-					/>
-					<img
-						src={feature.image.dark}
-						alt={feature.title}
-						width={feature.image.width}
-						height={feature.image.height}
-						className="hidden dark:block w-full h-auto"
-					/>
-				</GradientCard>
+			<div className="relative overflow-hidden p-2">
+				<div className="relative overflow-hidden rounded-xl dark:after:absolute dark:after:inset-0 dark:after:rounded-xl dark:after:outline dark:after:outline-1 dark:after:-outline-offset-1 dark:after:outline-white/10 dark:after:content-['']">
+					<GradientCard
+						color={feature.color}
+						placement={feature.placement}
+						rounded="xl"
+					>
+						<img
+							src={feature.image.light}
+							alt={feature.title}
+							width={feature.image.width}
+							height={feature.image.height}
+							className="dark:hidden w-full h-auto"
+						/>
+						<img
+							src={feature.image.dark}
+							alt={feature.title}
+							width={feature.image.width}
+							height={feature.image.height}
+							className="hidden dark:block w-full h-auto"
+						/>
+					</GradientCard>
+				</div>
 			</div>
 
 			{/* Content */}
-			<div className="flex flex-col gap-4 p-6 sm:p-10 lg:p-6">
+			<div className="flex flex-col gap-4 p-8 sm:p-10 lg:p-8">
 				<div>
-					<h3 className="text-base font-medium leading-8 text-marketing-fg">
+					<h3 className="text-xl font-semibold leading-8 text-marketing-fg">
 						{feature.title}
 					</h3>
-					<div className="mt-2 flex flex-col gap-4 text-sm leading-7 text-marketing-fg-muted">
+					<div className="mt-3 flex flex-col gap-4 text-base leading-7 text-marketing-fg-muted">
 						<p>{feature.description}</p>
 					</div>
 				</div>
 				<Link
 					href={feature.link}
-					className="group inline-flex items-center gap-2 text-sm font-medium text-marketing-fg"
+					className="group/btn inline-flex items-center gap-2 text-sm font-semibold text-marketing-accent"
 				>
 					{feature.linkText}
-					<ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+					<ArrowRightIcon className="size-3.5 transition-transform group-hover/btn:translate-x-1" />
 				</Link>
 			</div>
 		</div>
@@ -72,11 +74,11 @@ function FeatureCard({ feature }: { feature: Feature }) {
 export function FeaturesSection() {
 	const features: Feature[] = [
 		{
-			title: "Connect Your AI to Anything",
+			title: "Natural Language to MCP",
 			description:
-				"Databases, REST APIs, spreadsheets, internal tools — if it has an interface, MCPHero can connect it to your AI. Works with ChatGPT, Claude, Cursor, Grok, and any MCP-compatible client.",
+				"Don't waste days reading API docs. Describe what you want in plain English, and our AI builds the OpenAPI schemas and MCP tools for you instantly.",
 			link: "/docs/usage-overview",
-			linkText: "See integrations",
+			linkText: "Explore AI Generation",
 			color: "green",
 			placement: "bottom-right",
 			image: {
@@ -87,11 +89,11 @@ export function FeaturesSection() {
 			},
 		},
 		{
-			title: "Code First. Built for developers.",
+			title: "One-Click VPS Deployment",
 			description:
-				"Use in AI libraries in minutes. Focus on building your AI, forget about the glue.",
+				"Production-ready hosting with zero configuration. We handle the VPS provisioning, SSL, and process management so your tools are always online.",
 			link: "/docs/usage-overview",
-			linkText: "See code examples",
+			linkText: "Learn about hosting",
 			color: "blue",
 			placement: "bottom-left",
 			image: {
@@ -102,11 +104,11 @@ export function FeaturesSection() {
 			},
 		},
 		{
-			title: "Infrastructure Managed for You",
+			title: "Managed OAuth & Security",
 			description:
-				"Stop wrestling with deployment scripts and server configs. MCPHero handles hosting, scaling, OAuth, and monitoring so you can focus on building AI workflows, not glue code.",
+				"Easily manage secrets and complex auth flows. Our managed OAuth layer simplifies connecting to platforms like Slack, GitHub, and Notion.",
 			link: "/docs",
-			linkText: "Learn more",
+			linkText: "Security overview",
 			color: "purple",
 			placement: "bottom-right",
 			image: {
@@ -129,12 +131,12 @@ export function FeaturesSection() {
 						</div>
 						<h2
 							className={cn(
-								"text-pretty font-display text-[2rem] leading-10 tracking-tight",
+								"text-pretty font-display text-4xl leading-tight tracking-tight",
 								"text-marketing-fg",
-								"sm:text-5xl sm:leading-14",
+								"sm:text-6xl sm:leading-14",
 							)}
 						>
-							Everything you need to go from idea to live MCP server
+							Platform for the Agentic MCP era
 						</h2>
 					</div>
 					<div className="text-base leading-7 text-marketing-fg-muted text-pretty">

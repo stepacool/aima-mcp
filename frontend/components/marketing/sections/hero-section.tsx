@@ -75,7 +75,7 @@ export function HeroSection() {
 							)}
 						>
 							<span className="truncate text-pretty sm:truncate">
-								Introducing our latest features
+								Check our Python Library
 							</span>
 							<span className="hidden h-3 w-px bg-marketing-card-hover sm:block" />
 							<span className="inline-flex shrink-0 items-center gap-1 font-semibold">
@@ -89,18 +89,19 @@ export function HeroSection() {
 							className={cn(
 								"max-w-5xl text-balance font-display text-5xl tracking-display-tight",
 								"text-marketing-fg",
-								"sm:text-5xl sm:leading-14",
-								"lg:text-[5rem] lg:leading-20",
+								"sm:text-6xl sm:leading-14",
+								"lg:text-[5.5rem] lg:leading-20",
 							)}
 						>
-							Ship MCPs in minutes. Give your AI superpowers.
+							Build & Deploy MCP Servers with Natural Language
 						</h1>
 
 						{/* Description */}
-						<div className="flex max-w-3xl flex-col gap-4 text-lg leading-8 text-marketing-fg-muted">
+						<div className="flex max-w-3xl flex-col gap-4 text-lg leading-8 text-marketing-fg-muted md:text-xl">
 							<p>
-								Connect your AI to anything. APIs, databases, excel sheets or
-								websites - connect to anything in minutes.
+								Connect your AI to any API, database, or tool in minutes. No
+								code required. Managed hosting, OAuth, and scale included out
+								of the box.
 							</p>
 						</div>
 
@@ -109,21 +110,23 @@ export function HeroSection() {
 							<Link
 								href="/auth/sign-up"
 								className={cn(
-									"inline-flex shrink-0 items-center justify-center gap-1 rounded-full px-4 py-2 text-sm font-medium",
+									"inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-all",
 									"bg-marketing-accent text-marketing-accent-fg hover:bg-marketing-accent-hover",
+									"hover:shadow-[0_0_20px_rgba(var(--marketing-accent-rgb),0.3)] hover:-translate-y-0.5 active:translate-y-0",
 								)}
 							>
-								Get Started
+								Get Started Free
+								<ArrowRightIcon className="size-4" />
 							</Link>
 							<Link
 								href="/docs"
 								className={cn(
-									"group inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
+									"group inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-medium transition-all",
 									"text-marketing-fg hover:bg-marketing-card-hover",
 								)}
 							>
-								Read Docs
-								<ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+								Documentation
+								<ChevronRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
 							</Link>
 						</div>
 					</div>

@@ -101,16 +101,16 @@ export default async function HomePage() {
 	};
 
 	const ctaContent = {
-		headline: "Ready to connect your AI to everything?",
+		headline: "Ready to build the future of AI tools?",
 		description:
-			"Build your first MCP server in minutes. Free plan available — no credit card required.",
+			"Build, deploy, and manage your MCP servers in minutes. Start for free today.",
 		primaryCta: {
 			text: "Get Started Free",
 			href: "/auth/sign-up",
 		},
 		secondaryCta: {
-			text: "Contact Sales",
-			href: "/contact",
+			text: "View Documentation",
+			href: "/docs",
 		},
 	};
 
