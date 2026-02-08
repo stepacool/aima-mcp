@@ -6,6 +6,16 @@ prompt: |
   Do not list all tools in the application description in docstring.
   Import all used libraries inline, no top-level imports.
 
+  # MCP Runtime Context
+  You are generating the body of an async Python function that runs as an MCP tool
+  inside a managed runtime. Key constraints:
+  - This is NOT a standalone script or HTTP server. It is a single async function.
+  - All imports must be inline (inside the function body), not at module level.
+  - Environment variables are available via os.getenv(). The os module is pre-injected.
+  - File system access is blocked. Do not read or write local files.
+  - Return the result directly. Do not print or use sys.stdout.
+  - Do not start any servers, event loops, or background threads.
+
   # Available libraries:
   {AVAILABLE_LIBRARIES}
 

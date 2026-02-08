@@ -80,7 +80,7 @@ export const submitWizardToolsSchema = z.object({
 	selectedToolIds: z
 		.array(z.string())
 		.min(1, "At least one tool must be selected")
-		.max(3, "Maximum 3 tools allowed for free tier"),
+		.max(5, "Maximum 3 tools allowed for free tier"),
 });
 export type SubmitWizardToolsInput = z.infer<typeof submitWizardToolsSchema>;
 

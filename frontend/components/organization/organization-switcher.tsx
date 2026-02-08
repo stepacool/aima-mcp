@@ -100,7 +100,7 @@ export function OrganizationSwitcher(): React.JSX.Element | null {
 			// while preserving user-level queries (like organizations list) to avoid flickering
 			clearOrganizationScopedQueries(queryClient);
 			// Navigate to the organization dashboard
-			router.push("/dashboard/organization");
+			router.push("/dashboard/organization/mcp-servers");
 		} catch (error) {
 			// Log the error for debugging but don't expose details to user
 			console.error("Failed to switch organization:", error);

@@ -322,7 +322,31 @@ class WizardStepsService:
         try:
             system_prompt = load_prompt(prompt_file)
             server_desc = server.description if server else ""
-            user_content = f"Server description:\n{server_desc}\n"
+
+            server_tools = await Provider.mcp_tool_repo().get_tools_for_server(
+                mcp_server_id
+            )
+            tools_description = "\n".join(
+                f"- {tool.name}: {tool.description} "
+                f"(params: {', '.join(p.get('name', '') for p in tool.parameters_schema)})"
+                for tool in server_tools
+            )
+            technical_details = (
+                server.meta.get("technical_details", [])
+                if server and server.meta
+                else []
+            )
+            technical_details_text = ""
+            if technical_details:
+                technical_details_text = "\n\nTechnical details:\n" + "\n".join(
+                    f"- {detail}" for detail in technical_details
+                )
+
+            user_content = (
+                f"Server description:\n{server_desc}\n\n"
+                f"Tools in this server:\n{tools_description}"
+                f"{technical_details_text}\n"
+            )
             messages: list[Any] = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
@@ -380,8 +404,30 @@ class WizardStepsService:
 
             system_prompt = load_prompt(prompt_file)
             server_desc = server.description if server else ""
+
+            server_tools = await Provider.mcp_tool_repo().get_tools_for_server(
+                mcp_server_id
+            )
+            tools_description = "\n".join(
+                f"- {tool.name}: {tool.description} "
+                f"(params: {', '.join(p.get('name', '') for p in tool.parameters_schema)})"
+                for tool in server_tools
+            )
+            technical_details = (
+                server.meta.get("technical_details", [])
+                if server and server.meta
+                else []
+            )
+            technical_details_text = ""
+            if technical_details:
+                technical_details_text = "\n\nTechnical details:\n" + "\n".join(
+                    f"- {detail}" for detail in technical_details
+                )
+
             user_content = (
-                f"MCP description: \n{server_desc}\n\n"
+                f"MCP description:\n{server_desc}\n\n"
+                f"Tools in this server:\n{tools_description}"
+                f"{technical_details_text}\n\n"
                 f"Current environment variables:\n{vars_description}\n\n"
                 f"User feedback:\n{feedback}"
             )

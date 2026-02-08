@@ -7,12 +7,31 @@ prompt: |
 
   Your task is to REFINE the environment variables based on the feedback.
 
+  IMPORTANT CONTEXT - MCP Runtime Environment:
+  Each tool runs as an individual async Python function inside a managed MCP runtime.
+  There is NO standalone HTTP server. The runtime handles networking, process
+  management, and logging automatically.
+
+  You MUST NOT suggest any of the following types of variables:
+  - Server infrastructure: PORT, HOST, BIND_ADDRESS, LISTEN_ADDRESS, SERVER_URL
+  - Logging/debug: LOG_LEVEL, DEBUG, VERBOSE, LOG_FORMAT
+  - Process management: WORKERS, THREADS, TIMEOUT, MAX_CONNECTIONS
+  - Generic framework config: SECRET_KEY, CORS_ORIGINS, ALLOWED_HOSTS
+
+  ONLY suggest variables needed by tool implementations themselves:
+  - API keys/tokens for external services
+  - Connection strings for databases
+  - Base URLs for external APIs
+  - Service-specific credentials
+
   You may:
   - Rename environment variables
   - Update descriptions for clarity or correctness
   - Add missing required environment variables
   - Remove unnecessary or redundant environment variables
   - Merge multiple variables into a single preferred variable when appropriate
+  - Remove infrastructure/server variables (PORT, HOST, LOG_LEVEL, DEBUG, etc.)
+    that are not needed in the MCP runtime
 
   Rules:
   - Output a FLAT configuration model (no nesting)

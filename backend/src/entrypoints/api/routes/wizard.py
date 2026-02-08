@@ -9,9 +9,11 @@ from loguru import logger
 from pydantic import BaseModel
 
 from core.services.tier_service import FREE_TIER_MAX_TOOLS
-from core.services.wizard_steps_services import WizardStepsService
+from core.services.wizard_steps_services import WizardStepsService, openai_client
 from infrastructure.models.mcp_server import MCPServerSetupStatus
+from infrastructure.repositories.mcp_server import MCPServerUpdate
 from infrastructure.repositories.repo_provider import Provider
+from settings import settings
 
 router = APIRouter()
 
@@ -163,6 +165,36 @@ async def start_wizard(
                 meta=meta if meta else None,
             )
         )
+
+        # Generate a descriptive name using LLM
+        try:
+            name_response = await openai_client.chat.completions.create(
+                model=settings.DEFAULT_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            "Generate a short, descriptive name "
+                            "(2-4 words) for an MCP server based "
+                            "on this description: "
+                            f"{request.description}. "
+                            "Return only the name, nothing else."
+                        ),
+                    }
+                ],
+                max_tokens=30,
+                temperature=0.3,
+            )
+            generated_name = (
+                name_response.choices[0].message.content or ""
+            ).strip().strip('"').strip("'")
+            if generated_name:
+                await Provider.mcp_server_repo().update(
+                    server.id,
+                    MCPServerUpdate(name=generated_name),
+                )
+        except Exception as e:
+            logger.warning(f"Failed to generate server name: {e}")
 
         service = get_wizard_service()
         background_tasks.add_task(

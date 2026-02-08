@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
+	CardAction,
 	CardContent,
 	CardDescription,
 	CardFooter,
@@ -167,18 +168,18 @@ export function McpServersGrid(): React.JSX.Element {
 						key={server.id}
 						className="group relative overflow-hidden transition-shadow hover:shadow-md"
 					>
-						<CardHeader className="pb-3">
-							<div className="flex items-start justify-between">
-								<div className="min-w-0 flex-1">
-									<CardTitle className="truncate text-base">
-										{server.name}
-									</CardTitle>
-									{server.description && (
-										<CardDescription className="mt-1 line-clamp-2">
-											{server.description}
-										</CardDescription>
-									)}
-								</div>
+						<CardHeader className="grid-cols-[minmax(0,1fr)_auto] pb-3">
+							<div className="min-w-0">
+								<CardTitle className="truncate text-base">
+									{server.name}
+								</CardTitle>
+								{server.description && (
+									<CardDescription className="mt-1 line-clamp-2 break-words">
+										{server.description}
+									</CardDescription>
+								)}
+							</div>
+							<CardAction>
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
 										<Button
@@ -213,7 +214,7 @@ export function McpServersGrid(): React.JSX.Element {
 										</DropdownMenuItem>
 									</DropdownMenuContent>
 								</DropdownMenu>
-							</div>
+							</CardAction>
 						</CardHeader>
 
 						<CardContent className="space-y-3 pb-3">
@@ -254,7 +255,7 @@ export function McpServersGrid(): React.JSX.Element {
 							</div>
 
 							{server.mcpEndpoint && (
-								<div className="text-sm">
+								<div className="min-w-0 text-sm">
 									<p className="text-muted-foreground">Endpoint</p>
 									<p
 										className="truncate font-mono text-xs"
@@ -268,12 +269,12 @@ export function McpServersGrid(): React.JSX.Element {
 
 						<CardFooter className="border-t pt-3">
 							<div className="flex w-full items-center justify-between overflow-hidden">
-								<p className="text-xs text-muted-foreground">
+								<p className="truncate text-xs text-muted-foreground">
 									{isValidDate
 										? `Created ${format(createdAt, "MMM d, yyyy")}`
 										: "Created date unavailable"}
 								</p>
-								<div className="flex gap-2">
+								<div className="flex shrink-0 gap-2">
 									{server.setupStatus !== "ready" && (
 										<Button variant="default" size="sm" asChild>
 											<Link

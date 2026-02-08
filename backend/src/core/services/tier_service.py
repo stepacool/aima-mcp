@@ -68,7 +68,7 @@ BLOCKED_MODULES = {
     "socket",  # raw sockets not allowed, use httpx
 }
 
-FREE_TIER_MAX_TOOLS = 3
+FREE_TIER_MAX_TOOLS = 5
 
 
 class TierLimits(BaseModel):

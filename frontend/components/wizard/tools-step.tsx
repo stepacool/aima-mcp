@@ -28,7 +28,7 @@ interface ToolsStepProps {
 	onRefetchState?: () => void;
 }
 
-const MAX_FREE_TOOLS = 3;
+const MAX_FREE_TOOLS = 5;
 
 export function ToolsStep({
 	serverId,

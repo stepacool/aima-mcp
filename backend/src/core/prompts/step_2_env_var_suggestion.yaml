@@ -4,6 +4,23 @@ prompt: |
   Given the MCP server description and its tools, suggest the minimal set of
   environment variables required to run the server.
 
+  IMPORTANT CONTEXT - MCP Runtime Environment:
+  Each tool runs as an individual async Python function inside a managed MCP runtime.
+  There is NO standalone HTTP server. The runtime handles networking, process
+  management, and logging automatically.
+
+  You MUST NOT suggest any of the following types of variables:
+  - Server infrastructure: PORT, HOST, BIND_ADDRESS, LISTEN_ADDRESS, SERVER_URL
+  - Logging/debug: LOG_LEVEL, DEBUG, VERBOSE, LOG_FORMAT
+  - Process management: WORKERS, THREADS, TIMEOUT, MAX_CONNECTIONS
+  - Generic framework config: SECRET_KEY, CORS_ORIGINS, ALLOWED_HOSTS
+
+  ONLY suggest variables needed by tool implementations themselves:
+  - API keys/tokens for external services
+  - Connection strings for databases
+  - Base URLs for external APIs
+  - Service-specific credentials
+
   Rules:
   - Output a FLAT configuration model (no nesting)
   - Prefer single credentials over multiple ones
@@ -66,17 +83,8 @@ examples:
         ]
       }
 
-  - input: "Internal MCP server with optional logging and debug mode"
+  - input: "MCP server that generates random test data and performs text transformations"
     output: |
       {
-        "env_vars": [
-          {
-            "name": "LOG_LEVEL",
-            "description": "Logging level (debug, info, warning, error)"
-          },
-          {
-            "name": "DEBUG",
-            "description": "Enable debug mode for additional logging"
-          }
-        ]
+        "env_vars": []
       }

@@ -47,7 +47,7 @@ export function OrganizationsGrid(): React.JSX.Element {
 			// while preserving user-level queries (like organizations list) to avoid flickering
 			clearOrganizationScopedQueries(queryClient);
 			// Navigate to the organization dashboard
-			router.push("/dashboard/organization");
+			router.push("/dashboard/organization/mcp-servers");
 		} finally {
 			setSelectingOrgId(null);
 		}
