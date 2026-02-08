@@ -98,7 +98,12 @@ export function EnvVarsStep({
 		}
 	};
 
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
 	const handleContinue = async () => {
+		if (isSubmitting) return;
+		setIsSubmitting(true);
+
 		// Build values map with all env vars (use empty string if not filled)
 		const values: Record<string, string> = {};
 		if (suggestedEnvVars) {
@@ -115,6 +120,7 @@ export function EnvVarsStep({
 			onEnvVarsSubmitted();
 		} catch (_error) {
 			toast.error("Failed to submit environment variables");
+			setIsSubmitting(false);
 		}
 	};
 
@@ -189,7 +195,7 @@ export function EnvVarsStep({
 					<div className="mx-auto flex max-w-4xl justify-end">
 						<Button
 							onClick={handleContinue}
-							loading={submitEnvVarsMutation.isPending}
+							loading={isSubmitting}
 						>
 							Continue to Deploy
 						</Button>
@@ -298,7 +304,7 @@ export function EnvVarsStep({
 				<div className="mx-auto flex max-w-3xl justify-end">
 					<Button
 						onClick={handleContinue}
-						loading={submitEnvVarsMutation.isPending}
+						loading={isSubmitting}
 						disabled={!areAllEnvVarsFilled()}
 					>
 						Continue to Deploy

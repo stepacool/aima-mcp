@@ -510,9 +510,10 @@ class WizardStepsService:
             raise ValueError(f"Server {mcp_server_id} not found")
 
         if server.setup_status == MCPServerSetupStatus.code_generating:
-            raise RuntimeError(
-                "Code generation invoked at invalid server state (already code_generating)"
+            logger.warning(
+                f"[{mcp_server_id}] Code generation already in progress, skipping duplicate call"
             )
+            return
 
         # Set generating status
         await Provider.mcp_server_repo().update_setup_status(

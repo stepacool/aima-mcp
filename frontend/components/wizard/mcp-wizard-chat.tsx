@@ -174,7 +174,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 
 	// Handle env vars submitted - skip auth and trigger code generation
 	const handleEnvVarsSubmitted = useCallback(() => {
-		if (!serverId) {
+		if (!serverId || generateCodeMutation.isPending) {
 			return;
 		}
 		// Skip auth step - directly generate code and transition to deploy
