@@ -154,9 +154,11 @@ class MCPEnvMiddleware(BaseHTTPMiddleware):
         # Extract X-Env-* headers
         ephemeral_env: dict[str, str] = {}
         for header, value in request.headers.items():
-            if header.lower().startswith("x-env-"):
+            first_six_chars = header.lower()[:6]
+            if first_six_chars.replace("-", "_") == "x_env_":
                 # X-Env-FOO-BAR -> FOO_BAR (uppercase, hyphens to underscores)
                 ephemeral_env[header[6:].upper().replace("-", "_")] = value
+                logger.debug(f"EPHEMERAL_HEADER: {header}")
 
         # Set contextvar for this request
         token = request_env_vars.set(ephemeral_env)
