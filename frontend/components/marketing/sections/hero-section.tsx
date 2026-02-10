@@ -95,7 +95,7 @@ export function HeroSection() {
 								"lg:text-[5.5rem] lg:leading-20",
 							)}
 						>
-							Auto MCP & MCP Generator built with AI
+							Auto MCP & MCP Generator. Create Connectors by chatting with AI.
 						</h1>
 
 						{/* Description */}
