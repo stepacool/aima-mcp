@@ -169,7 +169,7 @@ async def start_wizard(
         # Generate a descriptive name using LLM
         try:
             name_response = await openai_client.chat.completions.create(
-                model=settings.DEFAULT_MODEL,
+                model=settings.SERVER_DETAILS_GENERATION_MODEL,
                 messages=[
                     {
                         "role": "user",

@@ -57,7 +57,10 @@ class MonitoringSettings(BaseSettings):
 class LLMSettings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    DEFAULT_MODEL: str = "google/gemini-3-pro-preview"
+    SERVER_DETAILS_GENERATION_MODEL: str = "google/gemini-2.5-flash"
+    TOOL_GENERATION_MODEL: str = "google/gemini-2.5-flash"
+    ENV_VARS_GENERATION_MODEL: str = "google/gemini-2.5-flash"
+    CODE_GENERATION_MODEL: str = "google/gemini-2.5-flash"
 
 
 class PostgresSettings(BaseSettings):

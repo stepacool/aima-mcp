@@ -142,7 +142,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model=settings.DEFAULT_MODEL,
+                model=settings.TOOL_GENERATION_MODEL,
                 messages=messages,
                 response_format=ToolsResponse,
             )
@@ -222,7 +222,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model=settings.DEFAULT_MODEL,
+                model=settings.TOOL_GENERATION_MODEL,
                 messages=messages,
                 response_format=ToolsResponse,
             )
@@ -352,7 +352,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model=settings.DEFAULT_MODEL,
+                model=settings.ENV_VARS_GENERATION_MODEL,
                 messages=messages,
                 response_format=EnvVarsResponse,
             )
@@ -437,7 +437,7 @@ class WizardStepsService:
                 {"role": "user", "content": user_content},
             ]
             response = await openai_client.chat.completions.parse(
-                model=settings.DEFAULT_MODEL,
+                model=settings.ENV_VARS_GENERATION_MODEL,
                 messages=messages,
                 response_format=EnvVarsResponse,
             )
@@ -577,7 +577,7 @@ class WizardStepsService:
 
             for _ in range(MAX_GENERATION_RETRIES):
                 response = await openai_client.chat.completions.create(
-                    model=settings.DEFAULT_MODEL,
+                    model=settings.CODE_GENERATION_MODEL,
                     messages=messages,  # type: ignore[arg-type]
                 )
                 code = response.choices[0].message.content
