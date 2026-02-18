@@ -2,7 +2,7 @@
 
 import { motion, type Variants } from "motion/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Database, Globe, FileText, Server, Clock, Shield } from "lucide-react";
+import { Database, Globe, FileText, Shield } from "lucide-react";
 
 const useCases = [
   {
@@ -19,16 +19,6 @@ const useCases = [
     title: "Document Search",
     description: "Index PDFs, Word docs, and text files. AI assistants can search and summarize your entire knowledge base.",
     icon: FileText,
-  },
-  {
-    title: "Webhooks & Events",
-    description: "Trigger actions from external systems. Connect Salesforce, Stripe, or any webhook-enabled service.",
-    icon: Server,
-  },
-  {
-    title: "Scheduled Syncs",
-    description: "Keep data in sync on a schedule. Pull from external APIs and update your database automatically.",
-    icon: Clock,
   },
   {
     title: "Enterprise Connectors",
