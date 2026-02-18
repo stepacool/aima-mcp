@@ -1,120 +1,132 @@
-# Roadmap: MCPHERO Landing Page Redesign
+# Roadmap: MCPHERO Landing Page
 
 **Project:** MCPHERO Landing Page
 **Core Value:** Ship MCP servers in minutes, not weeks
 **Depth:** Standard (5-8 phases)
 **Created:** 2026-02-18
+**Milestone:** v1.1 (Content Alignment)
+
+---
+
+## Milestones
+
+- ✅ **v1.0 MVP** - Phases 1-3 (shipped 2026-02-18)
+- 🚧 **v1.1 Content Alignment** - Phases 4-7 (in progress)
+- 📋 **v2.0** - Future work (planned)
 
 ---
 
 ## Phases
 
-- [x] **Phase 1: SEO Foundation** - Preserve and enhance search visibility (completed 2026-02-18)
-- [x] **Phase 2: Content & Design** - Build all visual sections with Vercel/Linear aesthetic (completed 2026-02-18)
-- [x] **Phase 3: Performance & Analytics** - Optimize Core Web Vitals and enable tracking (completed 2026-02-18)
+- [ ] **Phase 4: Hero Section Updates** - Update headline, subheadline, and social proof (3 requirements)
+- [ ] **Phase 5: Comparison Section Updates** - Add competitor comparisons, fix pricing (5 requirements)
+- [ ] **Phase 6: Trust Section Updates** - Replace placeholders, verify stars (2 requirements)
+- [ ] **Phase 7: Social Proof Expansion** - Add testimonials and case studies (2 requirements)
 
 ---
 
 ## Phase Details
 
-### Phase 1: SEO Foundation
+### 🚧 v1.1 Content Alignment (In Progress)
 
-**Goal:** Preserve and enhance search visibility while maintaining existing URL structure and meta tags
-
-**Depends on:** Nothing (first phase)
-
-**Requirements:** SEO-01, SEO-02, SEO-03, SEO-04, SEO-05
-
-**Success Criteria** (what must be TRUE):
-1. Next.js Metadata API returns proper title, description, and keywords for all MCP-related search queries
-2. Open Graph tags (og:title, og:description, og:image) render correctly for social sharing
-3. JSON-LD structured data (Organization, WebSite, Product schemas) is present in page source
-4. All existing URLs return 200 status (no 404s from moved content)
-5. Canonical URLs point to correct pages and meta descriptions match existing content
-
-**Plans:** TBD
+**Milestone Goal:** Align landing page content with competitor analysis - emphasize "No API docs" + "any input" messaging, add competitive comparisons, fix pricing accuracy
 
 ---
 
-### Phase 2: Content & Design
+### Phase 4: Hero Section Updates
 
-**Goal:** Build complete landing page with all visual sections using Vercel/Linear aesthetic
+**Goal:** Hero section communicates core value proposition with "No API docs required" messaging and "any input" capability
 
-**Depends on:** Phase 1
+**Depends on:** Phase 3 (previous milestone complete)
 
-**Requirements:** 
-- HERO-01, HERO-02, HERO-03, HERO-04, HERO-05, HERO-06, HERO-07
-- HOW-01, HOW-02, HOW-03, HOW-04
-- USECASE-01, USECASE-02, USECASE-03, USECASE-04
-- DEV-01, DEV-02, DEV-03, DEV-04, DEV-05
-- COMP-01, COMP-02, COMP-03, COMP-04, COMP-05
-- TRUST-01, TRUST-02, TRUST-03, TRUST-04
-- DESIGN-01, DESIGN-02, DESIGN-03, DESIGN-04, DESIGN-05, DESIGN-06, DESIGN-07
+**Requirements:** HERO-UPDATE-01, HERO-UPDATE-02, HERO-UPDATE-03
 
 **Success Criteria** (what must be TRUE):
-1. Hero section displays with headline, subheadline, primary CTA ("Start Building"), secondary CTA, product visual, and social proof - all visible above fold on desktop
-2. How It Works section shows 4-step wizard flow (Describe → Tools → Configure → Deploy) with icons, titles, descriptions, and connecting visual flow
-3. Use Cases section displays 4-6 cards with use case name, description, and copy-pasteable code snippets in responsive grid
-4. For Developers section shows mcphero Python package with install command (with copy button), code example, and docs link
-5. Comparison section displays tables vs self-hosting, FastMCP, and official MCP SDK with clear "Why MCPHERO" advantages
-6. Trust section shows company logos, GitHub link with star count, docs link, and footer with Docs/GitHub/Discord links
-7. Design matches Vercel/Linear aesthetic with dark mode support, proper heading hierarchy, accessible colors, visible focus states, and scroll-triggered animations
-8. Mobile layout renders correctly with 44px minimum touch targets and responsive grid (1 col mobile, 2 tablet, 3-4 desktop)
+1. Headline emphasizes "No API docs required" messaging - visitor sees this immediately on load
+2. Subheadline mentions "any input" capability (cURL, SQL schema, HTML, natural language) as supported inputs
+3. Social proof numbers are specific and accurate (verified against actual metrics)
 
-**Plans:** 
-5/5 plans complete
-- [x] 02-01-PLAN.md — Hero + How It Works sections (11 requirements)
-- [x] 02-02-PLAN.md — Use Cases + For Developers sections (9 requirements)
-- [x] 02-03-PLAN.md — Comparison + Trust sections (9 requirements)
-- [x] 02-04-PLAN.md — Page assembly + Design polish (7 requirements)
+**Plans**: TBD
 
 ---
 
-### Phase 3: Performance & Analytics
+### Phase 5: Comparison Section Updates
 
-**Goal:** Achieve Core Web Vitals targets and enable analytics tracking
+**Goal:** Competitive positioning is clear with accurate pricing information
 
-**Depends on:** Phase 2
+**Depends on:** Phase 4
 
-**Requirements:** PERF-01, PERF-02, PERF-03, PERF-04, PERF-05, PERF-06, ANALYTICS-01, ANALYTICS-02, ANALYTICS-03
+**Requirements:** COMP-MANUFACT-01, COMP-COMPOSIO-01, COMP-PRICING-01, COMP-PRICING-02, COMP-PRICING-03
 
 **Success Criteria** (what must be TRUE):
-1. Lighthouse Performance score is ≥ 90
-2. LCP (Largest Contentful Paint) is under 2.5 seconds
-3. CLS (Cumulative Layout Shift) is under 0.1
-4. INP (Interaction to Next Paint) is under 200ms
-5. Below-fold images are lazy loaded
-6. Non-critical JavaScript is deferred
-7. Vercel Analytics tracks page views
-8. CTA click events are tracked in analytics
-9. Speed Insights monitoring is enabled
+1. Comparison table vs Manufact displays with YC-backed badge, 8K+ GitHub stars, IBM/NVIDIA/Oracle logos visible
+2. Comparison table vs Composio displays with 500+ integrations and enterprise features highlighted
+3. HasMCP pricing shows $59/mo Pro in the comparison (not $19/seat)
+4. MCPHero pricing in JSON-LD structured data shows $59/mo Pro
+5. Free tier in JSON-LD shows "1 server, 3 tools" (not "unlimited")
 
-**Plans:** 1/1 plans complete
-- [x] 03-01-PLAN.md — CTA tracking + performance verification (9 requirements)
+**Plans**: TBD
 
 ---
 
-## Progress Table
+### Phase 6: Trust Section Updates
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. SEO Foundation | 1/1 | Complete | 2026-02-18 |
-| 2. Content & Design | 4/4 | Complete    | 2026-02-18 |
-| 3. Performance & Analytics | 1/1 | Complete    | 2026-02-18 |
+**Goal:** Trust section establishes credibility with real company names and accurate metrics
+
+**Depends on:** Phase 5
+
+**Requirements:** TRUST-LOGO-01, TRUST-STARS-01
+
+**Success Criteria** (what must be TRUE):
+1. Company logos in Trust section show real company names/initials (no placeholder text)
+2. GitHub stars count displays verified correct number (not 2.5k+, but actual count)
+
+**Plans**: TBD
+
+---
+
+### Phase 7: Social Proof Expansion
+
+**Goal:** Additional social proof sections provide real-world validation through testimonials and case studies
+
+**Depends on:** Phase 6
+
+**Requirements:** SOCIAL-01, SOCIAL-02
+
+**Success Criteria** (what must be TRUE):
+1. Testimonials section renders with placeholder testimonial cards (name, role, company, quote)
+2. Case studies section renders with placeholder for SQL→MCP server conversion examples
+
+**Plans**: TBD
+
+---
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. SEO Foundation | v1.0 | 1/1 | Complete | 2026-02-18 |
+| 2. Content & Design | v1.0 | 4/4 | Complete | 2026-02-18 |
+| 3. Performance & Analytics | v1.0 | 1/1 | Complete | 2026-02-18 |
+| 4. Hero Section Updates | v1.1 | 0/TBD | Not started | - |
+| 5. Comparison Section Updates | v1.1 | 0/TBD | Not started | - |
+| 6. Trust Section Updates | v1.1 | 0/TBD | Not started | - |
+| 7. Social Proof Expansion | v1.1 | 0/TBD | Not started | - |
 
 ---
 
 ## Coverage
 
-**Total v1 requirements:** 50
-**Mapped to phases:** 50
+**Total v1.1 requirements:** 12
+**Mapped to phases:** 12
 **Unmapped:** 0 ✓
 
 | Phase | Requirements |
 |-------|--------------|
-| Phase 1: SEO Foundation | SEO-01, SEO-02, SEO-03, SEO-04, SEO-05 |
-| Phase 2: Content & Design | HERO-01 to HERO-07, HOW-01 to HOW-04, USECASE-01 to USECASE-04, DEV-01 to DEV-05, COMP-01 to COMP-05, TRUST-01 to TRUST-04, DESIGN-01 to DESIGN-07 |
-| Phase 3: Performance & Analytics | PERF-01 to PERF-06, ANALYTICS-01 to ANALYTICS-03 |
+| Phase 4: Hero Section Updates | HERO-UPDATE-01, HERO-UPDATE-02, HERO-UPDATE-03 |
+| Phase 5: Comparison Section Updates | COMP-MANUFACT-01, COMP-COMPOSIO-01, COMP-PRICING-01, COMP-PRICING-02, COMP-PRICING-03 |
+| Phase 6: Trust Section Updates | TRUST-LOGO-01, TRUST-STARS-01 |
+| Phase 7: Social Proof Expansion | SOCIAL-01, SOCIAL-02 |
 
 ---
 

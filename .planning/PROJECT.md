@@ -22,12 +22,13 @@ Ship MCP servers in minutes, not weeks. The wizard handles everything from code 
 
 ### Active
 
-- [ ] Landing page with YC-quality polish targeting MCP SEO
-- [ ] Hero section with clear value proposition
-- [ ] "How it works" section showing wizard flow
-- [ ] Use cases/examples section with MCP server templates
-- [ ] "For developers" section highlighting mcphero Python package
-- [ ] Comparison/FAQ section (vs self-hosting, vs alternatives)
+- [ ] Hero: Emphasize "No API docs" + "any input" (cURL, SQL, HTML, natural language)
+- [ ] Add vs Manufact comparison (biggest competitor per analysis)
+- [ ] Add vs Composio comparison
+- [ ] Fix HasMCP pricing in comparison ($59/mo vs $24/seat)
+- [ ] Replace placeholder company logos
+- [ ] Clarify GitHub stars (verify actual count)
+- [ ] Add testimonials/case studies section
 
 ### Out of Scope
 
@@ -68,6 +69,19 @@ Ship MCP servers in minutes, not weeks. The wizard handles everything from code 
 | Iterate on existing template | Preserve infra, focus on content/UX | — Pending |
 | Vercel/Linear style | Clean, minimal, trust-building for YC audience | — Pending |
 | Include mcphero package mention | Attract developers who want programmatic access | — Pending |
+---
+
+## Current Milestone: v1.1 Landing Page Content Alignment
+
+**Goal:** Align landing page content with MCPHero's key differentiators from competitor analysis
+
+**Target features:**
+- Update hero messaging to emphasize "No API docs required" + "any input" capability
+- Add vs Manufact and vs Composio comparison tables
+- Fix HasMCP pricing ($59/mo not $19/seat)
+- Replace placeholder company logos (user will add real ones)
+- Clarify GitHub stars count
+- Add testimonials/case studies section (placeholder for now)
 
 ---
-*Last updated: 2026-02-18 after initialization*
+*Last updated: 2026-02-18 for v1.1*
