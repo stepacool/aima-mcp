@@ -55,8 +55,8 @@ const comparisonTables: ComparisonTable[] = [
     subtitle: "More flexible. More affordable. More powerful.",
     rows: [
       { feature: "AI Code Generation", mcphero: true, competitor: false },
-      { feature: "Free Tier", mcphero: "Unlimited", competitor: "250 calls/mo" },
-      { feature: "Pro Pricing", mcphero: "$19/seat", competitor: "$24/seat" },
+      { feature: "Free Tier", mcphero: "1 server, 3 tools", competitor: "250 calls/mo" },
+      { feature: "Pro Pricing", mcphero: "$59/mo", competitor: "$59/mo" },
       { feature: "Custom Tools", mcphero: true, competitor: "OpenAPI only" },
       { feature: "Self-Hosted Option", mcphero: true, competitor: true },
     ],
