@@ -9,27 +9,37 @@ import { Copy, Check, ExternalLink } from "lucide-react";
 const installCommand = "pip install mcphero";
 const installCommandUv = "uv add mcphero";
 
-const codeExample = `from mcphero import MCPServer, DatabaseTool
+const codeExample = `import asyncio
+from openai import OpenAI
+from mcphero import MCPToolAdapterOpenAI
 
-# Create your MCP server
-server = MCPServer(
-    name="my-database-server",
-    description="Database tools for AI assistants"
-)
+async def main():
+    # Connect to MCP server
+    adapter = MCPToolAdapterOpenAI(
+        "https://api.mcphero.app/mcp/your-server"
+    )
+    client = OpenAI()
 
-# Add database tools
-server.add_tool(DatabaseTool(
-    connection="postgresql://user:pass@localhost/mydb",
-    tables=["users", "orders", "products"],
-    operations=["query", "insert", "update"]
-))
+    # Get tools from MCP server
+    tools = await adapter.get_tool_definitions()
 
-# Start the server
-server.run()  # Runs on stdio by default
+    # Use with OpenAI
+    messages = [{"role": "user", 
+                 "content": "Get the weather in London"}]
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+        tools=tools,
+    )
 
-# Or connect to Claude, ChatGPT, Cursor...
-server.connect_to_claude()
-server.connect_to_cursor()`;
+    # Process tool calls automatically
+    if response.choices[0].message.tool_calls:
+        results = await adapter.process_tool_calls(
+            response.choices[0].message.tool_calls
+        )
+        # Continue with results...
+
+asyncio.run(main())`;
 
 function CodeBlock({ code, className }: { code: string; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -105,14 +115,14 @@ export function ForDevelopers() {
           >
             For Developers
           </motion.h2>
-          <motion.p
+            <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
             className="mt-4 text-lg text-marketing-fg-muted"
           >
-            Python package for programmatic control
+            Connect OpenAI, Gemini, and any LLM to MCP servers
           </motion.p>
         </div>
 
@@ -132,7 +142,7 @@ export function ForDevelopers() {
                 <div>
                   <CardTitle className="text-marketing-fg text-xl">mcphero</CardTitle>
                   <CardDescription className="text-marketing-fg-muted">
-                    Python package for programmatic MCP server control
+                    Connect any MCP server to OpenAI or Gemini
                   </CardDescription>
                 </div>
               </div>

@@ -14,68 +14,98 @@ interface UseCase {
 
 const useCases: UseCase[] = [
   {
-    title: "Database Tools",
-    description: "Connect your database to any AI client with native MCP tools",
-    code: `from mcphero import MCPServer, DatabaseTool
+    title: "AI Tool Adapter",
+    description: "Connect any MCP server to OpenAI as native tools",
+    code: `import asyncio
+from openai import OpenAI
+from mcphero import MCPToolAdapterOpenAI
 
-server = MCPServer()
-server.add_tool(DatabaseTool(
-    connection="postgresql://user:pass@localhost/db",
-    tables=["users", "products"]
-))`,
+adapter = MCPToolAdapterOpenAI(
+    "https://api.mcphero.app/mcp/your-server"
+)
+client = OpenAI()
+
+tools = await adapter.get_tool_definitions()
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "What's the weather?"}],
+    tools=tools
+)`,
   },
   {
-    title: "API Integration",
-    description: "Expose REST APIs as MCP tools in minutes",
-    code: `from mcphero import MCPServer, RESTEndpoint
+    title: "Multi-Server",
+    description: "Connect to multiple MCP servers at once",
+    code: `from mcphero import MCPToolAdapterOpenAI, MCPServerConfig
 
-server = MCPServer()
-server.add_tool(RESTEndpoint(
-    url="https://api.github.com",
-    endpoints=["/users", "/repos"]
-))`,
+adapter = MCPToolAdapterOpenAI([
+    MCPServerConfig(
+        url="https://api.mcphero.app/mcp/weather",
+        name="weather",
+    ),
+    MCPServerConfig(
+        url="https://api.mcphero.app/mcp/calendar",
+        name="calendar",
+    ),
+])
+
+tools = await adapter.get_tool_definitions()
+# Tools from both servers merged automatically`,
   },
   {
-    title: "Slack Bot",
-    description: "Build an AI-powered Slack assistant with MCP",
-    code: `from mcphero import MCPServer, SlackTool
+    title: "Google Gemini",
+    description: "Use MCP tools with Gemini AI models",
+    code: `import asyncio
+from google import genai
+from mcphero import MCPToolAdapterGemini
 
-server = MCPServer()
-server.add_tool(SlackTool(
-    bot_token="xoxb-...",
-    channels=["#general", "#dev"]
-))`,
+adapter = MCPToolAdapterGemini(
+    "https://api.mcphero.app/mcp/your-server"
+)
+client = genai.Client(api_key="your-api-key")
+
+tool = await adapter.get_tool()
+response = client.models.generate_content(
+    model="gemini-2.0-flash",
+    contents="What's on my calendar?",
+    config=types.GenerateContentConfig(tools=[tool])
+)`,
   },
   {
-    title: "GitHub Automation",
-    description: "Automate GitHub workflows with AI commands",
-    code: `from mcphero import MCPServer, GitHubTool
+    title: "Tool Routing",
+    description: "Automatic routing between multiple servers",
+    code: `from mcphero import MCPToolAdapterOpenAI
 
-server = MCPServer()
-server.add_tool(GitHubTool(
-    token="ghp_...",
-    repos=["owner/repo"]
-))`,
+adapter = MCPToolAdapterOpenAI([
+    MCPServerConfig(url="https://example.com/mcp/db", name="db"),
+    MCPServerConfig(url="https://example.com/mcp/api", name="api"),
+])
+
+tools = await adapter.get_tool_definitions()
+# "search" becomes "db__search" and "api__search"`,
   },
   {
-    title: "Custom LLM Tools",
-    description: "Create custom tools for any LLM",
-    code: `from mcphero import MCPServer, CustomTool
+    title: "Custom Headers",
+    description: "Pass authentication to your MCP servers",
+    code: `from mcphero import MCPToolAdapterOpenAI, MCPServerConfig
 
-@server.tool()
-def calculate_metrics(data: list) -> dict:
-    return {"avg": sum(data) / len(data)}`,
+adapter = MCPToolAdapterOpenAI(
+    MCPServerConfig(
+        url="https://api.mcphero.app/mcp/secure",
+        headers={
+            "Authorization": "Bearer your-token",
+        },
+    )
+)`,
   },
   {
-    title: "File Operations",
-    description: "AI-powered file management and processing",
-    code: `from mcphero import MCPServer, FileTool
-
-server = MCPServer()
-server.add_tool(FileTool(
-    root_dir="./data",
-    operations=["read", "write", "search"]
-))`,
+    title: "Error Handling",
+    description: "Graceful error handling with automatic retries",
+    code: `results = await adapter.process_tool_calls(
+    tool_calls,
+    return_errors=True  # Returns errors in results
+)
+# Failed calls return error messages
+# that can be sent back to the model`,
   },
 ];
 
