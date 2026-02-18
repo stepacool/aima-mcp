@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Star } from "lucide-react";
 import Link from "next/link";
 import { track } from "@vercel/analytics";
 
@@ -28,7 +27,7 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
             className="mt-6 text-lg text-marketing-fg-muted md:text-xl"
           >
-            Build, deploy, and manage MCP servers with AI. No code required. Connect any database, API, or tool to ChatGPT, Claude, Cursor, and more.
+            Connect any database, API, or tool — even without documentation. cURL, SQL schema, HTML, or plain English. Anything works.
           </motion.p>
 
           {/* CTAs */}
@@ -51,24 +50,6 @@ export function Hero() {
             >
               How It Works
             </Link>
-          </motion.div>
-
-          {/* Social Proof */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-            className="mt-10 flex items-center justify-center gap-2 text-sm text-marketing-fg-muted"
-          >
-            <div className="flex items-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className="size-4 fill-yellow-400 text-yellow-400"
-                />
-              ))}
-            </div>
-            <span>Trusted by 2,000+ developers</span>
           </motion.div>
         </div>
 
