@@ -73,6 +73,18 @@ const comparisonTables: ComparisonTable[] = [
       { feature: "Setup Time", mcphero: "Minutes", competitor: "Hours" },
     ],
   },
+  {
+    title: "vs Composio",
+    subtitle: "500+ integrations. But what about custom tools?",
+    rows: [
+      { feature: "No-Code Builder", mcphero: true, competitor: false },
+      { feature: "Custom Tools", mcphero: "Any input + code", competitor: "OpenAPI only" },
+      { feature: "AI Generation", mcphero: true, competitor: "Limited" },
+      { feature: "Dedicated VPS", mcphero: true, competitor: false },
+      { feature: "Pricing", mcphero: "$59/mo", competitor: "Enterprise" },
+      { feature: "Setup Time", mcphero: "Minutes", competitor: "Days" },
+    ],
+  },
 ];
 
 function CheckIcon({ className }: { className?: string }) {
