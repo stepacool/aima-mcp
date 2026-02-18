@@ -1,8 +1,10 @@
 "use client";
 
 import { motion, type Variants } from "motion/react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MessageSquare, Wand2, Settings, Rocket } from "lucide-react";
+import Link from "next/link";
 
 const steps = [
   {
@@ -128,6 +130,19 @@ export function HowItWorks() {
               </Card>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* CTA Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="mt-12 text-center"
+        >
+          <Button asChild size="lg" className="min-w-[160px]">
+            <Link href="/signup">Start Building</Link>
+          </Button>
         </motion.div>
       </div>
     </section>
