@@ -120,7 +120,12 @@ const tableVariants: Variants = {
 
 export function Comparison() {
   return (
-    <section className="bg-marketing-bg py-24 md:py-32" id="comparison">
+    <section className="relative overflow-hidden bg-marketing-bg py-24 md:py-32" id="comparison">
+      {/* Background accent */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 size-[600px] rounded-full bg-[var(--marketing-accent)]/5 blur-[120px]" />
+      </div>
+      
       <div className="container">
         <div className="mx-auto max-w-3xl text-center mb-16">
           <motion.h2
@@ -128,9 +133,9 @@ export function Comparison() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="text-3xl font-bold tracking-tight text-marketing-fg md:text-4xl lg:text-5xl"
+            className="text-4xl font-bold tracking-tight text-marketing-fg md:text-5xl lg:text-6xl"
           >
-            Why MCP Hero?
+            Why <span className="text-[var(--marketing-accent)]">MCP Hero</span>?
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}

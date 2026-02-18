@@ -70,12 +70,17 @@
   --marketing-border: var(--color-neutral-200);
   --marketing-border-strong: var(--color-neutral-300);
 
-  --marketing-accent: var(--color-neutral-950);
-  --marketing-accent-hover: var(--color-neutral-800);
+  /* Bold accent - electric coral */
+  --marketing-accent: #ff6b4a;
+  --marketing-accent-hover: #e85a3a;
   --marketing-accent-fg: var(--color-white);
 
-  --marketing-card: color-mix(in srgb, var(--color-neutral-950), transparent 96%);
-  --marketing-card-hover: color-mix(in srgb, var(--color-neutral-950), transparent 92%);
+  --marketing-card: var(--color-white);
+  --marketing-card-hover: var(--color-neutral-50);
+
+  /* Hero gradient */
+  --hero-gradient-start: #fff5f3;
+  --hero-gradient-end: #fefefe;
 }
 
 .dark {
@@ -135,8 +140,17 @@
   --marketing-border: var(--color-neutral-800);
   --marketing-border-strong: var(--color-neutral-700);
 
-  /* Subtle accent - monochromatic but elegant */
-  --marketing-accent: var(--color-white);
+  /* Bold accent - electric coral */
+  --marketing-accent: #ff6b4a;
+  --marketing-accent-hover: #ff8a70;
+  --marketing-accent-fg: var(--color-white);
+
+  --marketing-card: var(--color-neutral-900);
+  --marketing-card-hover: var(--color-neutral-800);
+
+  /* Hero gradient */
+  --hero-gradient-start: #1a0a08;
+  --hero-gradient-end: #0d0d0d;
   --marketing-accent-hover: var(--color-neutral-200);
   --marketing-accent-fg: var(--color-black);
 

@@ -3,7 +3,7 @@
 import { motion, type Variants } from "motion/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MessageSquare, Wand2, Settings, Rocket } from "lucide-react";
+import { MessageSquare, Wand2, Settings, Rocket, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { track } from "@vercel/analytics";
 
@@ -60,8 +60,13 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="bg-marketing-bg py-24 md:py-32"
+      className="relative overflow-hidden bg-marketing-bg py-24 md:py-32"
     >
+      {/* Background */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-0 left-1/4 size-[400px] rounded-full bg-[var(--marketing-accent)]/5 blur-[100px]" />
+      </div>
+      
       <div className="container">
         {/* Section Header */}
         <motion.div
@@ -71,8 +76,8 @@ export function HowItWorks() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="mx-auto max-w-2xl text-center"
         >
-          <h2 className="text-3xl font-bold tracking-tight text-marketing-fg md:text-4xl lg:text-5xl">
-            How It Works
+          <h2 className="text-4xl font-bold tracking-tight text-marketing-fg md:text-5xl lg:text-6xl">
+            How It <span className="text-[var(--marketing-accent)]">Works</span>
           </h2>
           <p className="mt-4 text-lg text-marketing-fg-muted">
             Build your MCP server in four simple steps
@@ -139,10 +144,18 @@ export function HowItWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="mt-12 text-center"
+          className="mt-16 text-center"
         >
-          <Button asChild size="lg" className="min-w-[160px]" onClick={() => track("cta_click", { location: "how-it-works", variant: "primary" })}>
-            <Link href="/auth/sign-up">Start Building</Link>
+          <Button 
+            asChild 
+            size="lg" 
+            className="min-w-[200px] bg-[var(--marketing-accent)] hover:bg-[var(--marketing-accent-hover)] text-[var(--marketing-accent-fg)] border-0 text-base font-semibold px-8 h-12 shadow-lg shadow-[var(--marketing-accent)]/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[var(--marketing-accent)]/30" 
+            onClick={() => track("cta_click", { location: "how-it-works", variant: "primary" })}
+          >
+            <Link href="/auth/sign-up">
+              Start Building
+              <ArrowRight className="ml-2 size-5 inline-block" />
+            </Link>
           </Button>
         </motion.div>
       </div>
