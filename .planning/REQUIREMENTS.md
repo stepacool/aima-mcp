@@ -1,139 +1,66 @@
-# Requirements: MCPHERO Landing Page
+# Requirements: MCPHERO Landing Page v1.1
 
 **Defined:** 2026-02-18
 **Core Value:** Ship MCP servers in minutes, not weeks. The wizard handles everything from code generation to OAuth to deployment.
 
-## v1 Requirements
+## v1.1 Requirements
 
-### SEO & Metadata
+### Hero Section Updates
 
-- [x] **SEO-01**: Implement Next.js Metadata API with title, description, keywords for MCP-related queries
-- [x] **SEO-02**: Add Open Graph meta tags for social sharing (og:title, og:description, og:image)
-- [x] **SEO-03**: Add JSON-LD structured data (Organization, WebSite, Product schemas)
-- [x] **SEO-04**: Preserve existing URL structure to avoid 404s and link equity loss
-- [x] **SEO-05**: Maintain canonical URLs and existing meta descriptions
+- [x] **HERO-UPDATE-01**: Update hero headline to emphasize "No API docs required" messaging
+- [x] **HERO-UPDATE-02**: Add "any input" capability mention in subheadline (cURL, SQL schema, HTML, natural language)
+- [x] **HERO-UPDATE-03**: Update social proof to be specific/accurate (verify actual numbers)
 
-### Hero Section
+### Comparison Section Updates
 
-- [ ] **HERO-01**: Clear headline communicating core value proposition
-- [ ] **HERO-02**: Subheadline with secondary value (1-2 sentences)
-- [ ] **HERO-03**: Primary CTA button ("Start Building" or similar, first-person)
-- [ ] **HERO-04**: Secondary CTA for docs/demo
-- [ ] **HERO-05**: Product screenshot or demo video (30 seconds max)
-- [ ] **HERO-06**: Social proof above fold (GitHub stars, company logos)
-- [ ] **HERO-07**: Mobile-responsive layout with touch-friendly CTAs (44px min)
+- [x] **COMP-MANUFACT-01**: Add vs Manufact comparison table (YC-backed, 8K+ GitHub stars, IBM/NVIDIA/Oralce logos)
+- [x] **COMP-COMPOSIO-01**: Add vs Composio comparison table (500+ integrations, enterprise features)
+- [x] **COMP-PRICING-01**: Fix HasMCP pricing in existing comparison ($59/mo Pro, not $19/seat)
+- [x] **COMP-PRICING-02**: Update MCPHero pricing to $59/mo Pro in JSON-LD structured data
+- [x] **COMP-PRICING-03**: Fix free tier description in JSON-LD (1 server, 3 tools, not "unlimited")
 
-### How It Works Section
+### Trust Section Updates
 
-- [ ] **HOW-01**: 3-4 step wizard flow visualization (Describe → Tools → Configure → Deploy)
-- [ ] **HOW-02**: Each step with icon, title, and 1-line description
-- [ ] **HOW-03**: Visual flow connecting steps (arrows or connecting line)
-- [ ] **HOW-04**: CTA at bottom of section
+- [ ] **TRUST-LOGO-01**: Replace placeholder company logos with real company names/initials
+- [ ] **TRUST-STARS-01**: Verify and correct GitHub stars count (currently says 2.5k+)
 
-### Use Cases Section
+### Social Proof
 
-- [ ] **USECASE-01**: Grid of 4-6 use case cards
-- [ ] **USECASE-02**: Each card shows use case name, description, copy-pasteable code snippet
-- [ ] **USECASE-03**: Visual distinction (icon or accent) per use case
-- [ ] **USECASE-04**: Mobile-responsive grid (1 col mobile, 2 tablet, 3-4 desktop)
-
-### For Developers Section
-
-- [ ] **DEV-01**: Section highlighting mcphero Python package
-- [ ] **DEV-02**: npm/pip install command with copy button
-- [ ] **DEV-03**: Code example showing basic usage
-- [ ] **DEV-04**: Link to package documentation
-- [ ] **DEV-05**: Developer-focused language and tone
-
-### Comparison Section
-
-- [ ] **COMP-01**: Comparison table vs self-hosting (manual MCP setup)
-- [ ] **COMP-02**: Comparison table vs FastMCP (open source alternative)
-- [ ] **COMP-03**: Comparison table vs official MCP SDK
-- [ ] **COMP-04**: Clear "Why MCPHERO" column highlighting advantages
-- [ ] **COMP-05**: Fair, accurate comparisons (not misleading)
-
-### Performance
-
-- [ ] **PERF-01**: Lighthouse Performance score ≥ 90
-- [ ] **PERF-02**: LCP (Largest Contentful Paint) < 2.5s
-- [ ] **PERF-03**: CLS (Cumulative Layout Shift) < 0.1
-- [ ] **PERF-04**: INP (Interaction to Next Paint) < 200ms
-- [ ] **PERF-05**: Lazy load below-fold images
-- [ ] **PERF-06**: Defer non-critical JavaScript
-
-### Trust & Social Proof
-
-- [ ] **TRUST-01**: Company/developer logos (social proof)
-- [ ] **TRUST-02**: GitHub repository link with star count
-- [ ] **TRUST-03**: Documentation link prominently placed
-- [ ] **TRUST-04**: Footer with links (Docs, GitHub, Discord/Twitter)
-
-### Design & UX
-
-- [ ] **DESIGN-01**: Vercel/Linear aesthetic - clean, minimal, professional
-- [ ] **DESIGN-02**: Dark mode support (or dark-first design)
-- [ ] **DESIGN-03**: Consistent spacing using design tokens
-- [ ] **DESIGN-04**: Proper heading hierarchy (h1 → h2 → h3)
-- [ ] **DESIGN-05**: Accessible colors with sufficient contrast
-- [ ] **DESIGN-06**: Keyboard-navigable (focus states visible)
-- [ ] **DESIGN-07**: Scroll-triggered animations using motion (not blocking)
-
-### Analytics
-
-- [ ] **ANALYTICS-01**: Vercel Analytics integration for page views
-- [ ] **ANALYTICS-02**: Track CTA click events
-- [ ] **ANALYTICS-03**: Speed Insights monitoring enabled
-
-## v2 Requirements
-
-### Content
-
-- **BLOG-01**: Blog section with MCP-related technical content
-- **CASE-01**: Customer case studies
-- **DOCS-01**: Interactive API documentation
-
-### Features
-
-- **PLAYGROUND-01**: Live code playground for trying MCP servers
-- **TEMPLATES-01**: Pre-built MCP server templates gallery
-- **A/B-01**: A/B testing framework for CTAs
-
-### Engagement
-
-- **CHAT-01**: AI chatbot for product questions
-- **DEMO-01**: Interactive product demo
+- [ ] **SOCIAL-01**: Add testimonials section with placeholder testimonials
+- [ ] **SOCIAL-02**: Add case studies section placeholder (for SQL→MCP server examples)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Blog/Content section | Defer until after product-market fit |
-| Live code playground | Requires backend support, high complexity |
-| A/B testing framework | Defer until 1k+ daily visitors |
-| Multi-language support | English sufficient for initial launch |
-| Complex 3D animations | Performance risk, not aligned with Vercel/Linear aesthetic |
+| Real screenshots/video | User will add themselves |
+| Real customer logos | User will provide |
+| Real testimonials | User will source |
+| Pricing page changes | Separate concern |
+| Blog/content section | Not in v1.1 scope |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEO-01 through SEO-05 | Phase 1 | Complete |
-| HERO-01 through HERO-07 | Phase 2 | Pending |
-| HOW-01 through HOW-04 | Phase 2 | Pending |
-| USECASE-01 through USECASE-04 | Phase 2 | Pending |
-| DEV-01 through DEV-05 | Phase 2 | Pending |
-| COMP-01 through COMP-05 | Phase 2 | Pending |
-| PERF-01 through PERF-07 | Phase 3 | Pending |
-| TRUST-01 through TRUST-04 | Phase 2 | Pending |
-| DESIGN-01 through DESIGN-07 | Phase 2 | Pending |
-| ANALYTICS-01 through ANALYTICS-03 | Phase 3 | Pending |
+| HERO-UPDATE-01 | Phase 4 | Complete |
+| HERO-UPDATE-02 | Phase 4 | Complete |
+| HERO-UPDATE-03 | Phase 4 | Complete |
+| COMP-MANUFACT-01 | Phase 5 | Complete |
+| COMP-COMPOSIO-01 | Phase 5 | Complete |
+| COMP-PRICING-01 | Phase 5 | Complete |
+| COMP-PRICING-02 | Phase 5 | Complete |
+| COMP-PRICING-03 | Phase 5 | Complete |
+| TRUST-LOGO-01 | Phase 6 | Pending |
+| TRUST-STARS-01 | Phase 6 | Pending |
+| SOCIAL-01 | Phase 7 | Pending |
+| SOCIAL-02 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 54 total
-- Mapped to phases: 54
+- v1.1 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after research synthesis*
+*Last updated: 2026-02-18 for v1.1*
