@@ -1,9 +1,29 @@
-import type { ReactNode } from "react";
+import type { Metadata, ReactNode } from "react";
 import { CookieBanner } from "@/components/marketing/navigation/cookie-banner";
 import { Footer } from "@/components/marketing/navigation/footer";
 import { Header } from "@/components/marketing/navigation/header";
 import { ThemeToggle } from "@/components/ui/custom/theme-toggle";
 import { MarketingProviders } from "./providers";
+import { appConfig } from "@/config/app.config";
+
+export const metadata: Metadata = {
+	alternates: {
+		canonical: appConfig.baseUrl,
+	},
+	keywords: [
+		"MCP server",
+		"Model Context Protocol",
+		"Auto MCP",
+		"MCP Generator",
+		"AI tools integration",
+		"no-code MCP",
+		"MCP from OpenAPI",
+	],
+	robots: {
+		index: true,
+		follow: true,
+	},
+};
 
 /**
  * Marketing Layout
