@@ -5,15 +5,6 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Github, BookOpen, Twitter, Disc } from "lucide-react";
 
-const companies = [
-  { name: "Acme Corp", initials: "AC" },
-  { name: "TechCo", initials: "TC" },
-  { name: "DataFlow", initials: "DF" },
-  { name: "CloudScale", initials: "CS" },
-  { name: "DevOps Inc", initials: "DO" },
-  { name: "ScaleUp", initials: "SU" },
-];
-
 const footerLinks = [
   {
     title: "Product",
@@ -49,75 +40,10 @@ const footerLinks = [
   },
 ];
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
-  },
-};
-
-function CompanyLogo({ name, initials }: { name: string; initials: string }) {
-  return (
-    <div className="flex items-center justify-center">
-      <div className="flex h-12 w-24 items-center justify-center rounded-lg bg-marketing-bg-elevated grayscale opacity-60 transition-all duration-300 hover:grayscale-0 hover:opacity-100 border border-marketing-border">
-        <span className="text-lg font-semibold text-marketing-fg">
-          {initials}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export function Trust() {
   return (
     <section className="bg-marketing-bg py-24 md:py-32" id="trust">
       <div className="container">
-        {/* Company Logos */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="mb-20"
-        >
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-2xl font-bold tracking-tight text-marketing-fg">
-              Trusted by leading companies
-            </h2>
-          </div>
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="mt-10 grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-6"
-          >
-            {companies.map((company) => (
-              <motion.div key={company.name} variants={itemVariants}>
-                <CompanyLogo
-                  name={company.name}
-                  initials={company.initials}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-
         {/* GitHub Stars & Docs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -138,7 +64,7 @@ export function Trust() {
               })}
             >
               <Github className="mr-2 size-5" />
-              <span className="font-semibold">2.5k+</span>
+              <span className="font-semibold">4</span>
               <span className="ml-1 text-marketing-fg-muted">Stars</span>
             </a>
 
