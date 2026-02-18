@@ -7,6 +7,8 @@ import { LibrarySection } from "@/components/marketing/sections/library-section"
 import { LatestArticlesSection } from "@/components/marketing/sections/latest-articles-section";
 import { PricingSection } from "@/components/marketing/sections/pricing-section";
 import { StatsSection } from "@/components/marketing/sections/stats-section";
+import { Comparison } from "@/components/landing/comparison";
+import { Trust } from "@/components/landing/trust";
 import { appConfig } from "@/config/app.config";
 import { getAllPosts } from "@/lib/marketing/blog/posts";
 
@@ -194,6 +196,8 @@ export default async function HomePage() {
 			<WebSiteJsonLd />
 			<ProductJsonLd />
 			<HeroSection />
+			<Comparison />
+			<Trust />
 			<FeaturesSection />
 			<LibrarySection />
 			<StatsSection />
