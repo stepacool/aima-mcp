@@ -8,7 +8,7 @@
 
 **Phase:** 02-content-design
 **Plan:** 02-05
-**Status:** Complete
+**Status:** Milestone complete
 
 ### Progress Bar
 

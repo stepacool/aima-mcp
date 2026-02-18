@@ -71,13 +71,13 @@
 
 ### Design & UX
 
-- [ ] **DESIGN-01**: Vercel/Linear aesthetic - clean, minimal, professional
-- [ ] **DESIGN-02**: Dark mode support (or dark-first design)
-- [ ] **DESIGN-03**: Consistent spacing using design tokens
-- [ ] **DESIGN-04**: Proper heading hierarchy (h1 → h2 → h3)
-- [ ] **DESIGN-05**: Accessible colors with sufficient contrast
-- [ ] **DESIGN-06**: Keyboard-navigable (focus states visible)
-- [ ] **DESIGN-07**: Scroll-triggered animations using motion (not blocking)
+- [x] **DESIGN-01**: Vercel/Linear aesthetic - clean, minimal, professional
+- [x] **DESIGN-02**: Dark mode support (or dark-first design)
+- [x] **DESIGN-03**: Consistent spacing using design tokens
+- [x] **DESIGN-04**: Proper heading hierarchy (h1 → h2 → h3)
+- [x] **DESIGN-05**: Accessible colors with sufficient contrast
+- [x] **DESIGN-06**: Keyboard-navigable (focus states visible)
+- [x] **DESIGN-07**: Scroll-triggered animations using motion (not blocking)
 
 ### Analytics
 
