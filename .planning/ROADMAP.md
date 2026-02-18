@@ -89,7 +89,7 @@
 8. CTA click events are tracked in analytics
 9. Speed Insights monitoring is enabled
 
-**Plans:** 1/1 plan complete
+**Plans:** 1/1 plans complete
 - [x] 03-01-PLAN.md — CTA tracking + performance verification (9 requirements)
 
 ---
@@ -100,7 +100,7 @@
 |-------|----------------|--------|-----------|
 | 1. SEO Foundation | 1/1 | Complete | 2026-02-18 |
 | 2. Content & Design | 4/4 | Complete    | 2026-02-18 |
-| 3. Performance & Analytics | 1/1 | Complete | 2026-02-18 |
+| 3. Performance & Analytics | 1/1 | Complete    | 2026-02-18 |
 
 ---
 
