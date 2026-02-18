@@ -9,7 +9,7 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Ship MCP servers in minutes, not weeks
-**Current focus:** Phase 4 - Hero Section Updates
+**Current focus:** Phase 5 - Comparison Section Updates
 
 ---
 
