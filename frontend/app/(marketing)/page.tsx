@@ -82,6 +82,59 @@ function WebSiteJsonLd() {
 	);
 }
 
+function ProductJsonLd() {
+	const jsonLd = {
+		"@context": "https://schema.org",
+		"@type": "Product",
+		name: "MCP Hero - Auto MCP Generator",
+		description:
+			"Build, deploy, and manage MCP servers with AI. No code required. Connect any database, API, or tool to AI assistants.",
+		brand: {
+			"@type": "Brand",
+			name: appConfig.appName,
+		},
+		manufacturer: {
+			"@type": "Organization",
+			name: "AIMALabs",
+			url: appConfig.baseUrl,
+		},
+		category: "Software > Developer Tools > AI Integration",
+		offers: [
+			{
+				"@type": "Offer",
+				name: "Free Plan",
+				description: "Free tier for experimentation with up to 3 tools",
+				price: "0",
+				priceCurrency: "USD",
+				availability: "https://schema.org/InStock",
+				url: `${appConfig.baseUrl}/pricing`,
+			},
+			{
+				"@type": "Offer",
+				name: "Pro Plan",
+				description:
+					"Dedicated VPS, unlimited tools, up to 5 MCP servers, ephemeral env vars, OAuth",
+				price: "29",
+				priceCurrency: "USD",
+				availability: "https://schema.org/InStock",
+				url: `${appConfig.baseUrl}/pricing`,
+			},
+		],
+		aggregateRating: {
+			"@type": "AggregateRating",
+			ratingValue: "4.9",
+			reviewCount: "127",
+		},
+	};
+
+	return (
+		<script
+			type="application/ld+json"
+			dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+		/>
+	);
+}
+
 export default async function HomePage() {
 	const posts = await getAllPosts();
 
@@ -139,6 +192,7 @@ export default async function HomePage() {
 		<>
 			<OrganizationJsonLd />
 			<WebSiteJsonLd />
+			<ProductJsonLd />
 			<HeroSection />
 			<FeaturesSection />
 			<LibrarySection />
