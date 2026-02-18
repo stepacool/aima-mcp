@@ -25,7 +25,7 @@ const comparisonTables: ComparisonTable[] = [
       { feature: "No Code Required", mcphero: true, competitor: false },
       { feature: "Auto-scaling", mcphero: true, competitor: "Manual" },
       { feature: "Managed Infrastructure", mcphero: true, competitor: false },
-      { feature: "Security & Auth", mcphero: "Built-in", competitor: "DIY" },
+      { feature: "Security & Auth", mcphero: "Built-in OAuth", competitor: "DIY" },
     ],
   },
   {
@@ -33,21 +33,32 @@ const comparisonTables: ComparisonTable[] = [
     subtitle: "More power. More integrations. Less boilerplate.",
     rows: [
       { feature: "No-Code Builder", mcphero: true, competitor: false },
-      { feature: "AI-Powered", mcphero: true, competitor: false },
+      { feature: "AI-Powered Generation", mcphero: true, competitor: false },
       { feature: "Hosted Deployment", mcphero: true, competitor: false },
-      { feature: "Database Tools", mcphero: "Full", competitor: "Limited" },
+      { feature: "Database Tools", mcphero: "Full + OAuth", competitor: "Limited" },
       { feature: "OAuth Support", mcphero: true, competitor: false },
     ],
   },
   {
-    title: "vs Official MCP SDK",
+    title: "vs Official SDK",
     subtitle: "Ship faster with less code and more features.",
     rows: [
       { feature: "No Code Required", mcphero: true, competitor: false },
       { feature: "Visual Builder", mcphero: true, competitor: false },
       { feature: "One-Click Deploy", mcphero: true, competitor: "CLI" },
-      { feature: "Managed Auth", mcphero: true, competitor: "Manual" },
-      { feature: "50+ Integrations", mcphero: true, competitor: false },
+      { feature: "Managed Auth", mcphero: "OAuth2", competitor: "Manual" },
+      { feature: "Built-in Integrations", mcphero: "50+", competitor: false },
+    ],
+  },
+  {
+    title: "vs HasMCP",
+    subtitle: "More flexible. More affordable. More powerful.",
+    rows: [
+      { feature: "AI Code Generation", mcphero: true, competitor: false },
+      { feature: "Free Tier", mcphero: "Unlimited", competitor: "250 calls/mo" },
+      { feature: "Pro Pricing", mcphero: "$19/seat", competitor: "$24/seat" },
+      { feature: "Custom Tools", mcphero: true, competitor: "OpenAPI only" },
+      { feature: "Self-Hosted Option", mcphero: true, competitor: true },
     ],
   },
 ];
@@ -108,7 +119,7 @@ export function Comparison() {
           </motion.p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-4">
           {comparisonTables.map((table, tableIndex) => (
             <motion.div
               key={table.title}
