@@ -1,4 +1,4 @@
-import type { Metadata, ReactNode } from "react";
+import type { Metadata, ReactNode } from "next";
 import { CookieBanner } from "@/components/marketing/navigation/cookie-banner";
 import { Footer } from "@/components/marketing/navigation/footer";
 import { Header } from "@/components/marketing/navigation/header";
