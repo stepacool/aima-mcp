@@ -111,7 +111,7 @@ function ProductJsonLd() {
 			{
 				"@type": "Offer",
 				name: "Free Plan",
-				description: "Free tier for experimentation with up to 3 tools",
+				description: "Free tier: 1 server, 3 tools, community support",
 				price: "0",
 				priceCurrency: "USD",
 				availability: "https://schema.org/InStock",
@@ -121,8 +121,8 @@ function ProductJsonLd() {
 				"@type": "Offer",
 				name: "Pro Plan",
 				description:
-					"Dedicated VPS, unlimited tools, up to 5 MCP servers, ephemeral env vars, OAuth",
-				price: "29",
+					"Dedicated VPS, unlimited tools, 5 MCP servers, ephemeral env vars, priority support",
+				price: "59",
 				priceCurrency: "USD",
 				availability: "https://schema.org/InStock",
 				url: `${appConfig.baseUrl}/pricing`,
