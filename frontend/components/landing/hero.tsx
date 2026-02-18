@@ -125,7 +125,7 @@ export function Hero() {
               className={buttonVariants({
                 variant: "outline",
                 size: "lg",
-              })}
+              }) + " h-12 px-6"}
               onClick={() => track("cta_click", { location: "hero", variant: "secondary" })}
             >
               See How It Works
