@@ -7,17 +7,17 @@
 
 ### Hero Section Updates
 
-- [ ] **HERO-UPDATE-01**: Update hero headline to emphasize "No API docs required" messaging
-- [ ] **HERO-UPDATE-02**: Add "any input" capability mention in subheadline (cURL, SQL schema, HTML, natural language)
-- [ ] **HERO-UPDATE-03**: Update social proof to be specific/accurate (verify actual numbers)
+- [x] **HERO-UPDATE-01**: Update hero headline to emphasize "No API docs required" messaging
+- [x] **HERO-UPDATE-02**: Add "any input" capability mention in subheadline (cURL, SQL schema, HTML, natural language)
+- [x] **HERO-UPDATE-03**: Update social proof to be specific/accurate (verify actual numbers)
 
 ### Comparison Section Updates
 
-- [ ] **COMP-MANUFACT-01**: Add vs Manufact comparison table (YC-backed, 8K+ GitHub stars, IBM/NVIDIA/Oralce logos)
-- [ ] **COMP-COMPOSIO-01**: Add vs Composio comparison table (500+ integrations, enterprise features)
-- [ ] **COMP-PRICING-01**: Fix HasMCP pricing in existing comparison ($59/mo Pro, not $19/seat)
-- [ ] **COMP-PRICING-02**: Update MCPHero pricing to $59/mo Pro in JSON-LD structured data
-- [ ] **COMP-PRICING-03**: Fix free tier description in JSON-LD (1 server, 3 tools, not "unlimited")
+- [x] **COMP-MANUFACT-01**: Add vs Manufact comparison table (YC-backed, 8K+ GitHub stars, IBM/NVIDIA/Oralce logos)
+- [x] **COMP-COMPOSIO-01**: Add vs Composio comparison table (500+ integrations, enterprise features)
+- [x] **COMP-PRICING-01**: Fix HasMCP pricing in existing comparison ($59/mo Pro, not $19/seat)
+- [x] **COMP-PRICING-02**: Update MCPHero pricing to $59/mo Pro in JSON-LD structured data
+- [x] **COMP-PRICING-03**: Fix free tier description in JSON-LD (1 server, 3 tools, not "unlimited")
 
 ### Trust Section Updates
 
@@ -43,14 +43,14 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HERO-UPDATE-01 | Phase 4 | Pending |
-| HERO-UPDATE-02 | Phase 4 | Pending |
-| HERO-UPDATE-03 | Phase 4 | Pending |
-| COMP-MANUFACT-01 | Phase 5 | Pending |
-| COMP-COMPOSIO-01 | Phase 5 | Pending |
-| COMP-PRICING-01 | Phase 5 | Pending |
-| COMP-PRICING-02 | Phase 5 | Pending |
-| COMP-PRICING-03 | Phase 5 | Pending |
+| HERO-UPDATE-01 | Phase 4 | Complete |
+| HERO-UPDATE-02 | Phase 4 | Complete |
+| HERO-UPDATE-03 | Phase 4 | Complete |
+| COMP-MANUFACT-01 | Phase 5 | Complete |
+| COMP-COMPOSIO-01 | Phase 5 | Complete |
+| COMP-PRICING-01 | Phase 5 | Complete |
+| COMP-PRICING-02 | Phase 5 | Complete |
+| COMP-PRICING-03 | Phase 5 | Complete |
 | TRUST-LOGO-01 | Phase 6 | Pending |
 | TRUST-STARS-01 | Phase 6 | Pending |
 | SOCIAL-01 | Phase 7 | Pending |

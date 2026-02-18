@@ -20,7 +20,7 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 **Status:** Milestone complete
 **Last activity:** 2026-02-18 — Phase 4 context gathered
 
-**Progress:** [░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
+**Progress:** [██████████] 100%
 (Phases 4-7 of 7 total phases)
 
 ---
@@ -77,6 +77,7 @@ Align landing page content with competitor analysis findings:
 - Not enough data yet for v1.1
 
 ---
+| Phase 05-comparison-section-updates P01 | 3 | 4 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ From v1.0 (archived):
 v1.1 decisions:
 - Phase 4: Hero updates must maintain existing visual structure while updating content
 - Phase 5: Comparison tables need to be added alongside existing comparisons (not replace)
+- [Phase 05-comparison-section-updates]: Added vs Manufact comparison (YC-backed, 8K+ stars) as 5th table — Competitor analysis identified Manufact as key competitor to address
+- [Phase 05-comparison-section-updates]: Added vs Composio comparison (500+ integrations) as 6th table — Competitor analysis identified Composio as key competitor to address
+- [Phase 05-comparison-section-updates]: Fixed pricing consistency to /mo across comparison tables and JSON-LD — Aligns pricing messaging across landing page
 
 ### Pending Todos
 
