@@ -61,6 +61,18 @@ const comparisonTables: ComparisonTable[] = [
       { feature: "Self-Hosted Option", mcphero: true, competitor: true },
     ],
   },
+  {
+    title: "vs Manufact",
+    subtitle: "YC-backed. 8K+ GitHub stars. But is it truly no-code?",
+    rows: [
+      { feature: "No-Code Builder", mcphero: true, competitor: false },
+      { feature: "Any Input Type", mcphero: "cURL, SQL, HTML, NL", competitor: "Structured specs only" },
+      { feature: "AI Generation", mcphero: true, competitor: "Limited" },
+      { feature: "Dedicated VPS", mcphero: true, competitor: false },
+      { feature: "Pricing", mcphero: "$59/mo flat", competitor: "Enterprise" },
+      { feature: "Setup Time", mcphero: "Minutes", competitor: "Hours" },
+    ],
+  },
 ];
 
 function CheckIcon({ className }: { className?: string }) {
