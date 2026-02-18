@@ -16,7 +16,7 @@
 
 **Phase:** 1-seo-foundation
 **Plan:** 01-01
-**Status:** Complete
+**Status:** Milestone complete
 
 ### Progress Bar
 
