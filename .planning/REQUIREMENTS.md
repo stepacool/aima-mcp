@@ -15,35 +15,35 @@
 
 ### Hero Section
 
-- [ ] **HERO-01**: Clear headline communicating core value proposition
-- [ ] **HERO-02**: Subheadline with secondary value (1-2 sentences)
-- [ ] **HERO-03**: Primary CTA button ("Start Building" or similar, first-person)
-- [ ] **HERO-04**: Secondary CTA for docs/demo
-- [ ] **HERO-05**: Product screenshot or demo video (30 seconds max)
-- [ ] **HERO-06**: Social proof above fold (GitHub stars, company logos)
-- [ ] **HERO-07**: Mobile-responsive layout with touch-friendly CTAs (44px min)
+- [x] **HERO-01**: Clear headline communicating core value proposition
+- [x] **HERO-02**: Subheadline with secondary value (1-2 sentences)
+- [x] **HERO-03**: Primary CTA button ("Start Building" or similar, first-person)
+- [x] **HERO-04**: Secondary CTA for docs/demo
+- [x] **HERO-05**: Product screenshot or demo video (30 seconds max)
+- [x] **HERO-06**: Social proof above fold (GitHub stars, company logos)
+- [x] **HERO-07**: Mobile-responsive layout with touch-friendly CTAs (44px min)
 
 ### How It Works Section
 
-- [ ] **HOW-01**: 3-4 step wizard flow visualization (Describe → Tools → Configure → Deploy)
-- [ ] **HOW-02**: Each step with icon, title, and 1-line description
-- [ ] **HOW-03**: Visual flow connecting steps (arrows or connecting line)
-- [ ] **HOW-04**: CTA at bottom of section
+- [x] **HOW-01**: 3-4 step wizard flow visualization (Describe → Tools → Configure → Deploy)
+- [x] **HOW-02**: Each step with icon, title, and 1-line description
+- [x] **HOW-03**: Visual flow connecting steps (arrows or connecting line)
+- [x] **HOW-04**: CTA at bottom of section
 
 ### Use Cases Section
 
-- [ ] **USECASE-01**: Grid of 4-6 use case cards
-- [ ] **USECASE-02**: Each card shows use case name, description, copy-pasteable code snippet
-- [ ] **USECASE-03**: Visual distinction (icon or accent) per use case
-- [ ] **USECASE-04**: Mobile-responsive grid (1 col mobile, 2 tablet, 3-4 desktop)
+- [x] **USECASE-01**: Grid of 4-6 use case cards
+- [x] **USECASE-02**: Each card shows use case name, description, copy-pasteable code snippet
+- [x] **USECASE-03**: Visual distinction (icon or accent) per use case
+- [x] **USECASE-04**: Mobile-responsive grid (1 col mobile, 2 tablet, 3-4 desktop)
 
 ### For Developers Section
 
-- [ ] **DEV-01**: Section highlighting mcphero Python package
-- [ ] **DEV-02**: npm/pip install command with copy button
-- [ ] **DEV-03**: Code example showing basic usage
-- [ ] **DEV-04**: Link to package documentation
-- [ ] **DEV-05**: Developer-focused language and tone
+- [x] **DEV-01**: Section highlighting mcphero Python package
+- [x] **DEV-02**: npm/pip install command with copy button
+- [x] **DEV-03**: Code example showing basic usage
+- [x] **DEV-04**: Link to package documentation
+- [x] **DEV-05**: Developer-focused language and tone
 
 ### Comparison Section
 
