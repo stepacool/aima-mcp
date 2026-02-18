@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -166,15 +167,13 @@ export function ForDevelopers() {
 
               {/* Documentation Link */}
               <div className="flex justify-center pt-2">
-                <a
-                  href="https://mcphero.dev/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/docs"
                   className={buttonVariants({ variant: "link" })}
                 >
                   View Full Documentation
                   <ExternalLink className="ml-1 h-4 w-4" />
-                </a>
+                </Link>
               </div>
             </CardContent>
           </Card>

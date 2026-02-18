@@ -130,7 +130,7 @@ export function Comparison() {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="text-3xl font-bold tracking-tight text-marketing-fg md:text-4xl lg:text-5xl"
           >
-            Why MCPHERO?
+            Why MCP Hero?
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -167,7 +167,7 @@ export function Comparison() {
                     {/* Header row */}
                     <div className="grid grid-cols-3 gap-2 border-b border-marketing-border pb-2 text-sm font-semibold">
                       <span className="text-marketing-fg-muted">Feature</span>
-                      <span className="text-center text-marketing-accent">MCPHERO</span>
+                      <span className="text-center text-marketing-accent">MCP Hero</span>
                       <span className="text-center text-marketing-fg-muted">
                         {table.title.replace("vs ", "")}
                       </span>
@@ -220,7 +220,7 @@ export function Comparison() {
               },
               {
                 title: "Expert Support",
-                description: "Direct access to the MCPHERO team",
+                description: "Direct access to the MCP Hero team",
               },
             ].map((item, index) => (
               <motion.div

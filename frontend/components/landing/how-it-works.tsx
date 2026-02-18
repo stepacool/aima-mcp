@@ -142,7 +142,7 @@ export function HowItWorks() {
           className="mt-12 text-center"
         >
           <Button asChild size="lg" className="min-w-[160px]" onClick={() => track("cta_click", { location: "how-it-works", variant: "primary" })}>
-            <Link href="/signup">Start Building</Link>
+            <Link href="/auth/sign-up">Start Building</Link>
           </Button>
         </motion.div>
       </div>

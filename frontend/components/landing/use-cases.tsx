@@ -120,7 +120,7 @@ function CodeBlock({ code }: { code: string }) {
 
   return (
     <div className="relative group">
-      <pre className="bg-marketing-bg-subtle text-marketing-fg text-xs md:text-sm p-3 rounded-lg overflow-x-auto border border-marketing-border">
+      <pre className="bg-marketing-bg-subtle text-marketing-fg text-xs md:text-sm p-3 rounded-lg overflow-x-auto border border-marketing-border max-w-full">
         <code>{code}</code>
       </pre>
       <Button
@@ -183,7 +183,7 @@ export function UseCases() {
             transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
             className="mt-4 text-lg text-marketing-fg-muted"
           >
-            See what you can build with MCPHERO
+            See what you can build with MCP Hero
           </motion.p>
         </div>
 

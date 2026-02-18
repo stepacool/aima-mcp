@@ -38,7 +38,7 @@ export function Hero() {
             className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center"
           >
             <Button asChild size="lg" className="min-w-[160px]" onClick={() => track("cta_click", { location: "hero", variant: "primary" })}>
-              <Link href="/signup">Start Building</Link>
+              <Link href="/auth/sign-up">Start Building</Link>
             </Button>
             <Link
               href="#how-it-works"
@@ -69,7 +69,7 @@ export function Hero() {
               <div className="flex h-full items-center justify-center bg-marketing-bg-subtle">
                 <div className="text-center">
                   <p className="text-lg font-medium text-marketing-fg">
-                    MCPHERO Dashboard
+                    MCP Hero Dashboard
                   </p>
                   <p className="mt-2 text-sm text-marketing-fg-muted">
                     Product screenshot / demo video placeholder
