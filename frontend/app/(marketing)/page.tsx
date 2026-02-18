@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { CtaSection } from "@/components/marketing/sections/cta-section";
 import { FaqSection } from "@/components/marketing/sections/faq-section";
 import { FeaturesSection } from "@/components/marketing/sections/features-section";
@@ -8,6 +9,25 @@ import { PricingSection } from "@/components/marketing/sections/pricing-section"
 import { StatsSection } from "@/components/marketing/sections/stats-section";
 import { appConfig } from "@/config/app.config";
 import { getAllPosts } from "@/lib/marketing/blog/posts";
+
+export const metadata: Metadata = {
+	title: {
+		default: "MCP Hero - Ship MCP Servers in Minutes",
+		template: "%s | MCP Hero",
+	},
+	description:
+		"Build, deploy, and manage MCP servers with AI in minutes. No code required. Connect any database, API, or tool to ChatGPT, Claude, Cursor, and more.",
+	openGraph: {
+		title: "MCP Hero - Ship MCP Servers in Minutes",
+		description:
+			"Build, deploy, and manage MCP servers with AI in minutes. No code required. Connect any database, API, or tool to ChatGPT, Claude, Cursor, and more.",
+		type: "website",
+		url: appConfig.baseUrl,
+	},
+	alternates: {
+		canonical: appConfig.baseUrl,
+	},
+};
 
 function OrganizationJsonLd() {
 	const jsonLd = {
