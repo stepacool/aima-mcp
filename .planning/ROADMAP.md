@@ -65,7 +65,7 @@
 4. MCPHero pricing in JSON-LD structured data shows $59/mo Pro
 5. Free tier in JSON-LD shows "1 server, 3 tools" (not "unlimited")
 
-**Plans**: TBD
+**Plans**: 1 plan (05-01-PLAN.md)
 
 ---
 
@@ -109,7 +109,7 @@
 | 2. Content & Design | v1.0 | 4/4 | Complete | 2026-02-18 |
 | 3. Performance & Analytics | v1.0 | 1/1 | Complete | 2026-02-18 |
 | 4. Hero Section Updates | v1.1 | Complete    | 2026-02-18 | - |
-| 5. Comparison Section Updates | v1.1 | 0/TBD | Not started | - |
+| 5. Comparison Section Updates | v1.1 | 1/1 | In progress | - |
 | 6. Trust Section Updates | v1.1 | 0/TBD | Not started | - |
 | 7. Social Proof Expansion | v1.1 | 0/TBD | Not started | - |
 
