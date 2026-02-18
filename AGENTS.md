@@ -5,8 +5,8 @@ Guidelines for AI agents working with this codebase.
 ## Project Structure
 
 ```
-/frontend    - Next.js 16 app with tRPC, Drizzle ORM, React
-/backend     - Python FastAPI server with SQLAlchemy, MCP
+/frontend    - Next.js 16 app with tRPC, Drizzle ORM, React 19, Shadcn UI
+/backend     - Python FastAPI server with SQLAlchemy, FastMCP
 ```
 
 ## Essential Commands
@@ -66,12 +66,15 @@ uv run python -m src.main              # Run server
 - Never use `any` - use `unknown` or proper types
 - Use `const` by default, `let` only when needed
 - Early returns, avoid nested conditionals
+- Never use `console.log` - use `logger`
 
 **Naming:**
-- Files: `kebab-case.tsx`
+- Files: `kebab-case.tsx` / `kebab-case.ts`
 - Components: `PascalCase`
 - Functions/Variables: `camelCase`
 - Types/Interfaces: `PascalCase`
+- Schemas: `[domain]-schemas.ts`
+- Routers: `[scope]-[feature].ts`
 
 **Component Structure:**
 ```typescript
@@ -83,15 +86,31 @@ interface Props {
 
 export function Component({ required, optional, className }: Props) {
   // 1. Hooks
+  const router = useRouter();
+  const { data } = trpc.example.useQuery();
+
   // 2. Derived state
+  const isValid = Boolean(required);
+
   // 3. Event handlers
+  const handleClick = () => { ... };
+
   // 4. Early returns
+  if (!data) return <Skeleton />;
+
   // 5. Render
+  return (
+    <div className={cn("base-styles", className)}>
+      {/* content */}
+    </div>
+  );
 }
 ```
 
-**Imports:** Use path aliases (`@/`)
+**Imports:** Use path aliases (`@/`). Organize: Node builtins → npm packages → `@/**`
 ```typescript
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/trpc/client";
 ```
@@ -109,26 +128,26 @@ import { trpc } from "@/trpc/client";
 - Classes: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE`
 
-**Imports:**
+**Imports (stdlib → third-party → local):**
 ```python
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from infrastructure.repositories.base import BaseRepository
 ```
 
 **Error Handling:**
 ```python
-# Raise specific exceptions
 from fastapi import HTTPException
+from loguru import logger
 
 if not item:
     raise HTTPException(status_code=404, detail="Not found")
-
-# Structured logging
-from loguru import logger
 
 logger.info("Operation completed", extra={"user_id": user.id})
 logger.error("Failed", exc_info=True)
@@ -136,19 +155,38 @@ logger.error("Failed", exc_info=True)
 
 ## Key Patterns
 
-### Frontend tRPC
+### Frontend tRPC Procedures
+
 ```typescript
-// Procedures: publicProcedure, protectedProcedure, protectedOrganizationProcedure
+import {
+  publicProcedure,           // No auth required
+  protectedProcedure,        // Requires login
+  protectedAdminProcedure,   // Requires admin role
+  protectedOrganizationProcedure, // Requires org membership
+} from "@/trpc/init";
+
 export const router = createTRPCRouter({
-  get: protectedProcedure.query(async ({ ctx }) => {
+  get: protectedOrganizationProcedure.query(async ({ ctx }) => {
+    // ctx.user, ctx.organization, ctx.membership available
     return db.query.table.findMany({
       where: eq(table.organizationId, ctx.organization.id),
     });
   }),
+
+  create: protectedOrganizationProcedure
+    .input(createSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Always check roles for sensitive actions
+      if (ctx.membership.role !== "owner" && ctx.membership.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      // ...
+    }),
 });
 ```
 
 ### Backend MCP Server
+
 ```python
 from fastmcp import FastMCP
 
@@ -161,8 +199,9 @@ async def tool_name(param: str) -> str:
 ```
 
 ### Frontend Database Queries (Drizzle ORM)
+
 ```typescript
-// Simple query
+// Simple query with relations
 const user = await db.query.userTable.findFirst({
   where: eq(userTable.id, userId),
   with: { organizations: true },
@@ -180,6 +219,7 @@ const leads = await db
 ```
 
 ### Frontend Authentication
+
 ```typescript
 // Client-side
 import { useSession } from "@/hooks/use-session";
@@ -195,6 +235,7 @@ const { organization } = useActiveOrganization();
 ```
 
 ### Frontend Forms (React Hook Form + Zod)
+
 ```typescript
 import { useZodForm } from "@/hooks/use-zod-form";
 
@@ -223,7 +264,8 @@ function MyForm() {
 }
 ```
 
-### Frontend Modals
+### Frontend Modals (NiceModal)
+
 ```typescript
 import NiceModal from "@ebay/nice-modal-react";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -240,28 +282,63 @@ NiceModal.show(ConfirmationModal, {
 ```
 
 ### Frontend Role System
+
 Two-tier system:
 1. **Platform Role** (`user.role`): `user` | `admin` - Controls admin panel access
 2. **Organization Role** (`member.role`): `owner` | `admin` | `member` - Per-org permissions
 
 ```typescript
 // Platform admin check
-if (ctx.user.role !== "admin") { ... }
+if (ctx.user.role !== "admin") { throw new TRPCError({ code: "FORBIDDEN" }); }
 
 // Organization admin check
-if (ctx.membership.role !== "owner" && ctx.membership.role !== "admin") { ... }
+if (ctx.membership.role !== "owner" && ctx.membership.role !== "admin") { throw ... }
 ```
 
-### Multi-Tenant Data (Frontend)
+## Multi-Tenant Data (CRITICAL)
+
 **ALWAYS filter by organization** for tenant data:
+
 ```typescript
-// CORRECT
+// ✅ CORRECT
 const leads = await db.query.leadTable.findMany({
   where: eq(leadTable.organizationId, ctx.organization.id),
 });
 
-// WRONG - Data leak across tenants
+// ❌ WRONG - Data leak across tenants
 const leads = await db.query.leadTable.findMany();
+```
+
+## UI Components
+
+Use Shadcn UI from `@/components/ui/`:
+
+- `Button`, `Input`, `Textarea`, `Select`
+- `Card`, `Dialog`, `Sheet`, `Drawer`
+- `Form`, `FormField`, `FormItem`, `FormLabel`, `FormMessage`
+- `DataTable` for lists
+- `Skeleton` for loading states
+- `toast` from `sonner` for notifications
+
+```typescript
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+```
+
+## Billing Checks
+
+```typescript
+import { requirePaidPlan, getOrganizationPlanLimits } from "@/lib/billing/guards";
+
+// In tRPC procedure
+await requirePaidPlan(ctx.organization.id);
+
+// Check limits
+const limits = await getOrganizationPlanLimits(ctx.organization.id);
+if (memberCount >= limits.maxMembers) {
+  throw new TRPCError({ code: "FORBIDDEN", message: "Member limit reached" });
+}
 ```
 
 ## Testing Requirements
@@ -273,16 +350,15 @@ const leads = await db.query.leadTable.findMany();
 
 ## Key Files
 
-### Frontend
-| File                       | Purpose                        |
-| -------------------------- | ------------------------------ |
-| `config/app.config.ts`     | App name, description, contact |
-| `config/billing.config.ts` | Plans, pricing, limits         |
-| `config/auth.config.ts`    | Auth settings                  |
-| `lib/db/schema/tables.ts`  | Database tables                |
-| `lib/db/schema/enums.ts`   | Database enums                 |
-| `trpc/init.ts`             | tRPC procedures & middleware   |
-| `trpc/routers/app.ts`      | Root router                    |
+| Frontend                           | Purpose                      |
+| ---------------------------------- | ---------------------------- |
+| `config/app.config.ts`             | App name, description        |
+| `config/billing.config.ts`         | Plans, pricing, limits       |
+| `config/auth.config.ts`            | Auth settings                |
+| `lib/db/schema/tables.ts`          | Database tables              |
+| `lib/db/schema/enums.ts`           | Database enums               |
+| `trpc/init.ts`                     | tRPC procedures & middleware |
+| `trpc/routers/app.ts`              | Root router                  |
 
 ## Before Committing
 
@@ -297,3 +373,4 @@ const leads = await db.query.leadTable.findMany();
 - Push directly to main
 - Use `any` in TypeScript
 - Skip type hints in Python
+- Use `console.log` in production code
