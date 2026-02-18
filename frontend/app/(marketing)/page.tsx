@@ -26,6 +26,17 @@ export const metadata: Metadata = {
 	},
 };
 
+/**
+ * LCP Optimization Guidelines
+ *
+ * When adding hero images or other above-the-fold visual content:
+ * - Use next/image component with the priority prop for the LCP element
+ * - Example: <Image src="/hero.png" alt="Hero" priority sizes="(max-width: 768px) 100vw, 50vw" />
+ * - The priority prop preloads the image, improving LCP score
+ * - Use sizes prop to serve appropriately sized images for different viewports
+ * - For below-fold images, lazy loading is the default behavior of next/image
+ */
+
 function OrganizationJsonLd() {
 	const jsonLd = {
 		"@context": "https://schema.org",

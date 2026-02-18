@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 
 export function Hero() {
   return (
@@ -37,7 +38,7 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
             className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center"
           >
-            <Button asChild size="lg" className="min-w-[160px]">
+            <Button asChild size="lg" className="min-w-[160px]" onClick={() => track("cta_click", { location: "hero", variant: "primary" })}>
               <Link href="/signup">Start Building</Link>
             </Button>
             <Link
@@ -46,6 +47,7 @@ export function Hero() {
                 variant: "outline",
                 size: "lg",
               })}
+              onClick={() => track("cta_click", { location: "hero", variant: "secondary" })}
             >
               How It Works
             </Link>

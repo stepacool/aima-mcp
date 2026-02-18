@@ -5,6 +5,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MessageSquare, Wand2, Settings, Rocket } from "lucide-react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 
 const steps = [
   {
@@ -140,7 +141,7 @@ export function HowItWorks() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="mt-12 text-center"
         >
-          <Button asChild size="lg" className="min-w-[160px]">
+          <Button asChild size="lg" className="min-w-[160px]" onClick={() => track("cta_click", { location: "how-it-works", variant: "primary" })}>
             <Link href="/signup">Start Building</Link>
           </Button>
         </motion.div>
