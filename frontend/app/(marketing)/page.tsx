@@ -4,7 +4,6 @@ import { HowItWorks } from "@/components/landing/how-it-works";
 import { UseCases } from "@/components/landing/use-cases";
 import { ForDevelopers } from "@/components/landing/for-developers";
 import { Comparison } from "@/components/landing/comparison";
-import { Trust } from "@/components/landing/trust";
 import { appConfig } from "@/config/app.config";
 
 export const metadata: Metadata = {
@@ -154,7 +153,6 @@ export default async function HomePage() {
 			<UseCases />
 			<ForDevelopers />
 			<Comparison />
-			<Trust />
 		</>
 	);
 }
