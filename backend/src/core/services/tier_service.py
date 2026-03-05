@@ -37,6 +37,7 @@ CURATED_LIBRARIES = {
     "os": ["getenv", "environ"],  # Limited os access
     "pathlib": ["Path"],
     "urllib": None,  # URL parsing utilities
+    "urllib.parse": None,  # URL parsing utilities
     "urlparse": None,
     "base64": None,  # Base64 encoding/decoding
     "hashlib": None,  # Hashing functions
