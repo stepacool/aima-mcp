@@ -202,3 +202,31 @@ export async function updateEnvVarValue(
 		throw error;
 	}
 }
+
+/**
+ * Updates a tool's description.
+ */
+export async function updateToolDescription(
+	serverId: string,
+	toolId: string,
+	description: string,
+): Promise<ServerTool> {
+	try {
+		const response = await pythonBackendClient.patch<ServerTool>(
+			`/api/servers/${serverId}/tools/${toolId}`,
+			{ description },
+		);
+		logger.info(
+			{ serverId, toolId },
+			"Updated tool description in Python backend",
+		);
+		return response.data;
+	} catch (error) {
+		logger.error(
+			{ serverId, toolId, error },
+			"Failed to update tool description in Python backend",
+		);
+		throw error;
+	}
+}
+

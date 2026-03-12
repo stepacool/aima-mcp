@@ -9,7 +9,7 @@ from fastmcp.tools.tool import FunctionTool
 from loguru import logger
 
 from core.services.request_context import DynamicEnvDict
-from core.services.tier_service import CodeValidator, Tier, CURATED_LIBRARIES
+from core.services.tier_service import CURATED_LIBRARIES, CodeValidator, Tier
 
 
 class ToolCompilationError(Exception):
@@ -80,7 +80,7 @@ class DynamicToolLoader:
         tool_id: str,
         name: str,
         description: str,
-        parameters: list[dict[str, Any]],
+        parameters: list[dict[str, Any]],  # pyright: ignore[reportExplicitAny]
         code: str,
         customer_id: UUID,
         tier: Tier = Tier.FREE,

@@ -17,6 +17,7 @@ export {
 	type UpdateEnvVarResponse,
 	updateEnvVarValue,
 	updateServer,
+	updateToolDescription,
 } from "./servers";
 export {
 	type ActivateServerResponse,

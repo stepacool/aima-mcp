@@ -41,6 +41,7 @@ import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { InputPassword } from "@/components/ui/custom/input-password";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	createMcpConfig,
 	generateClaudeCodeCommand,
@@ -218,6 +219,118 @@ function EnvVarRow({ envVar, onUpdate, isUpdating }: EnvVarRowProps) {
 	);
 }
 
+interface ToolRowProps {
+	tool: {
+		id: string;
+		name: string;
+		description: string;
+		parametersSchema: Record<string, unknown>[];
+		code: string;
+	};
+	serverId: string;
+	onUpdate: (toolId: string, description: string) => void;
+	isUpdating: boolean;
+}
+
+function ToolRow({ tool, onUpdate, isUpdating }: ToolRowProps) {
+	const [isEditing, setIsEditing] = React.useState(false);
+	const [editDescription, setEditDescription] = React.useState(
+		tool.description,
+	);
+
+	const handleSave = () => {
+		if (editDescription.trim()) {
+			onUpdate(tool.id, editDescription.trim());
+			setIsEditing(false);
+		}
+	};
+
+	const handleCancel = () => {
+		setEditDescription(tool.description);
+		setIsEditing(false);
+	};
+
+	return (
+		<div className="py-2">
+			<div className="flex items-start justify-between">
+				<p className="font-medium">{tool.name}</p>
+				<div className="flex items-center gap-2">
+					{tool.code && tool.code.trim().length > 0 ? (
+						<Badge
+							variant="outline"
+							className="border-none bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+						>
+							Code Ready
+						</Badge>
+					) : (
+						<Badge
+							variant="outline"
+							className="border-none bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+						>
+							Pending Code
+						</Badge>
+					)}
+					{!isEditing && (
+						<Button
+							variant="ghost"
+							size="icon"
+							className="shrink-0"
+							onClick={() => setIsEditing(true)}
+						>
+							<PencilIcon className="size-4" />
+						</Button>
+					)}
+				</div>
+			</div>
+			<div className="mt-1">
+				{isEditing ? (
+					<div className="flex flex-col gap-2">
+						<Textarea
+							value={editDescription}
+							onChange={(e) => setEditDescription(e.target.value)}
+							className="text-sm resize-none"
+							rows={3}
+							autoFocus
+							onKeyDown={(e) => {
+								if (e.key === "Escape") handleCancel();
+							}}
+						/>
+						<div className="flex justify-end gap-2">
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={handleCancel}
+							>
+								<XIcon className="mr-1 size-4" />
+								Cancel
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={handleSave}
+								disabled={isUpdating || !editDescription.trim()}
+							>
+								<CheckIcon className="mr-1 size-4" />
+								Save
+							</Button>
+						</div>
+					</div>
+				) : (
+					<p className="text-sm text-muted-foreground">{tool.description}</p>
+				)}
+			</div>
+			{tool.parametersSchema && tool.parametersSchema.length > 0 && (
+				<div className="mt-2">
+					<p className="text-xs text-muted-foreground">
+						Parameters: {tool.parametersSchema.length}
+					</p>
+				</div>
+			)}
+		</div>
+	);
+}
+
+
 export function McpServerDetail({
 	serverId,
 }: McpServerDetailProps): React.JSX.Element {
@@ -259,6 +372,16 @@ export function McpServerDetail({
 				toast.error(error.message || "Failed to update environment variable");
 			},
 		});
+
+	const updateToolMutation = trpc.organization.server.updateTool.useMutation({
+		onSuccess: () => {
+			toast.success("Tool description updated");
+			utils.organization.server.getDetails.invalidate({ serverId });
+		},
+		onError: (error) => {
+			toast.error(error.message || "Failed to update tool description");
+		},
+	});
 
 	const handleDeleteServer = () => {
 		if (!server) return;
@@ -823,41 +946,18 @@ export function McpServerDetail({
 							{server.tools.map((tool, index) => (
 								<React.Fragment key={tool.id}>
 									{index > 0 && <Separator />}
-									<div className="py-2">
-										<div className="flex items-start justify-between">
-											<div>
-												<p className="font-medium">{tool.name}</p>
-												<p className="mt-1 text-sm text-muted-foreground">
-													{tool.description}
-												</p>
-											</div>
-											<div className="flex gap-2">
-												{tool.code && tool.code.trim().length > 0 ? (
-													<Badge
-														variant="outline"
-														className="border-none bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-													>
-														Code Ready
-													</Badge>
-												) : (
-													<Badge
-														variant="outline"
-														className="border-none bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-													>
-														Pending Code
-													</Badge>
-												)}
-											</div>
-										</div>
-										{tool.parametersSchema &&
-											tool.parametersSchema.length > 0 && (
-												<div className="mt-2">
-													<p className="text-xs text-muted-foreground">
-														Parameters: {tool.parametersSchema.length}
-													</p>
-												</div>
-											)}
-									</div>
+									<ToolRow
+										tool={tool}
+										serverId={serverId}
+										onUpdate={(toolId, description) =>
+											updateToolMutation.mutate({
+												serverId,
+												toolId,
+												description,
+											})
+										}
+										isUpdating={updateToolMutation.isPending}
+									/>
 								</React.Fragment>
 							))}
 						</div>

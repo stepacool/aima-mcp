@@ -3,8 +3,10 @@ from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID
 
 from pydantic import ConfigDict
-from sqlalchemy import ForeignKey, String, Text, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from infrastructure.db import CustomBase
@@ -113,7 +115,9 @@ class MCPTool(CustomBase):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    parameters_schema: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    parameters_schema: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False
+    )
     code: Mapped[str] = mapped_column(Text, nullable=False)
     server: Mapped["MCPServer"] = relationship(back_populates="tools")
 
@@ -153,7 +157,7 @@ class MCPEnvironmentVariable(CustomBase):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
-    value: Mapped[str] = mapped_column(Text, nullable=True)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     server: Mapped["MCPServer"] = relationship(back_populates="environment_variables")
 

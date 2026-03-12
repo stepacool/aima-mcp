@@ -1,11 +1,8 @@
 """Server routes for activation and deployment."""
 
 from datetime import datetime
-from uuid import UUID
 from typing import Any, Optional
-from fastapi import APIRouter, HTTPException, Request
-from loguru import logger
-from pydantic import BaseModel, ConfigDict, computed_field, field_validator
+from uuid import UUID
 
 from core.services.tier_service import (
     CURATED_LIBRARIES,
@@ -15,12 +12,19 @@ from core.services.tier_service import (
     get_tier_limits,
 )
 from core.services.tool_loader import get_tool_loader
-from entrypoints.mcp.shared_runtime import register_new_customer_app, unregister_mcp_app
+from fastapi import APIRouter, HTTPException, Request
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
 from infrastructure.models.mcp_server import MCPServerSetupStatus
 from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.repo_provider import Provider
+from loguru import logger
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 
+from entrypoints.mcp.shared_runtime import (
+    register_new_customer_app,
+    remount_mcp_server,
+    unregister_mcp_app,
+)
 
 router = APIRouter()
 
@@ -408,10 +412,11 @@ async def delete_server(server_id: UUID, request: Request) -> dict:
 
 @router.patch("/{server_id}", response_model=ServerListItem)
 async def update_server(
-    server_id: UUID, request: UpdateServerRequest
+    server_id: UUID, body: UpdateServerRequest, request: Request
 ) -> ServerListItem:
     """
     Update an MCP server's name and description.
+    Remounts the server in the shared runtime if it is actively deployed.
     """
     server_repo = Provider.mcp_server_repo()
 
@@ -424,12 +429,21 @@ async def update_server(
     from infrastructure.repositories.mcp_server import MCPServerUpdate
 
     update_data = MCPServerUpdate()
-    if request.name is not None:
-        update_data.name = request.name
-    if request.description is not None:
-        update_data.description = request.description
+    if body.name is not None:
+        update_data.name = body.name
+    if body.description is not None:
+        update_data.description = body.description
 
-    await server_repo.update(server_id, update_data)
+    _ = await server_repo.update(server_id, update_data)
+
+    # Remount the live MCP app if the server is deployed (best-effort)
+    try:
+        app = request.app
+        stack = getattr(app.state, "mcp_stack", None)
+        if stack:
+            _ = await remount_mcp_server(app, server_id, stack)
+    except Exception as e:
+        logger.warning(f"Failed to remount server {server_id} after update: {e}")
 
     # Fetch full details to return consistent response format
     server_details = await server_repo.get_with_full_details(server_id)
@@ -452,6 +466,46 @@ async def get_server_api_key(server_id: UUID) -> ApiKeyResponse:
         api_key=api_key_record.key if api_key_record else None,
         auth_type=server.auth_type,
     )
+
+
+@router.patch("/{server_id}/tools/{tool_id}", response_model=MCPToolResponse)
+async def update_tool(
+    server_id: UUID, tool_id: UUID, body: UpdateServerRequest, request: Request
+) -> MCPToolResponse:
+    """
+    Update an MCP tool's description.
+    Remounts the server in the shared runtime if it is actively deployed.
+    """
+    from infrastructure.repositories.mcp_server import MCPToolUpdate
+
+    tool_repo = Provider.mcp_tool_repo()
+
+    # Verify tool exists and belongs to this server
+    tool = await tool_repo.get_by_uuid(tool_id)
+    if not tool or tool.server_id != server_id:
+        raise HTTPException(404, f"Tool {tool_id} not found for server {server_id}")
+
+    update_data = MCPToolUpdate()
+    if body.description is not None:
+        update_data.description = body.description
+
+    _ = await tool_repo.update(tool_id, update_data)
+
+    # Remount the live MCP app if the server is deployed (best-effort)
+    try:
+        app = request.app
+        stack = getattr(app.state, "mcp_stack", None)
+        if stack:
+            _ = await remount_mcp_server(app, server_id, stack)
+    except Exception as e:
+        logger.warning(f"Failed to remount server {server_id} after tool update: {e}")
+
+    # Fetch updated tool
+    updated_tool = await tool_repo.get_by_uuid(tool_id)
+    if not updated_tool:
+        raise HTTPException(500, "Failed to fetch updated tool")
+
+    return MCPToolResponse.model_validate(updated_tool)
 
 
 @router.patch("/{server_id}/env-vars/{var_id}")

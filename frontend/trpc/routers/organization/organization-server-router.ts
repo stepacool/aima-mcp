@@ -7,6 +7,7 @@ import {
 	listServers,
 	updateEnvVarValue,
 	updateServer,
+	updateToolDescription,
 } from "@/lib/python-backend";
 import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
 
@@ -119,4 +120,33 @@ export const organizationServerRouter = createTRPCRouter({
 
 			return result;
 		}),
+
+	// Update a tool's description
+	updateTool: protectedOrganizationProcedure
+		.input(
+			z.object({
+				serverId: z.string().uuid(),
+				toolId: z.string().uuid(),
+				description: z.string().min(1, "Description is required"),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const result = await updateToolDescription(
+				input.serverId,
+				input.toolId,
+				input.description,
+			);
+
+			logger.info(
+				{
+					serverId: input.serverId,
+					toolId: input.toolId,
+					organizationId: ctx.organization.id,
+				},
+				"Updated MCP tool description",
+			);
+
+			return result;
+		}),
 });
+
