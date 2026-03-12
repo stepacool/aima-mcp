@@ -2,6 +2,7 @@
 
 import NiceModal, { useModal } from "@ebay/nice-modal-react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -49,6 +50,16 @@ export const EditMcpServerModal = NiceModal.create(
 				description: initialDescription || "",
 			},
 		});
+
+		// Reset form when modal opens with a different server (NiceModal reuses the same instance)
+		useEffect(() => {
+			if (modal.visible) {
+				form.reset({
+					name: initialName,
+					description: initialDescription || "",
+				});
+			}
+		}, [modal.visible, serverId, initialName, initialDescription, form]);
 
 		const updateServerMutation = trpc.organization.server.update.useMutation({
 			onSuccess: () => {
