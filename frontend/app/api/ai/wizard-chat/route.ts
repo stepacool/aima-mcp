@@ -117,7 +117,7 @@ export async function POST(req: Request) {
 	const result = streamText({
 		// Use .chat() to force Chat Completions API instead of Responses API
 		// (OpenRouter doesn't support the Responses API)
-		model: openrouter.chat("google/gemini-3-flash-preview"),
+		model: openrouter.chat("google/gemini-3.1-flash-lite-preview"),
 		messages: messagesWithSystem,
 	});
 
