@@ -23,7 +23,6 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from settings import settings
 
-from core.services.tool_loader import compile_server_tools
 from core.services.tier_service import (
     BLOCKED_MODULES,
     CURATED_LIBRARIES,
@@ -31,6 +30,7 @@ from core.services.tier_service import (
     CodeValidator,
     Tier,
 )
+from core.services.tool_loader import compile_server_tools
 
 openai_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -141,13 +141,21 @@ class WizardStepsService:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
             ]
-            response = await openai_client.chat.completions.parse(
-                model=settings.TOOL_GENERATION_MODEL,
-                messages=messages,
-                response_format=ToolsResponse,
-            )
-            parsed_response = response.choices[0].message.parsed
-            parsed: list[Tool] = parsed_response.tools if parsed_response else []
+            parsed: list[Tool] = []
+            max_retries = 3
+            for attempt in range(max_retries):
+                response = await openai_client.chat.completions.parse(
+                    model=settings.TOOL_GENERATION_MODEL,
+                    messages=messages,
+                    response_format=ToolsResponse,
+                )
+                parsed_response = response.choices[0].message.parsed
+                parsed = parsed_response.tools if parsed_response else []
+                if parsed:
+                    break
+                logger.warning(
+                    f"[{mcp_server_id}] step_1a returned no tools (attempt {attempt + 1}/{max_retries}), retrying"
+                )
 
             create_payloads = []
             for tool in parsed:

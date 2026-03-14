@@ -10,11 +10,7 @@ Recorded during calculator MCP server creation via MCP Hero Wizard (customer `c4
 
 **Workaround:** Called `POST /api/wizard/{server_id}/tools/refine` with explicit feedback: "Please add a calculator tool. It should have one parameter: expression (string)...". Refine produced the `calculate_expression` tool.
 
-**To fix:**
-
-- Investigate why `step_1_tool_suggestion.yaml` / TOOL_GENERATION_MODEL returns empty for calculator-style descriptions
-- Add validation or retry when `parsed.tools` is empty
-- Consider improving the step_1 prompt for simple, single-tool use cases
+**Fix applied:** When `parsed.tools` is empty, step_1a retries generation up to 3 times until tools are not empty.
 
 ---
 
