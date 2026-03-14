@@ -437,6 +437,35 @@ async def set_auth(server_id: UUID) -> AuthResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{server_id}/tools/{tool_id}/regenerate-code")
+async def regenerate_tool_code(
+    server_id: UUID,
+    tool_id: UUID,
+) -> dict[str, Any]:
+    """
+    Regenerate code for a single tool. Uses same LLM logic as generate-code.
+    Returns the new code. Synchronous (waits for LLM).
+    """
+    server = await Provider.mcp_server_repo().get_by_uuid(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
+    try:
+        service = get_wizard_service()
+        code = await service.regenerate_code_for_tool(
+            mcp_server_id=server_id,
+            tool_id=tool_id,
+        )
+        return {
+            "server_id": str(server_id),
+            "tool_id": str(tool_id),
+            "code": code,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/{server_id}/generate-code")
 async def generate_code(
     server_id: UUID,

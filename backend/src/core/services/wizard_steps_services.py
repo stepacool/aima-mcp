@@ -633,6 +633,95 @@ class WizardStepsService:
             mcp_server_id, MCPServerSetupStatus.code_gen
         )
 
+    async def regenerate_code_for_tool(
+        self,
+        mcp_server_id: UUID,
+        tool_id: UUID,
+    ) -> str:
+        """
+        Regenerate code for a single tool. Uses same LLM logic as step_4.
+        Returns the generated code. Raises on failure.
+        """
+        server = await Provider.mcp_server_repo().get_by_uuid(mcp_server_id)
+        if server is None:
+            raise ValueError(f"Server {mcp_server_id} not found")
+
+        tool = await Provider.mcp_tool_repo().get_by_uuid(tool_id)
+        if tool is None:
+            raise ValueError(f"Tool {tool_id} not found")
+        if tool.server_id != mcp_server_id:
+            raise ValueError(
+                f"Tool {tool_id} does not belong to server {mcp_server_id}"
+            )
+
+        tier = Tier.FREE
+        system_prompt_data = load_prompt("step_4_code_generation.yaml", as_string=False)
+        assert isinstance(system_prompt_data, dict)
+        prompt_template = system_prompt_data["prompt"]
+
+        available_libraries = []
+        for package, imports in CURATED_LIBRARIES.items():
+            available_libraries.append(
+                f"- {package}: "
+                + ("all exports" if imports is None else ", ".join(imports))
+            )
+
+        prompt = prompt_template.format(
+            AVAILABLE_LIBRARIES="\n".join(available_libraries),
+            FORBIDDEN_LIBRARIES="\n".join(f"- {lib}" for lib in BLOCKED_MODULES),
+            ENVIRONMENT_VARIABLES="\n".join(
+                f"- {var.name}: {var.description}"
+                for var in server.environment_variables
+            ),
+            TECHNICAL_DETAILS=",".join(
+                (server.meta or {}).get("technical_details") or []
+            ),
+            FUNCTION_NAME=tool.name,
+            TOOL_NAME=tool.name,
+            TOOL_DESCRIPTION=tool.description,
+            MCP_SERVER_DESCRIPTION=server.description or "",
+            ARGUMENTS_DOCSTRING="\n".join(
+                f"{param.get('name', 'arg')}: {param.get('type', 'str')} - {param.get('description', '')}"
+                for param in tool.parameters_schema
+            ),
+            TOOL_ARGUMENTS="\n".join(
+                f"{param.get('name', 'arg')}: {param.get('type', 'str')} = Field(description='{param.get('description', '')}')"
+                for param in tool.parameters_schema
+            ),
+        )
+
+        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        code_validator = CodeValidator(tier)
+        code: str | None = None
+
+        for _ in range(5):
+            response = await openai_client.chat.completions.create(
+                model=settings.CODE_GENERATION_MODEL,
+                messages=messages,
+            )
+            code = response.choices[0].message.content
+            if code is None:
+                continue
+            errors = code_validator.validate(code)
+            if not errors:
+                break
+            messages.append({"role": "assistant", "content": code})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"The code is not valid. Please fix the errors and return the code again. Errors: {errors}",
+                }
+            )
+
+        if not code:
+            raise RuntimeError(
+                f"Tool {tool.name} (id={tool_id}): failed to generate code"
+            )
+
+        await Provider.mcp_tool_repo().update_tool_code(tool_id, code)
+        logger.success(f"[{mcp_server_id}] Regenerated code for tool {tool.name}")
+        return code
+
     async def step_5_deploy_to_shared(
         self,
         mcp_server_id: UUID,
