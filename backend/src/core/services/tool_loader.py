@@ -68,6 +68,58 @@ def _import_module(path: str):
     return importlib.import_module(path)
 
 
+def _parameters_to_json_schema(parameters: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Convert aima-mcp parameters_schema (list of param dicts) to MCP JSON Schema.
+
+    Input format: [{"name": "url", "type": "string", "description": "...", "required": true}]
+    Output format: {"type": "object", "properties": {...}, "required": [...]}
+    """
+    if not parameters:
+        return {"type": "object", "properties": {}, "required": []}
+
+    properties: dict[str, Any] = {}
+    required: list[str] = []
+
+    type_map = {
+        "string": "string",
+        "str": "string",
+        "integer": "integer",
+        "int": "integer",
+        "number": "number",
+        "float": "number",
+        "boolean": "boolean",
+        "bool": "boolean",
+        "array": "array",
+        "object": "object",
+    }
+
+    for p in parameters:
+        name = p.get("name") or "arg"
+        param_type = p.get("type", "string")
+        json_type = type_map.get(
+            str(param_type).lower() if param_type else "string", "string"
+        )
+        desc = p.get("description", "")
+        prop: dict[str, Any] = {"type": json_type}
+        if desc:
+            prop["description"] = desc
+        properties[name] = prop
+        if p.get("required", False):
+            required.append(name)
+
+    return {"type": "object", "properties": properties, "required": required}
+
+
+def _normalize_parameters(
+    v: list[dict[str, Any]] | dict[str, Any],  # pyright: ignore[reportExplicitAny]
+) -> list[dict[str, Any]]:  # pyright: ignore[reportExplicitAny]
+    """Handle both dict format {'parameters': [...]} and list format [...]."""
+    if isinstance(v, dict):
+        return v.get("parameters", [])
+    return v
+
+
 class DynamicToolLoader:
     """Loads and compiles customer tools for the shared runtime."""
 
@@ -105,7 +157,7 @@ class DynamicToolLoader:
         # Validate code for free tier
         if tier == Tier.FREE:
             validator = CodeValidator(tier)
-            errors = validator.validate(code)
+            errors: list[str] = validator.validate(code)
             if errors:
                 raise ToolCompilationError(f"Code validation failed: {errors}")
 
@@ -117,7 +169,7 @@ class DynamicToolLoader:
 
         # Compile the function
         try:
-            func = self._compile_function(
+            func: Callable[..., Any] = self._compile_function(
                 name, description, parameters, code, namespace, env_vars or {}, tier
             )
         except Exception as e:
@@ -131,6 +183,14 @@ class DynamicToolLoader:
             description=description,
         )
 
+        # Override parameters with stored schema so MCP clients receive argument
+        # names, types, and descriptions. FunctionTool infers schema from the
+        # compiled function, but LLM-generated code may omit Field(description=...),
+        # and the DB is the source of truth for tool metadata.
+        params_list = _normalize_parameters(parameters)
+        if params_list:
+            tool.parameters = _parameters_to_json_schema(params_list)
+
         cache_key = f"{customer_id}:{tool_id}"
         self._compiled_tools[cache_key] = tool
 
@@ -139,7 +199,7 @@ class DynamicToolLoader:
     def get_customer_tools(
         self,
         customer_id: UUID,
-        tool_specs: list[dict],
+        tool_specs: list[dict[str, Any]],
         env_vars: dict[str, str] | None = None,
     ) -> list[FunctionTool]:
         """
@@ -162,7 +222,7 @@ class DynamicToolLoader:
                 tools.append(self._compiled_tools[cache_key])
             else:
                 try:
-                    tool = self.compile_tool(
+                    tool: FunctionTool = self.compile_tool(
                         tool_id=spec["id"],
                         name=spec["name"],
                         description=spec["description"],
@@ -227,7 +287,7 @@ class DynamicToolLoader:
         namespace: dict[str, Any],
         env_vars: dict[str, str],
         tier: Tier,
-    ) -> Callable:
+    ) -> Callable[..., Any]:
         """
         Compile user code into an async function.
 
@@ -268,9 +328,15 @@ class DynamicToolLoader:
             builtins_dict.pop(bad, None)
 
         # Define guarded import
-        allowed_imports = CURATED_LIBRARIES.keys()
+        allowed_imports: list[str] = list[str](CURATED_LIBRARIES.keys())
 
-        def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        def guarded_import(
+            name: str,
+            globals: dict[str, Any] | None = None,
+            locals: dict[str, Any] | None = None,
+            fromlist: tuple[str, ...] = (),
+            level: int = 0,
+        ) -> Any:
             if tier != Tier.FREE:
                 return real_import(name, globals, locals, fromlist, level)
             if name not in allowed_imports:
