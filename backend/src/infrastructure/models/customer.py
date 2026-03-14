@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, override
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.db import CustomBase
@@ -15,9 +16,10 @@ class Customer(CustomBase):
     __tablename__ = "customers"
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
+    @override
     def __str__(self) -> str:
         return f"Customer(id={self.id}, name={self.name})"
 
@@ -36,4 +38,4 @@ class StaticAPIKey(CustomBase):
         index=True,
     )
 
-    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)

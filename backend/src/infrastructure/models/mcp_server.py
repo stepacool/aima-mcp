@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import ConfigDict
@@ -42,7 +42,7 @@ class MCPServer(CustomBase):
     __tablename__ = "mcp_servers"
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     setup_status: Mapped[MCPServerSetupStatus] = mapped_column(
         SQLEnum(MCPServerSetupStatus),
         nullable=False,
@@ -51,7 +51,7 @@ class MCPServer(CustomBase):
     )
 
     auth_type: Mapped[str] = mapped_column(String(50), default="none", nullable=False)
-    auth_config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    auth_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     customer_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -64,7 +64,7 @@ class MCPServer(CustomBase):
     @property
     def processing_error(self) -> str | None:
         """Get processing error from meta, if any."""
-        return self.meta.get("processing_error") if self.meta is not None else None
+        return self.meta.get("processing_error")
 
     tools: Mapped[list["MCPTool"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
@@ -76,7 +76,7 @@ class MCPServer(CustomBase):
     prompts: Mapped[list["MCPPrompt"]] = relationship(
         back_populates="server", cascade="all, delete-orphan"
     )
-    deployment: Mapped[Optional["Deployment"]] = relationship(
+    deployment: Mapped["Deployment | None"] = relationship(
         back_populates="server", uselist=False, cascade="all, delete-orphan"
     )
 
@@ -138,7 +138,7 @@ class MCPPrompt(CustomBase):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     template: Mapped[str] = mapped_column(Text, nullable=False)
-    arguments: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    arguments: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     server: Mapped["MCPServer"] = relationship(back_populates="prompts")
 

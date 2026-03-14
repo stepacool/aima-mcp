@@ -96,6 +96,9 @@ class CodeValidationError(Exception):
 class CodeValidator:
     """Validates that code only uses curated libraries."""
 
+    tier: Tier
+    limits: TierLimits
+
     def __init__(self, tier: Tier = Tier.FREE):
         self.tier = tier
         self.limits = TIER_LIMITS[tier]
@@ -106,7 +109,7 @@ class CodeValidator:
 
         Returns list of validation errors (empty if valid).
         """
-        errors = []
+        errors: list[str] = []
 
         if not self.limits.curated_only:
             return errors  # Paid tier can use any library
@@ -194,7 +197,7 @@ class ToolCodeTemplate:
     ) -> str:
         """Generate a tool function with proper structure."""
         # Build parameter string
-        params = []
+        params: list[str] = []
         for p in parameters:
             param_name = p.get("name", "arg")
             param_type = p.get("type", "str")

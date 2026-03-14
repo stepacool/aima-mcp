@@ -24,12 +24,34 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.38.2",
     "psycopg2-binary>=2.9.11",
     "pyright>=1.1.408",
     "pytest>=9.0.2",
     "pytest-anyio>=0.0.0",
     "ruff>=0.14.11",
 ]
+
+[tool.basedpyright]
+reportAttributeAccessIssue = false
+reportUninitializedInstanceVariable = false
+reportUndefinedVariable = false
+reportUnsafeMultipleInheritance = false
+reportArgumentType = false
+reportIncompatibleMethodOverride = false
+reportMissingSuperCall = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportCallInDefaultInitializer = false
+reportUnknownArgumentType = false
+reportUnannotatedClassAttribute = false
+reportPrivateUsage = false
+reportDeprecated = false
+reportImplicitOverride = false
+reportUnusedParameter = false
+# basedpyright-specific: use "none" to disable
+reportExplicitAny = "none"
+reportAny = "none"
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]

@@ -191,7 +191,7 @@ async def start_wizard(
                 .strip("'")
             )
             if generated_name:
-                await Provider.mcp_server_repo().update(
+                _ = await Provider.mcp_server_repo().update(
                     server.id,
                     MCPServerUpdate(name=generated_name),
                 )
@@ -466,7 +466,7 @@ async def regenerate_tool_code(
             app = request.app
             stack = getattr(app.state, "mcp_stack", None)
             if stack:
-                await remount_mcp_server(app, server_id, stack)
+                _ = await remount_mcp_server(app, server_id, stack)
         except Exception as e:
             logger.warning(
                 f"Failed to remount server {server_id} after regenerate: {e}"
@@ -610,8 +610,8 @@ async def deploy_to_shared(server_id: UUID, request: Request) -> DeployToSharedR
     if server.setup_status.value not in valid_states:
         raise HTTPException(
             status_code=400,
-            detail=f"Server must be in code_gen or deployment_selection state. "
-            f"Current state: {server.setup_status.value}",
+            detail="Server must be in code_gen or deployment_selection state. "
+            + f"Current state: {server.setup_status.value}",
         )
 
     # Get app and stack from request

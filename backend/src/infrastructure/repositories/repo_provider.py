@@ -1,4 +1,6 @@
-from infrastructure.db import create_database, Database
+from typing import Any
+
+from infrastructure.db import Database, create_database
 from infrastructure.repositories.customer import CustomerRepo, StaticAPIKeyRepo
 from infrastructure.repositories.deployment import (
     DeploymentArtifactRepo,
@@ -32,7 +34,7 @@ class Provider:
     _oauth_refresh_token_repo: None | OAuthRefreshTokenRepo = None
 
     @classmethod
-    def get_db(cls, **overrides):
+    def get_db(cls, **overrides: Any) -> Database:
         if cls._db is None:
             cls._db = create_database(**overrides)
         return cls._db

@@ -1,16 +1,16 @@
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from infrastructure.db import CustomBase
-
-if TYPE_CHECKING:
-    from infrastructure.models.mcp_server import MCPServer
 
 
 class DeploymentTarget(str, Enum):
@@ -60,19 +60,17 @@ class Deployment(CustomBase):
         String(50), default=DeploymentStatus.PENDING.value, nullable=False
     )
 
-    endpoint_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    endpoint_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    target_config: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        JSONB, nullable=True
-    )
+    target_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
-    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    deployed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    deployed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relationships
-    server: Mapped["MCPServer"] = relationship(back_populates="deployment")
-    artifact: Mapped[Optional["DeploymentArtifact"]] = relationship(
+    server: Mapped["MCPServer"] = relationship(back_populates="deployment")  # type: ignore[name-defined]
+    artifact: Mapped["DeploymentArtifact | None"] = relationship(
         back_populates="deployment", uselist=False, cascade="all, delete-orphan"
     )
 
@@ -97,8 +95,8 @@ class DeploymentArtifact(CustomBase):
     instructions: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Legacy fields for backward compatibility
-    code: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    config: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationship
     deployment: Mapped["Deployment"] = relationship(back_populates="artifact")

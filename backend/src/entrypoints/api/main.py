@@ -1,22 +1,17 @@
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import Any, override
 
 import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
-from opentelemetry.sdk.trace.sampling import (
-    ALWAYS_OFF,
-    ALWAYS_ON,
-    ParentBased,
-    Sampler,
-)
-from entrypoints.api.routes.oauth import well_known_router
+from opentelemetry.sdk.trace.sampling import ALWAYS_OFF, ALWAYS_ON, ParentBased, Sampler
+from settings import settings
+
 from entrypoints.api.middleware import MCPAccessMiddleware, MCPEnvMiddleware
 from entrypoints.api.routes import api_router
-from entrypoints.api.routes.oauth import mcp_oauth_router
-from infrastructure.repositories.repo_provider import Provider
-from settings import settings
-from contextlib import AsyncExitStack
+from entrypoints.api.routes.oauth import mcp_oauth_router, well_known_router
 
 
 @asynccontextmanager
@@ -29,7 +24,7 @@ async def lifespan(app: FastAPI):
 
         try:
             # Pass the stack to the loader
-            await load_and_register_all_mcp_servers(app, stack)
+            _ = await load_and_register_all_mcp_servers(app, stack)
             logger.info("Loaded MCP servers on startup")
         except Exception as e:
             logger.error(f"Failed to load MCP servers on startup: {e}")
@@ -58,14 +53,15 @@ APPLICATION_NAME = "web-server"
 
 class APIRouteSampler(Sampler):
     # https://logfire.pydantic.dev/docs/how-to-guides/sampling/#custom-head-sampling
+    @override
     def should_sample(
         self,
-        parent_context,
-        trace_id,
-        name,
-        *args,
-        **kwargs,
-    ):
+        parent_context: Any,
+        trace_id: Any,
+        name: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         sampler = ALWAYS_OFF
         if any(included in name for included in TRACE_URIS):
             sampler = ALWAYS_ON
@@ -78,11 +74,14 @@ class APIRouteSampler(Sampler):
             **kwargs,
         )
 
-    def get_description(self):
+    @override
+    def get_description(self) -> str:
         return "APIRouteSampler"
 
 
 class Application:
+    app: FastAPI  # type: ignore[reportUninitializedInstanceVariable]
+
     def setup(self) -> FastAPI:
         self.app = FastAPI(
             title="MCP Hero API",
@@ -119,7 +118,7 @@ class Application:
         self.app.include_router(well_known_router)
 
     def create_database_pool(self) -> None:
-        Provider.get_db(
+        _ = Provider.get_db(
             connect_args={
                 "server_settings": {"application_name": APPLICATION_NAME},
             },
@@ -127,15 +126,15 @@ class Application:
 
     def setup_instrumentation(self) -> None:
         if settings.LOGFIRE_TOKEN:
-            logfire.configure(
+            _ = logfire.configure(
                 service_name=APPLICATION_NAME,
                 environment="production",
                 send_to_logfire="if-token-present",
                 token=settings.LOGFIRE_TOKEN,
                 sampling=logfire.SamplingOptions(head=ParentBased(APIRouteSampler())),
             )
-            logger.configure(handlers=[logfire.loguru_handler()])
-            logfire.instrument_fastapi(self.app)
+            _ = logger.configure(handlers=[logfire.loguru_handler()])
+            _ = logfire.instrument_fastapi(self.app)
             logger.info("[SYSTEM] Configured logger for FastAPI server")
 
     def setup_exception_handlers(self) -> None:

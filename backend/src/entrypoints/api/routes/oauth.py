@@ -1,18 +1,13 @@
 """OAuth 2.1 API routes for MCP server authentication."""
 
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Form, HTTPException
+from core.services.oauth_service import InvalidRequestError, OAuthError, oauth_service
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from loguru import logger
 from pydantic import BaseModel
-
-from core.services.oauth_service import (
-    InvalidRequestError,
-    OAuthError,
-    oauth_service,
-)
 from settings import settings
 
 # Router for well-known endpoints (mounted at root level, no /api prefix)
@@ -164,14 +159,14 @@ async def get_authorization_server_metadata() -> AuthorizationServerMetadata:
 
 @oauth_router.post("/token", response_model=TokenResponse)
 async def token_endpoint(
-    grant_type: str = Form(...),
-    code: str | None = Form(None),
-    redirect_uri: str | None = Form(None),
-    client_id: str = Form(...),
-    client_secret: str | None = Form(None),
-    code_verifier: str | None = Form(None),
-    refresh_token: str | None = Form(None),
-    scope: str | None = Form(None),
+    grant_type: Annotated[str, Form()],
+    client_id: Annotated[str, Form()],
+    code: Annotated[str | None, Form()] = None,
+    redirect_uri: Annotated[str | None, Form()] = None,
+    client_secret: Annotated[str | None, Form()] = None,
+    code_verifier: Annotated[str | None, Form()] = None,
+    refresh_token: Annotated[str | None, Form()] = None,
+    scope: Annotated[str | None, Form()] = None,
 ) -> TokenResponse | JSONResponse:
     """
     OAuth 2.1 Token Endpoint.
@@ -243,21 +238,21 @@ async def token_endpoint(
 
 @oauth_router.post("/register", response_model=ClientRegistrationResponse)
 async def register_client(
-    request: ClientRegistrationRequest,
+    request: Request,
+    body: ClientRegistrationRequest,
 ) -> ClientRegistrationResponse | JSONResponse:
     """
     RFC 7591 Dynamic Client Registration.
 
     Registers a new OAuth client for an MCP server.
     """
-    # get server_id from request as it's in the path
     server_id = UUID(request.path_params["server_id"])
     try:
         result = await oauth_service.register_client(
             server_id=server_id,
-            redirect_uris=request.redirect_uris,
-            client_name=request.client_name,
-            grant_types=request.grant_types,
+            redirect_uris=body.redirect_uris,
+            client_name=body.client_name,
+            grant_types=body.grant_types,
             is_public=False,
         )
 
@@ -364,16 +359,16 @@ async def get_client_info(client_id: str) -> ClientInfoResponse:
 
 @oauth_router.post("/revoke")
 async def revoke_token(
-    token: str = Form(...),
-    token_type_hint: str | None = Form(None),
-    client_id: str | None = Form(None),
+    token: Annotated[str, Form()],
+    token_type_hint: Annotated[str | None, Form()] = None,
+    client_id: Annotated[str | None, Form()] = None,
 ) -> dict[str, Any]:
     """
     RFC 7009 Token Revocation.
 
     Revokes an access token or refresh token.
     """
-    await oauth_service.revoke_token(
+    _ = await oauth_service.revoke_token(
         token=token,
         token_type_hint=token_type_hint,
         client_id=client_id,
@@ -441,14 +436,14 @@ async def mcp_get_authorization_server_metadata(
 @mcp_oauth_router.post("/oauth/token", response_model=TokenResponse)
 async def mcp_token_endpoint(
     server_id: UUID,
-    grant_type: str = Form(...),
-    code: str | None = Form(None),
-    redirect_uri: str | None = Form(None),
-    client_id: str = Form(...),
-    client_secret: str | None = Form(None),
-    code_verifier: str | None = Form(None),
-    refresh_token: str | None = Form(None),
-    scope: str | None = Form(None),
+    grant_type: Annotated[str, Form()],
+    client_id: Annotated[str, Form()],
+    code: Annotated[str | None, Form()] = None,
+    redirect_uri: Annotated[str | None, Form()] = None,
+    client_secret: Annotated[str | None, Form()] = None,
+    code_verifier: Annotated[str | None, Form()] = None,
+    refresh_token: Annotated[str | None, Form()] = None,
+    scope: Annotated[str | None, Form()] = None,
 ) -> TokenResponse | JSONResponse:
     """
     OAuth 2.1 Token Endpoint for a specific MCP server.
@@ -457,6 +452,7 @@ async def mcp_token_endpoint(
     - authorization_code grant with PKCE
     - refresh_token grant
     """
+    _ = server_id  # Path param required for route; not used in token logic
     try:
         if grant_type == "authorization_code":
             if not code:
@@ -615,16 +611,17 @@ async def mcp_get_client_info(
 @mcp_oauth_router.post("/oauth/revoke")
 async def mcp_revoke_token(
     server_id: UUID,
-    token: str = Form(...),
-    token_type_hint: str | None = Form(None),
-    client_id: str | None = Form(None),
+    token: Annotated[str, Form()],
+    token_type_hint: Annotated[str | None, Form()] = None,
+    client_id: Annotated[str | None, Form()] = None,
 ) -> dict[str, Any]:
     """
     RFC 7009 Token Revocation for a specific MCP server.
 
     Revokes an access token or refresh token.
     """
-    await oauth_service.revoke_token(
+    _ = server_id  # Path param required for route
+    _ = await oauth_service.revoke_token(
         token=token,
         token_type_hint=token_type_hint,
         client_id=client_id,

@@ -28,7 +28,7 @@ class BaseCRUDRepo(BaseRepo, Generic[ModelType, CreateSchemaType, UpdateSchemaTy
         super().__init__(db)
         self.model = model
 
-    def _prepare_payload(self, obj_in: CreateSchemaType) -> dict:
+    def _prepare_payload(self, obj_in: CreateSchemaType) -> dict[str, object]:
         payload = obj_in.model_dump()
         now = _utc_now()
         payload["created_at"] = now
@@ -114,7 +114,7 @@ class BaseCRUDRepo(BaseRepo, Generic[ModelType, CreateSchemaType, UpdateSchemaTy
                 delete(self.model).where(self.model.id == id)
             )
             await session.commit()
-            return result.rowcount > 0  # type: ignore[attr-defined]
+            return (result.rowcount or 0) > 0  # type: ignore[union-attr,reportAttributeAccessIssue]
 
     async def delete_cascade(self, id: UUID) -> bool:
         """Delete an object by ID with cascade deletes.

@@ -1,11 +1,12 @@
 """OAuth 2.1 models for Authorization Code Grant flow."""
 
-from datetime import datetime
-from typing import Any, Optional
+from datetime import datetime, timezone
+from typing import Any, override
 from uuid import UUID
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from infrastructure.db import CustomBase
@@ -19,9 +20,7 @@ class OAuthClient(CustomBase):
     client_id: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
     )
-    client_secret_hash: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True
-    )
+    client_secret_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     redirect_uris: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     scopes: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
@@ -36,7 +35,7 @@ class OAuthClient(CustomBase):
     registration_type: Mapped[str] = mapped_column(
         String(50), default="dynamic", nullable=False
     )
-    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     authorization_codes: Mapped[list["OAuthAuthorizationCode"]] = relationship(
@@ -49,6 +48,7 @@ class OAuthClient(CustomBase):
         "OAuthRefreshToken", back_populates="client", cascade="all, delete-orphan"
     )
 
+    @override
     def __str__(self) -> str:
         return f"OAuthClient(client_id={self.client_id}, name={self.name})"
 
@@ -82,13 +82,14 @@ class OAuthAuthorizationCode(CustomBase):
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    state: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    state: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
     client: Mapped["OAuthClient"] = relationship(
         "OAuthClient", back_populates="authorization_codes"
     )
 
+    @override
     def __str__(self) -> str:
         return (
             f"OAuthAuthorizationCode(code={self.code[:8]}..., user_id={self.user_id})"
@@ -97,7 +98,7 @@ class OAuthAuthorizationCode(CustomBase):
     @property
     def is_expired(self) -> bool:
         """Check if the authorization code is expired."""
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
 
 
 class OAuthAccessToken(CustomBase):
@@ -119,7 +120,7 @@ class OAuthAccessToken(CustomBase):
     )
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     scope: Mapped[str] = mapped_column(String(1024), nullable=False)
-    audience: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    audience: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     server_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("mcp_servers.id", ondelete="CASCADE"),
@@ -133,17 +134,18 @@ class OAuthAccessToken(CustomBase):
     client: Mapped["OAuthClient"] = relationship(
         "OAuthClient", back_populates="access_tokens"
     )
-    refresh_token: Mapped[Optional["OAuthRefreshToken"]] = relationship(
+    refresh_token: Mapped["OAuthRefreshToken | None"] = relationship(
         "OAuthRefreshToken", back_populates="access_token", uselist=False
     )
 
+    @override
     def __str__(self) -> str:
         return f"OAuthAccessToken(jti={self.jti}, user_id={self.user_id})"
 
     @property
     def is_expired(self) -> bool:
         """Check if the access token is expired."""
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
 
     @property
     def is_valid(self) -> bool:
@@ -166,7 +168,7 @@ class OAuthRefreshToken(CustomBase):
         index=True,
     )
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    access_token_id: Mapped[Optional[UUID]] = mapped_column(
+    access_token_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("oauth_access_tokens.id", ondelete="SET NULL"),
         nullable=True,
@@ -187,17 +189,18 @@ class OAuthRefreshToken(CustomBase):
     client: Mapped["OAuthClient"] = relationship(
         "OAuthClient", back_populates="refresh_tokens"
     )
-    access_token: Mapped[Optional["OAuthAccessToken"]] = relationship(
+    access_token: Mapped["OAuthAccessToken | None"] = relationship(
         "OAuthAccessToken", back_populates="refresh_token"
     )
 
+    @override
     def __str__(self) -> str:
         return f"OAuthRefreshToken(user_id={self.user_id}, rotation={self.rotation_counter})"
 
     @property
     def is_expired(self) -> bool:
         """Check if the refresh token is expired."""
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
 
     @property
     def is_valid(self) -> bool:

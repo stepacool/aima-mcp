@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import ClassVar
 
 from pydantic import AnyUrl, field_validator
-from pydantic_core.core_schema import ValidationInfo, FieldValidationInfo
+from pydantic_core.core_schema import FieldValidationInfo, ValidationInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR: Path = Path(__file__).resolve().parent
@@ -87,7 +88,7 @@ class PostgresSettings(BaseSettings):
             scheme=scheme,
             username=values.data.get("POSTGRES_USER"),
             password=values.data.get("POSTGRES_PASSWORD"),
-            host=values.data.get("POSTGRES_HOST"),  # type: ignore[arg-type]
+            host=values.data.get("POSTGRES_HOST") or "0.0.0.0",
             port=values.data.get("POSTGRES_PORT"),
             path=f"{values.data.get('POSTGRES_DB') or ''}",
         )
@@ -107,7 +108,7 @@ class PostgresSettings(BaseSettings):
         return cls._make_db_uri(scheme="postgresql", value=v, values=values)
 
 
-class Settings(
+class Settings(  # type: ignore[reportUnsafeMultipleInheritance]
     AppSettings,
     OAuthSettings,
     MonitoringSettings,
@@ -115,7 +116,7 @@ class Settings(
     PostgresSettings,
     BaseSettings,
 ):
-    model_config = SettingsConfigDict(
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_file=str(BASE_DIR.parent / ".env"),
         env_file_encoding="utf-8",
         extra="allow",

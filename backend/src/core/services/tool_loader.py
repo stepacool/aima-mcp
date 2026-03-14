@@ -48,13 +48,13 @@ def make_mock_os(static_env_override: dict[str, str]) -> ModuleType:
 
     # Use DynamicEnvDict for layered env var lookup
     mock_environ = DynamicEnvDict({**os.environ, **static_env_override})
-    mock_os.environ = mock_environ  # type: ignore[attr-defined]
+    setattr(mock_os, "environ", mock_environ)
 
     # Override getenv to use our mock environ
     def mock_getenv(key: str, default: str | None = None) -> str | None:
         return mock_environ.get(key, default)
 
-    mock_os.getenv = mock_getenv  # type: ignore[attr-defined]
+    setattr(mock_os, "getenv", mock_getenv)
 
     # Override getenvb (bytes version) - falls back to real if key not in mock
     def mock_getenvb(key: bytes, default: bytes | None = None) -> bytes | None:
@@ -64,7 +64,7 @@ def make_mock_os(static_env_override: dict[str, str]) -> ModuleType:
             return result.encode("utf-8")
         return default
 
-    mock_os.getenvb = mock_getenvb  # type: ignore[attr-defined]
+    setattr(mock_os, "getenvb", mock_getenvb)
 
     return mock_os
 
@@ -118,8 +118,8 @@ def _parameters_to_json_schema(parameters: list[dict[str, Any]]) -> dict[str, An
 
 
 def _normalize_parameters(
-    v: list[dict[str, Any]] | dict[str, Any],  # pyright: ignore[reportExplicitAny]
-) -> list[dict[str, Any]]:  # pyright: ignore[reportExplicitAny]
+    v: list[dict[str, Any]] | dict[str, Any],
+) -> list[dict[str, Any]]:
     """Handle both dict format {'parameters': [...]} and list format [...]."""
     if isinstance(v, dict):
         return v.get("parameters", [])
@@ -138,7 +138,7 @@ class DynamicToolLoader:
         tool_id: str,
         name: str,
         description: str,
-        parameters: list[dict[str, Any]],  # pyright: ignore[reportExplicitAny]
+        parameters: list[dict[str, Any]],
         code: str,
         customer_id: UUID,
         tier: Tier = Tier.FREE,
@@ -293,8 +293,8 @@ class DynamicToolLoader:
     def _compile_function(
         self,
         name: str,
-        description: str,
-        parameters: list[dict[str, Any]],
+        _description: str,
+        _parameters: list[dict[str, Any]],
         code: str,
         namespace: dict[str, Any],
         env_vars: dict[str, str],

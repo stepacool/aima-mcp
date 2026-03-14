@@ -1,7 +1,7 @@
 """Server routes for activation and deployment."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from core.services.tier_service import (
@@ -34,7 +34,7 @@ async def _try_remount(request: Request, server_id: UUID) -> None:
     stack = getattr(app.state, "mcp_stack", None)
     if stack:
         try:
-            await remount_mcp_server(app, server_id, stack)
+            _ = await remount_mcp_server(app, server_id, stack)
         except Exception as e:
             logger.warning(f"Failed to remount server {server_id}: {e}")
 
@@ -66,8 +66,8 @@ class DeployResponse(BaseModel):
 
 
 class UpdateServerRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
 
 
 class ApiKeyResponse(BaseModel):
@@ -98,7 +98,7 @@ async def get_tier_info(tier: str) -> TierInfoResponse:
 
 
 @router.get("/targets")
-async def list_deployment_targets() -> dict:
+async def list_deployment_targets() -> dict[str, Any]:
     """List available deployment targets."""
     return {
         "targets": [
@@ -146,7 +146,7 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
         raise HTTPException(
             400,
             f"Free tier allows max {FREE_TIER_MAX_TOOLS} tools. "
-            f"You have {len(server.tools)}. Upgrade to paid for more.",
+            + f"You have {len(server.tools)}. Upgrade to paid for more.",
         )
 
     # Compile tools from DB (CodeValidator runs inside compile_tool for free tier)
@@ -164,13 +164,13 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
         logger.error("MCP stack not initialized in app state")
         raise HTTPException(status_code=500, detail="MCP runtime not initialized")
 
-    await register_new_customer_app(app, server_id, compiled_tools, stack=stack)
+    _ = await register_new_customer_app(app, server_id, compiled_tools, stack=stack)
 
     # Create or update deployment record
     endpoint_url = f"/mcp/{server_id}/mcp"
     if existing:
         # Update existing deployment
-        await deployment_repo.activate(existing.id, endpoint_url)
+        _ = await deployment_repo.activate(existing.id, endpoint_url)
     else:
         # Create new deployment
         deployment = await deployment_repo.create(
@@ -182,10 +182,10 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
             )
         )
         # Set deployed_at
-        await deployment_repo.activate(deployment.id, endpoint_url)
+        _ = await deployment_repo.activate(deployment.id, endpoint_url)
 
     # Update server setup status to READY
-    await server_repo.update_setup_status(server_id, MCPServerSetupStatus.ready)
+    _ = await server_repo.update_setup_status(server_id, MCPServerSetupStatus.ready)
 
     return ActivateResponse(
         server_id=server_id,
@@ -214,7 +214,7 @@ async def deploy_server(server_id: UUID, request: DeployRequest) -> DeployRespon
         raise HTTPException(
             400,
             f"Invalid target '{request.target}'. "
-            "Use 'dedicated' for VPC deployment or /activate for shared runtime.",
+            + "Use 'dedicated' for VPC deployment or /activate for shared runtime.",
         )
 
     # Check if already deployed
@@ -224,9 +224,9 @@ async def deploy_server(server_id: UUID, request: DeployRequest) -> DeployRespon
 
     # Create deployment record with PENDING status
     if existing:
-        await deployment_repo.delete(existing.id)
+        _ = await deployment_repo.delete(existing.id)
 
-    await deployment_repo.create(
+    _ = await deployment_repo.create(
         DeploymentCreate(
             server_id=server_id,
             target=DeploymentTarget.DEDICATED.value,
@@ -235,14 +235,14 @@ async def deploy_server(server_id: UUID, request: DeployRequest) -> DeployRespon
     )
 
     # Update server setup status to READY
-    await server_repo.update_setup_status(server_id, MCPServerSetupStatus.ready)
+    _ = await server_repo.update_setup_status(server_id, MCPServerSetupStatus.ready)
 
     return DeployResponse(
         server_id=server_id,
         target=DeploymentTarget.DEDICATED.value,
         status="pending",
         message="Dedicated VPC deployment is coming soon. "
-        "Your server has been queued for deployment.",
+        + "Your server has been queued for deployment.",
     )
 
 
@@ -255,13 +255,13 @@ class MCPToolResponse(BaseModel):
     id: UUID
     name: str
     description: str
-    parameters_schema: list[dict]
+    parameters_schema: list[dict[str, Any]]
     code: str
     server_id: UUID
 
     @field_validator("parameters_schema", mode="before")
     @classmethod
-    def normalize_parameters_schema(cls, v):
+    def normalize_parameters_schema(cls, v: object) -> list[dict[str, Any]]:
         """Handle both dict format {'parameters': [...]} and list format [...]"""
         if isinstance(v, dict):
             return v.get("parameters", [])
@@ -286,7 +286,7 @@ class DeploymentResponse(BaseModel):
     target: str
     status: str
     endpoint_url: str | None
-    target_config: dict | None
+    target_config: dict[str, Any] | None
     error_message: str | None
     deployed_at: datetime | None
     created_at: datetime
@@ -304,7 +304,7 @@ class ServerListItem(BaseModel):
     auth_config: dict[str, Any] | None
     tools: list[MCPToolResponse]
     environment_variables: list[MCPEnvironmentVariableResponse]
-    deployment: Optional[DeploymentResponse]
+    deployment: DeploymentResponse | None
     created_at: datetime
     updated_at: datetime
 
@@ -366,7 +366,7 @@ async def get_server_details(server_id: UUID) -> ServerListItem:
 
 
 @router.delete("/{server_id}")
-async def delete_server(server_id: UUID, request: Request) -> dict:
+async def delete_server(server_id: UUID, request: Request) -> dict[str, Any]:
     """
     Delete an MCP server.
 
@@ -379,9 +379,9 @@ async def delete_server(server_id: UUID, request: Request) -> dict:
         raise HTTPException(404, f"Server {server_id} not found")
 
     if server.deployment and server.deployment.status == DeploymentStatus.ACTIVE.value:
-        unregister_mcp_app(request.app, server_id)
+        _ = unregister_mcp_app(request.app, server_id)
 
-    await server_repo.delete_cascade(server_id)
+    _ = await server_repo.delete_cascade(server_id)
     logger.info(f"Deleted server {server_id}")
     return {
         "status": "deleted",
@@ -478,7 +478,7 @@ async def update_tool(
 @router.patch("/{server_id}/env-vars/{var_id}")
 async def update_env_var(
     server_id: UUID, var_id: UUID, request: UpdateEnvVarRequest, req: Request
-) -> dict:
+) -> dict[str, Any]:
     """Update the value of an environment variable. Remounts the server if deployed."""
     env_var_repo = Provider.environment_variable_repo()
 

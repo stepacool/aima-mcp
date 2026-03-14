@@ -4,13 +4,11 @@ import base64
 import hashlib
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
 import jwt
-from loguru import logger
-
 from infrastructure.models.oauth import OAuthClient
 from infrastructure.repositories.oauth import (
     OAuthAccessTokenCreate,
@@ -19,11 +17,15 @@ from infrastructure.repositories.oauth import (
     OAuthRefreshTokenCreate,
 )
 from infrastructure.repositories.repo_provider import Provider
+from loguru import logger
 from settings import settings
 
 
 class OAuthError(Exception):
     """Base OAuth error."""
+
+    error: str
+    description: str
 
     def __init__(self, error: str, description: str):
         self.error = error
@@ -95,6 +97,12 @@ class ClientRegistrationResponse:
 
 class OAuthService:
     """Service for OAuth 2.1 operations."""
+
+    issuer: str
+    access_token_lifetime: int
+    refresh_token_lifetime: int
+    auth_code_lifetime: int
+    supported_scopes: list[str]
 
     def __init__(self):
         self.issuer = settings.OAUTH_ISSUER
@@ -170,12 +178,12 @@ class OAuthService:
             registration_type="dynamic",
         )
 
-        await Provider.oauth_client_repo().create(client_create)
+        _ = await Provider.oauth_client_repo().create(client_create)
 
         return ClientRegistrationResponse(
             client_id=client_id,
             client_secret=client_secret,
-            client_id_issued_at=int(datetime.utcnow().timestamp()),
+            client_id_issued_at=int(datetime.now(timezone.utc).timestamp()),
             client_secret_expires_at=0,  # Never expires
             redirect_uris=redirect_uris,
             grant_types=grant_types,
@@ -220,7 +228,9 @@ class OAuthService:
 
         # Generate authorization code
         code = secrets.token_urlsafe(48)
-        expires_at = datetime.utcnow() + timedelta(seconds=self.auth_code_lifetime)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            seconds=self.auth_code_lifetime
+        )
 
         # Store the code
         code_create = OAuthAuthorizationCodeCreate(
@@ -236,7 +246,7 @@ class OAuthService:
             state=state,
         )
 
-        await Provider.oauth_authorization_code_repo().create(code_create)
+        _ = await Provider.oauth_authorization_code_repo().create(code_create)
 
         logger.info(
             f"Created authorization code for user {user_id}, client {client_id}"
@@ -353,7 +363,7 @@ class OAuthService:
 
         # Revoke old refresh token (rotation for public clients)
         if client.is_public:
-            await Provider.oauth_refresh_token_repo().revoke(token_hash)
+            _ = await Provider.oauth_refresh_token_repo().revoke(token_hash)
 
         # Generate new tokens
         return await self._generate_tokens(
@@ -371,7 +381,7 @@ class OAuthService:
         server_id: UUID,
     ) -> TokenResponse:
         """Generate access and refresh tokens."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         jti = secrets.token_urlsafe(24)
 
         # Generate access token (JWT)
@@ -432,7 +442,7 @@ class OAuthService:
             server_id=server_id,
             expires_at=refresh_token_expires,
         )
-        await Provider.oauth_refresh_token_repo().create(refresh_token_create)
+        _ = await Provider.oauth_refresh_token_repo().create(refresh_token_create)
 
         logger.info(f"Generated tokens for user {user_id}, client {client.client_id}")
 
@@ -506,6 +516,7 @@ class OAuthService:
         client_id: str | None = None,
     ) -> bool:
         """Revoke a token (access or refresh)."""
+        _ = client_id  # RFC 7009: client_id optional, not used for revocation
         token_hash = hashlib.sha256(token.encode()).hexdigest()
 
         # Try refresh token first if hint suggests it
@@ -521,7 +532,7 @@ class OAuthService:
                 token_hash
             )
             if access_token:
-                await Provider.oauth_access_token_repo().revoke(access_token.jti)
+                _ = await Provider.oauth_access_token_repo().revoke(access_token.jti)
                 return True
 
         return False

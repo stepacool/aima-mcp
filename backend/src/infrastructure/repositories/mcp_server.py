@@ -7,10 +7,10 @@ from sqlalchemy.orm import selectinload
 
 from infrastructure.db import Database
 from infrastructure.models.mcp_server import (
+    MCPEnvironmentVariable,
     MCPServer,
     MCPServerSetupStatus,
     MCPTool,
-    MCPEnvironmentVariable,
 )
 from infrastructure.repositories.base import BaseCRUDRepo
 
@@ -37,14 +37,14 @@ class MCPToolCreate(BaseModel):
     server_id: UUID
     name: str
     description: str
-    parameters_schema: list[dict]
+    parameters_schema: list[dict[str, Any]]
     code: str = ""
 
 
 class MCPToolUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
-    parameters_schema: list[dict] | None = None
+    parameters_schema: list[dict[str, Any]] | None = None
     code: str | None = None
 
 

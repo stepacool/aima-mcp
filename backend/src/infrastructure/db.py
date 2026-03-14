@@ -4,9 +4,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from uuid import UUID, uuid4
 
 from loguru import logger
+from settings import settings
 from sqlalchemy import DateTime, func, literal, select
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncSession,
@@ -14,12 +17,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from uuid import UUID, uuid4
-
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import DeclarativeBase, declarative_base, mapped_column, Mapped
-
-from settings import settings
+from sqlalchemy.orm import DeclarativeBase, Mapped, declarative_base, mapped_column
 
 
 class CustomBase(AsyncAttrs, DeclarativeBase):
@@ -88,7 +86,7 @@ class Database:
             return row._asdict()
 
     @asynccontextmanager
-    async def session(self, commit=True) -> AsyncGenerator[AsyncSession, None]:
+    async def session(self, commit: bool = True) -> AsyncGenerator[AsyncSession, None]:
         async with self._async_session() as session:
             try:
                 yield session

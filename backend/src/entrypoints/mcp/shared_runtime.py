@@ -76,7 +76,7 @@ def unregister_mcp_app(app: FastAPI, server_id: UUID) -> bool:
 
     # Find and remove the mounted route
     for i, route in enumerate(app.routes):
-        if hasattr(route, "path") and route.path == mount_path:  # type: ignore[attr-defined]
+        if hasattr(route, "path") and getattr(route, "path", None) == mount_path:
             _ = app.routes.pop(i)
             logger.info(f"Unmounted MCP app from {mount_path}")
             return True

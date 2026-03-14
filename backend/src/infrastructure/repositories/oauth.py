@@ -1,6 +1,6 @@
 """OAuth 2.1 repositories for managing OAuth clients, tokens, and codes."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -15,7 +15,6 @@ from infrastructure.models.oauth import (
     OAuthRefreshToken,
 )
 from infrastructure.repositories.base import BaseCRUDRepo
-
 
 # ============================================================================
 # OAuth Client Schemas and Repository
@@ -132,7 +131,7 @@ class OAuthAuthorizationCodeRepo(
                 .values(is_used=True)
             )
             await session.commit()
-            return result.rowcount  # type: ignore[attr-defined] > 0
+            return (result.rowcount or 0) > 0  # type: ignore[union-attr]
 
     async def get_valid_code(self, code: str) -> OAuthAuthorizationCode | None:
         """Get a valid (unused, unexpired) authorization code."""
@@ -141,7 +140,7 @@ class OAuthAuthorizationCodeRepo(
                 select(self.model).where(
                     self.model.code == code,
                     self.model.is_used.is_(False),
-                    self.model.expires_at > datetime.utcnow(),
+                    self.model.expires_at > datetime.now(timezone.utc),
                 )
             )
             return result.scalars().first()
@@ -152,10 +151,12 @@ class OAuthAuthorizationCodeRepo(
 
         async with self.db.session() as session:
             result = await session.execute(
-                sa_delete(self.model).where(self.model.expires_at < datetime.utcnow())
+                sa_delete(self.model).where(
+                    self.model.expires_at < datetime.now(timezone.utc)
+                )
             )
             await session.commit()
-            return result.rowcount  # type: ignore[attr-defined]
+            return result.rowcount or 0  # type: ignore[union-attr]
 
 
 # ============================================================================
@@ -213,7 +214,7 @@ class OAuthAccessTokenRepo(
                 update(self.model).where(self.model.jti == jti).values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount  # type: ignore[attr-defined] > 0
+            return (result.rowcount or 0) > 0  # type: ignore[union-attr]
 
     async def revoke_all_for_user(self, user_id: str, server_id: UUID) -> int:
         """Revoke all access tokens for a user on a server."""
@@ -228,7 +229,7 @@ class OAuthAccessTokenRepo(
                 .values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount  # type: ignore[attr-defined]
+            return result.rowcount or 0  # type: ignore[union-attr]
 
     async def is_token_valid(self, jti: str) -> bool:
         """Check if a token is valid (exists, not revoked, not expired)."""
@@ -237,7 +238,7 @@ class OAuthAccessTokenRepo(
                 select(self.model).where(
                     self.model.jti == jti,
                     self.model.is_revoked.is_(False),
-                    self.model.expires_at > datetime.utcnow(),
+                    self.model.expires_at > datetime.now(timezone.utc),
                 )
             )
             return result.scalars().first() is not None
@@ -291,7 +292,7 @@ class OAuthRefreshTokenRepo(
                 select(self.model).where(
                     self.model.token_hash == token_hash,
                     self.model.is_revoked.is_(False),
-                    self.model.expires_at > datetime.utcnow(),
+                    self.model.expires_at > datetime.now(timezone.utc),
                 )
             )
             return result.scalars().first()
@@ -305,7 +306,7 @@ class OAuthRefreshTokenRepo(
                 .values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount  # type: ignore[attr-defined] > 0
+            return (result.rowcount or 0) > 0  # type: ignore[union-attr]
 
     async def revoke_all_for_user(self, user_id: str, server_id: UUID) -> int:
         """Revoke all refresh tokens for a user on a server."""
@@ -320,7 +321,7 @@ class OAuthRefreshTokenRepo(
                 .values(is_revoked=True)
             )
             await session.commit()
-            return result.rowcount  # type: ignore[attr-defined]
+            return result.rowcount or 0  # type: ignore[union-attr]
 
     async def increment_rotation_counter(self, token_hash: str) -> bool:
         """Increment the rotation counter for refresh token rotation."""
@@ -331,4 +332,4 @@ class OAuthRefreshTokenRepo(
                 .values(rotation_counter=self.model.rotation_counter + 1)
             )
             await session.commit()
-            return result.rowcount  # type: ignore[attr-defined] > 0
+            return (result.rowcount or 0) > 0  # type: ignore[union-attr]

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -102,7 +102,7 @@ class DeploymentRepo(BaseCRUDRepo[Deployment, DeploymentCreate, DeploymentUpdate
             deployment = result.scalars().first()
             if deployment:
                 deployment.status = DeploymentStatus.ACTIVE.value
-                deployment.deployed_at = datetime.utcnow()
+                deployment.deployed_at = datetime.now(timezone.utc)
                 if endpoint_url:
                     deployment.endpoint_url = endpoint_url
                 await session.commit()

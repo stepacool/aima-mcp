@@ -1,16 +1,16 @@
 """Middleware for MCP server authentication and request processing."""
 
+from typing import Any, override
 from uuid import UUID
 
+from core.services.request_context import request_env_vars
+from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
+from settings import settings
 from starlette import status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-
-from core.services.request_context import request_env_vars
-from infrastructure.repositories.repo_provider import Provider
-from settings import settings
 
 
 def _build_www_authenticate_header(server_id: UUID | None = None) -> str:
@@ -44,7 +44,8 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
     pointing to the OAuth protected resource metadata.
     """
 
-    async def dispatch(self, request: Request, call_next):
+    @override
+    async def dispatch(self, request: Request, call_next: Any):
         path = request.url.path
         if not path.startswith("/mcp"):
             return await call_next(request)
@@ -146,7 +147,8 @@ class MCPEnvMiddleware(BaseHTTPMiddleware):
         in the tool's os.environ lookup.
     """
 
-    async def dispatch(self, request: Request, call_next):
+    @override
+    async def dispatch(self, request: Request, call_next: Any):
         path = request.url.path
         if not path.startswith("/mcp/"):
             return await call_next(request)

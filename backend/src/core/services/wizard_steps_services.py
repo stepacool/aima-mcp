@@ -3,14 +3,14 @@ import secrets
 import time
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import Any
+from typing import cast
 from uuid import UUID
 
 import yaml
 from entrypoints.mcp.shared_runtime import register_new_customer_app
 from fastapi import FastAPI
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
-from infrastructure.models.mcp_server import MCPServerSetupStatus, MCPTool
+from infrastructure.models.mcp_server import MCPServer, MCPServerSetupStatus, MCPTool
 from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.mcp_server import (
     MCPEnvironmentVariableCreate,
@@ -20,6 +20,7 @@ from infrastructure.repositories.mcp_server import (
 from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field
 from settings import settings
 
@@ -74,13 +75,13 @@ class EnvVarsResponse(BaseModel):
     env_vars: list[EnvVar]
 
 
-def load_prompt(filename: str, as_string: bool = True) -> str | dict[str, Any]:
+def load_prompt(filename: str, as_string: bool = True) -> str | dict[str, object]:
     try:
         with open(PROMPTS_DIR / filename, "r") as file:
             if as_string:
                 return file.read()
-            prompt_data = yaml.full_load(file)
-            return prompt_data
+            raw = cast(object, yaml.full_load(file))
+            return cast(dict[str, object], raw) if isinstance(raw, dict) else {}
     except (FileNotFoundError, yaml.YAMLError) as e:
         print(f"Error loading prompt file {filename}: {e}")
         return "" if as_string else {}
@@ -97,7 +98,7 @@ class WizardStepsService:
     async def step_1a_suggest_tools_for_mcp_server(
         self,
         description: str,
-        mcp_server_id: UUID | None = None,
+        mcp_server_id: UUID,
         prompt_file: str = "step_1_tool_suggestion.yaml",
     ) -> list[Tool]:
         """
@@ -105,15 +106,8 @@ class WizardStepsService:
         Suggested tools are stored in draft state in db.
         Sets status to tools_generating during LLM call, then tools_selection when done.
         """
-        if mcp_server_id is None:
-            # TODO: This create() call is missing required arguments (MCPServerCreate)
-            mcp_server = await Provider.mcp_server_repo().create()  # type: ignore[call-arg]
-            mcp_server_id = mcp_server.id
-
-        assert mcp_server_id is not None  # For type narrowing
-
         # Set generating status
-        await Provider.mcp_server_repo().update_setup_status(
+        _ = await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.tools_generating
         )
 
@@ -122,10 +116,11 @@ class WizardStepsService:
 
             # Get server to access meta for technical details
             server = await Provider.mcp_server_repo().get(mcp_server_id)  # type: ignore[arg-type]
-            technical_details = (
+            technical_details: list[str] = cast(
+                list[str],
                 server.meta.get("technical_details", [])
                 if server and server.meta
-                else []
+                else [],
             )
 
             # Build user content with description and technical details
@@ -137,10 +132,13 @@ class WizardStepsService:
                 )
                 user_content = f"{description}\n\n---\n\nTECHNICAL DETAILS (use these to design tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen designing tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
 
-            messages: list[Any] = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ]
+            messages: list[ChatCompletionMessageParam] = cast(
+                list[ChatCompletionMessageParam],
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+            )
             parsed: list[Tool] = []
             max_retries = 3
             for attempt in range(max_retries):
@@ -157,7 +155,7 @@ class WizardStepsService:
                     f"[{mcp_server_id}] step_1a returned no tools (attempt {attempt + 1}/{max_retries}), retrying"
                 )
 
-            create_payloads = []
+            create_payloads: list[MCPToolCreate] = []
             for tool in parsed:
                 create_payloads.append(
                     MCPToolCreate(
@@ -167,11 +165,11 @@ class WizardStepsService:
                         parameters_schema=[p.model_dump() for p in tool.parameters],
                     )
                 )
-            await Provider.mcp_tool_repo().create_bulk(create_payloads)
+            _ = await Provider.mcp_tool_repo().create_bulk(create_payloads)
             return parsed
         finally:
             # Set to tools_selection when done (success or failure)
-            await Provider.mcp_server_repo().update_setup_status(
+            _ = await Provider.mcp_server_repo().update_setup_status(
                 mcp_server_id, MCPServerSetupStatus.tools_selection
             )
 
@@ -188,7 +186,7 @@ class WizardStepsService:
         Sets status to tools_generating during LLM call, then tools_selection when done.
         """
         # Set generating status
-        await Provider.mcp_server_repo().update_setup_status(
+        _ = await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.tools_generating
         )
         server = await Provider.mcp_server_repo().get(mcp_server_id)
@@ -211,8 +209,9 @@ class WizardStepsService:
             system_prompt = load_prompt(prompt_file)
 
             # Include technical details from meta if available
-            technical_details = (
-                server.meta.get("technical_details", []) if server.meta else []
+            technical_details: list[str] = cast(
+                list[str],
+                server.meta.get("technical_details", []) if server.meta else [],
             )
             technical_details_text = ""
             if technical_details:
@@ -225,10 +224,13 @@ class WizardStepsService:
             server_desc = server.description if server else ""
             user_content = f"Server description:\n{server_desc}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}{technical_details_text}"
 
-            messages: list[Any] = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ]
+            messages: list[ChatCompletionMessageParam] = cast(
+                list[ChatCompletionMessageParam],
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+            )
             response = await openai_client.chat.completions.parse(
                 model=settings.TOOL_GENERATION_MODEL,
                 messages=messages,
@@ -261,28 +263,28 @@ class WizardStepsService:
                 updated_meta = dict(server.meta) if server.meta else {}
                 updated_meta["technical_details"] = merged_technical_details
 
-                await Provider.mcp_server_repo().update(
+                _ = await Provider.mcp_server_repo().update(
                     mcp_server_id,
                     MCPServerUpdate(meta=updated_meta),
                 )
 
-            await Provider.mcp_tool_repo().delete_tools_for_server(mcp_server_id)
+            _ = await Provider.mcp_tool_repo().delete_tools_for_server(mcp_server_id)
 
-            create_payloads = []
+            create_payloads: list[MCPToolCreate] = []
             for tool in parsed:
                 create_payloads.append(
                     MCPToolCreate(
                         server_id=mcp_server_id,
                         name=tool.name,
                         description=tool.description,
-                        parameters_schema=[p.dict() for p in tool.parameters],
+                        parameters_schema=[p.model_dump() for p in tool.parameters],
                     )
                 )
-            await Provider.mcp_tool_repo().create_bulk(create_payloads)
+            _ = await Provider.mcp_tool_repo().create_bulk(create_payloads)
             return parsed
         finally:
             # Set to tools_selection when done (success or failure)
-            await Provider.mcp_server_repo().update_setup_status(
+            _ = await Provider.mcp_server_repo().update_setup_status(
                 mcp_server_id, MCPServerSetupStatus.tools_selection
             )
 
@@ -297,15 +299,15 @@ class WizardStepsService:
         Transition mcp server to another setup_status, delete the other tools
         of the MCP server (that didn't get selected).
         """
-        await Provider.mcp_tool_repo().delete_tools_not_in_list(
+        _ = await Provider.mcp_tool_repo().delete_tools_not_in_list(
             mcp_server_id, selected_tool_ids
         )
         if setup_status_override:
-            await Provider.mcp_server_repo().update_setup_status(
+            _ = await Provider.mcp_server_repo().update_setup_status(
                 mcp_server_id,
                 setup_status_override,
             )
-        await Provider.mcp_server_repo().update_setup_status(
+        _ = await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id,
             MCPServerSetupStatus.env_vars_setup,
         )
@@ -322,7 +324,7 @@ class WizardStepsService:
         Sets status to env_vars_generating during LLM call, then env_vars_setup when done.
         """
         # Set generating status
-        await Provider.mcp_server_repo().update_setup_status(
+        _ = await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.env_vars_generating
         )
         server = await Provider.mcp_server_repo().get(mcp_server_id)
@@ -336,13 +338,14 @@ class WizardStepsService:
             )
             tools_description = "\n".join(
                 f"- {tool.name}: {tool.description} "
-                f"(params: {', '.join(p.get('name', '') for p in tool.parameters_schema)})"
+                + f"(params: {', '.join(p.get('name', '') for p in tool.parameters_schema)})"
                 for tool in server_tools
             )
-            technical_details = (
+            technical_details: list[str] = cast(
+                list[str],
                 server.meta.get("technical_details", [])
                 if server and server.meta
-                else []
+                else [],
             )
             technical_details_text = ""
             if technical_details:
@@ -352,13 +355,16 @@ class WizardStepsService:
 
             user_content = (
                 f"Server description:\n{server_desc}\n\n"
-                f"Tools in this server:\n{tools_description}"
-                f"{technical_details_text}\n"
+                + f"Tools in this server:\n{tools_description}"
+                + f"{technical_details_text}\n"
             )
-            messages: list[Any] = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ]
+            messages: list[ChatCompletionMessageParam] = cast(
+                list[ChatCompletionMessageParam],
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+            )
             response = await openai_client.chat.completions.parse(
                 model=settings.ENV_VARS_GENERATION_MODEL,
                 messages=messages,
@@ -367,7 +373,7 @@ class WizardStepsService:
             parsed_response = response.choices[0].message.parsed
             parsed: list[EnvVar] = parsed_response.env_vars if parsed_response else []
 
-            create_payloads = []
+            create_payloads: list[MCPEnvironmentVariableCreate] = []
             for var in parsed:
                 create_payloads.append(
                     MCPEnvironmentVariableCreate(
@@ -376,11 +382,11 @@ class WizardStepsService:
                         description=var.description,
                     )
                 )
-            await Provider.environment_variable_repo().create_bulk(create_payloads)
+            _ = await Provider.environment_variable_repo().create_bulk(create_payloads)
             return parsed
         finally:
             # Set to env_vars_setup when done (success or failure)
-            await Provider.mcp_server_repo().update_setup_status(
+            _ = await Provider.mcp_server_repo().update_setup_status(
                 mcp_server_id, MCPServerSetupStatus.env_vars_setup
             )
 
@@ -396,7 +402,7 @@ class WizardStepsService:
         Sets status to env_vars_generating during LLM call, then env_vars_setup when done.
         """
         # Set generating status
-        await Provider.mcp_server_repo().update_setup_status(
+        _ = await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.env_vars_generating
         )
         server = await Provider.mcp_server_repo().get(mcp_server_id)
@@ -418,13 +424,14 @@ class WizardStepsService:
             )
             tools_description = "\n".join(
                 f"- {tool.name}: {tool.description} "
-                f"(params: {', '.join(p.get('name', '') for p in tool.parameters_schema)})"
+                + f"(params: {', '.join(p.get('name', '') for p in tool.parameters_schema)})"
                 for tool in server_tools
             )
-            technical_details = (
+            technical_details: list[str] = cast(
+                list[str],
                 server.meta.get("technical_details", [])
                 if server and server.meta
-                else []
+                else [],
             )
             technical_details_text = ""
             if technical_details:
@@ -434,16 +441,19 @@ class WizardStepsService:
 
             user_content = (
                 f"MCP description:\n{server_desc}\n\n"
-                f"Tools in this server:\n{tools_description}"
-                f"{technical_details_text}\n\n"
-                f"Current environment variables:\n{vars_description}\n\n"
-                f"User feedback:\n{feedback}"
+                + f"Tools in this server:\n{tools_description}"
+                + f"{technical_details_text}\n\n"
+                + f"Current environment variables:\n{vars_description}\n\n"
+                + f"User feedback:\n{feedback}"
             )
 
-            messages: list[Any] = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content},
-            ]
+            messages: list[ChatCompletionMessageParam] = cast(
+                list[ChatCompletionMessageParam],
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+            )
             response = await openai_client.chat.completions.parse(
                 model=settings.ENV_VARS_GENERATION_MODEL,
                 messages=messages,
@@ -452,11 +462,11 @@ class WizardStepsService:
             parsed_response = response.choices[0].message.parsed
             parsed: list[EnvVar] = parsed_response.env_vars if parsed_response else []
 
-            await Provider.environment_variable_repo().delete_vars_for_server(
+            _ = await Provider.environment_variable_repo().delete_vars_for_server(
                 mcp_server_id
             )
 
-            create_payloads = []
+            create_payloads: list[MCPEnvironmentVariableCreate] = []
             for var in parsed:
                 create_payloads.append(
                     MCPEnvironmentVariableCreate(
@@ -465,11 +475,11 @@ class WizardStepsService:
                         description=var.description,
                     )
                 )
-            await Provider.environment_variable_repo().create_bulk(create_payloads)
+            _ = await Provider.environment_variable_repo().create_bulk(create_payloads)
             return parsed
         finally:
             # Set to env_vars_setup when done (success or failure)
-            await Provider.mcp_server_repo().update_setup_status(
+            _ = await Provider.mcp_server_repo().update_setup_status(
                 mcp_server_id, MCPServerSetupStatus.env_vars_setup
             )
 
@@ -488,8 +498,9 @@ class WizardStepsService:
         - mcp_server_id: UUID - The ID of the MCP server
         - values: dict[UUID, str] - A dictionary of variable IDs and their values
         """
+        _ = mcp_server_id  # Reserved for future setup_status transition
         for var_id, value in values.items():
-            await Provider.environment_variable_repo().update_value(var_id, value)
+            _ = await Provider.environment_variable_repo().update_value(var_id, value)
 
     async def step_3_set_header_auth(
         self,
@@ -499,13 +510,13 @@ class WizardStepsService:
         Sets header auth to MCP server, generates a Bearer token and returns it.
         """
         token = secrets.token_urlsafe(32)
-        await Provider.static_api_key_repo().create_for_server(mcp_server_id, token)
-        await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
+        _ = await Provider.static_api_key_repo().create_for_server(mcp_server_id, token)
+        _ = await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
         return token
 
     async def _generate_tool_code(
         self,
-        server,  # MCPServer ORM
+        server: MCPServer,
         tool: MCPTool,
         prompt_template: str,
         tier: Tier,
@@ -541,7 +552,7 @@ class WizardStepsService:
                 for var in server.environment_variables
             ),
             TECHNICAL_DETAILS=",".join(
-                (server.meta or {}).get("technical_details") or []
+                cast(list[str], (server.meta or {}).get("technical_details") or [])
             ),
             FUNCTION_NAME=tool.name,
             TOOL_NAME=tool.name,
@@ -559,7 +570,10 @@ class WizardStepsService:
         if enable_logging:
             logger_instance.info(f"{log_prefix} [{tool.name}] Prompt: {prompt}")
 
-        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        messages: list[ChatCompletionMessageParam] = cast(
+            list[ChatCompletionMessageParam],
+            [{"role": "user", "content": prompt}],
+        )
         code_validator = CodeValidator(tier)
 
         MAX_RETRIES = 5
@@ -568,7 +582,7 @@ class WizardStepsService:
         for _ in range(MAX_RETRIES):
             response = await openai_client.chat.completions.create(
                 model=settings.CODE_GENERATION_MODEL,
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
             )
             code = response.choices[0].message.content
             if enable_logging:
@@ -630,12 +644,12 @@ class WizardStepsService:
         updated_meta = dict(server.meta or {})
         if "processing_error" in updated_meta:
             del updated_meta["processing_error"]
-            await Provider.mcp_server_repo().update(
+            _ = await Provider.mcp_server_repo().update(
                 mcp_server_id, MCPServerUpdate(meta=updated_meta)
             )
 
         # Set generating status
-        await Provider.mcp_server_repo().update_setup_status(
+        _ = await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id, MCPServerSetupStatus.code_generating
         )
 
@@ -646,24 +660,22 @@ class WizardStepsService:
 
         system_prompt_data = load_prompt("step_4_code_generation.yaml", as_string=False)
         assert isinstance(system_prompt_data, dict)
-        system_prompt = system_prompt_data
+        prompt_template = system_prompt_data.get("prompt", "")
+        assert isinstance(prompt_template, str)
 
         async def generate_code_for_tool(
-            prompt_template: str, tool: MCPTool, enable_logging: bool = False
-        ):
+            pt: str, tool: MCPTool, enable_logging: bool = False
+        ) -> str:
             return await self._generate_tool_code(
                 server=server,
                 tool=tool,
-                prompt_template=prompt_template,
+                prompt_template=pt,
                 tier=tier,
                 enable_logging=enable_logging,
                 server_id_for_log=mcp_server_id,
             )
 
-        tasks = [
-            generate_code_for_tool(system_prompt["prompt"], tool)
-            for tool in server.tools
-        ]
+        tasks = [generate_code_for_tool(prompt_template, tool) for tool in server.tools]
 
         try:
             start_time = time.time()
@@ -673,33 +685,33 @@ class WizardStepsService:
                 f"[{mcp_server_id}] Time taken: {end_time - start_time} seconds"
             )
             for tool, result in zip(server.tools, results):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     logger.error(
                         f"[{mcp_server_id}] Tool: {tool.name}, failed: {result}"
                     )
                     raise result
-                code = result
+                code: str = result
                 if not code:
                     logger.error(
                         f"[{mcp_server_id}] Tool: {tool.name}, failed to generate code"
                     )
-                await Provider.mcp_tool_repo().update_tool_code(tool.id, code)
+                _ = await Provider.mcp_tool_repo().update_tool_code(tool.id, code)
                 logger.success(
                     f"[{mcp_server_id}] Tool: {tool.name}, completed code generation"
                 )
 
-            await Provider.mcp_server_repo().update_setup_status(
+            _ = await Provider.mcp_server_repo().update_setup_status(
                 mcp_server_id, MCPServerSetupStatus.code_gen
             )
         except Exception as e:
             logger.exception(f"[{mcp_server_id}] Code generation failed: {e}")
-            await Provider.mcp_server_repo().update(
+            _ = await Provider.mcp_server_repo().update(
                 mcp_server_id,
                 MCPServerUpdate(
                     meta={**(server.meta or {}), "processing_error": str(e)},
                 ),
             )
-            await Provider.mcp_server_repo().update_setup_status(
+            _ = await Provider.mcp_server_repo().update_setup_status(
                 mcp_server_id, MCPServerSetupStatus.deployment_selection
             )
             raise
@@ -728,18 +740,19 @@ class WizardStepsService:
         tier = Tier.FREE
         system_prompt_data = load_prompt("step_4_code_generation.yaml", as_string=False)
         assert isinstance(system_prompt_data, dict)
-        prompt_template = system_prompt_data["prompt"]
+        prompt_template_val = system_prompt_data.get("prompt", "")
+        assert isinstance(prompt_template_val, str)
 
         code = await self._generate_tool_code(
             server=server,
             tool=tool,
-            prompt_template=prompt_template,
+            prompt_template=prompt_template_val,
             tier=tier,
             enable_logging=False,
             server_id_for_log=mcp_server_id,
         )
 
-        await Provider.mcp_tool_repo().update_tool_code(tool_id, code)
+        _ = await Provider.mcp_tool_repo().update_tool_code(tool_id, code)
         logger.success(f"[{mcp_server_id}] Regenerated code for tool {tool.name}")
         return code
 
@@ -772,7 +785,7 @@ class WizardStepsService:
                 mcp_server_id
             )
             token = api_key.key if api_key else ""
-            await server_repo.update_setup_status(
+            _ = await server_repo.update_setup_status(
                 mcp_server_id, MCPServerSetupStatus.ready
             )
             return existing.endpoint_url or "", token
@@ -781,7 +794,7 @@ class WizardStepsService:
         if len(server.tools) > FREE_TIER_MAX_TOOLS:
             raise ValueError(
                 f"Free tier allows max {FREE_TIER_MAX_TOOLS} tools. "
-                f"You have {len(server.tools)}. Upgrade to paid for more."
+                + f"You have {len(server.tools)}. Upgrade to paid for more."
             )
 
         # Validate and compile tools
@@ -794,13 +807,15 @@ class WizardStepsService:
         )
 
         # Register with shared runtime
-        await register_new_customer_app(app, mcp_server_id, compiled_tools, stack=stack)
+        _ = await register_new_customer_app(
+            app, mcp_server_id, compiled_tools, stack=stack
+        )
 
         # Create or update deployment record
         endpoint_url = f"/mcp/{mcp_server_id}/mcp"
         if existing:
             # Update existing deployment
-            await deployment_repo.activate(existing.id, endpoint_url)
+            _ = await deployment_repo.activate(existing.id, endpoint_url)
         else:
             # Create new deployment
             deployment = await deployment_repo.create(
@@ -812,7 +827,7 @@ class WizardStepsService:
                 )
             )
             # Set deployed_at
-            await deployment_repo.activate(deployment.id, endpoint_url)
+            _ = await deployment_repo.activate(deployment.id, endpoint_url)
 
         # Reuse existing API key if auth step already created one
         api_key_repo = Provider.static_api_key_repo()
@@ -821,11 +836,13 @@ class WizardStepsService:
             token = existing_key.key
         else:
             token = secrets.token_urlsafe(32)
-            await api_key_repo.create_for_server(mcp_server_id, token)
-        await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
+            _ = await api_key_repo.create_for_server(mcp_server_id, token)
+        _ = await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
 
         # Update server setup status to READY
-        await server_repo.update_setup_status(mcp_server_id, MCPServerSetupStatus.ready)
+        _ = await server_repo.update_setup_status(
+            mcp_server_id, MCPServerSetupStatus.ready
+        )
 
         logger.success(f"Server {mcp_server_id} deployed to shared runtime")
         return endpoint_url, token
