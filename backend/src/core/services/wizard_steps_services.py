@@ -1,36 +1,36 @@
 import asyncio
 import secrets
+import time
 from contextlib import AsyncExitStack
 from pathlib import Path
-import time
 from typing import Any
 from uuid import UUID
 
 import yaml
-from fastapi import FastAPI
-from openai import AsyncOpenAI
-from pydantic import BaseModel, Field
-
-from core.services import get_tool_loader
-from core.services.tier_service import (
-    CURATED_LIBRARIES,
-    BLOCKED_MODULES,
-    FREE_TIER_MAX_TOOLS,
-    Tier,
-    CodeValidator,
-)
 from entrypoints.mcp.shared_runtime import register_new_customer_app
+from fastapi import FastAPI
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
 from infrastructure.models.mcp_server import MCPServerSetupStatus, MCPTool
 from infrastructure.repositories.deployment import DeploymentCreate
 from infrastructure.repositories.mcp_server import (
     MCPEnvironmentVariableCreate,
-    MCPToolCreate,
     MCPServerUpdate,
+    MCPToolCreate,
 )
 from infrastructure.repositories.repo_provider import Provider
-from settings import settings
 from loguru import logger
+from openai import AsyncOpenAI
+from pydantic import BaseModel, Field
+from settings import settings
+
+from core.services import get_tool_loader
+from core.services.tier_service import (
+    BLOCKED_MODULES,
+    CURATED_LIBRARIES,
+    FREE_TIER_MAX_TOOLS,
+    CodeValidator,
+    Tier,
+)
 
 openai_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -635,7 +635,9 @@ class WizardStepsService:
             start_time = time.time()
             results = await asyncio.gather(*tasks, return_exceptions=True)
             end_time = time.time()
-            logger.info(f"[{mcp_server_id}] Time taken: {end_time - start_time} seconds")
+            logger.info(
+                f"[{mcp_server_id}] Time taken: {end_time - start_time} seconds"
+            )
             for tool, result in zip(server.tools, results):
                 if isinstance(result, Exception):
                     logger.error(

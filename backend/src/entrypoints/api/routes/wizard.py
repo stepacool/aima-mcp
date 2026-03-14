@@ -4,15 +4,14 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
-from loguru import logger
-from pydantic import BaseModel
-
 from core.services.tier_service import FREE_TIER_MAX_TOOLS
 from core.services.wizard_steps_services import WizardStepsService, openai_client
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from infrastructure.models.mcp_server import MCPServerSetupStatus
 from infrastructure.repositories.mcp_server import MCPServerUpdate
 from infrastructure.repositories.repo_provider import Provider
+from loguru import logger
+from pydantic import BaseModel
 from settings import settings
 
 router = APIRouter()
@@ -186,8 +185,11 @@ async def start_wizard(
                 temperature=0.3,
             )
             generated_name = (
-                name_response.choices[0].message.content or ""
-            ).strip().strip('"').strip("'")
+                (name_response.choices[0].message.content or "")
+                .strip()
+                .strip('"')
+                .strip("'")
+            )
             if generated_name:
                 await Provider.mcp_server_repo().update(
                     server.id,
