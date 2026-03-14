@@ -443,10 +443,12 @@ async def set_auth(server_id: UUID) -> AuthResponse:
 async def regenerate_tool_code(
     server_id: UUID,
     tool_id: UUID,
+    request: Request,
 ) -> dict[str, Any]:
     """
     Regenerate code for a single tool. Uses same LLM logic as generate-code.
     Returns the new code. Synchronous (waits for LLM).
+    Remounts the server if deployed so the new code takes effect.
     """
     server = await Provider.mcp_server_repo().get_by_uuid(server_id)
     if not server:
@@ -457,6 +459,18 @@ async def regenerate_tool_code(
             mcp_server_id=server_id,
             tool_id=tool_id,
         )
+        # Remount if deployed so new code takes effect
+        try:
+            from entrypoints.mcp.shared_runtime import remount_mcp_server
+
+            app = request.app
+            stack = getattr(app.state, "mcp_stack", None)
+            if stack:
+                await remount_mcp_server(app, server_id, stack)
+        except Exception as e:
+            logger.warning(
+                f"Failed to remount server {server_id} after regenerate: {e}"
+            )
         return {
             "server_id": str(server_id),
             "tool_id": str(tool_id),

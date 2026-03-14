@@ -15,6 +15,9 @@ prompt: |
   - File system access is blocked. Do not read or write local files.
   - Return the result directly. Do not print or use sys.stdout.
   - Do not start any servers, event loops, or background threads.
+  - RESTRICTED BUILTINS (not available at runtime): dir, eval, exec, compile, open,
+    globals, locals, vars. Use explicit names instead of dir() for introspection
+    (e.g. for math: sqrt, sin, cos, tan, log, exp, pi, e - not dir(math)).
 
   # Available libraries:
   {AVAILABLE_LIBRARIES}

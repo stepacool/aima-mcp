@@ -43,9 +43,18 @@ services:
       - key: OPENROUTER_BASE_URL
         scope: RUN_TIME
         value: "https://openrouter.ai/api/v1"
-      - key: DEFAULT_MODEL
+      - key: SERVER_DETAILS_GENERATION_MODEL
         scope: RUN_TIME
-        value: "google/gemini-3-pro-preview"
+        value: "google/gemini-3.1-flash-lite-preview"
+      - key: TOOL_GENERATION_MODEL
+        scope: RUN_TIME
+        value: "google/gemini-3.1-flash-lite-preview"
+      - key: ENV_VARS_GENERATION_MODEL
+        scope: RUN_TIME
+        value: "google/gemini-3.1-flash-lite-preview"
+      - key: CODE_GENERATION_MODEL
+        scope: RUN_TIME
+        value: "google/gemini-3.1-flash-lite-preview"
       - key: LOGFIRE_TOKEN
         scope: RUN_TIME
         value: ""

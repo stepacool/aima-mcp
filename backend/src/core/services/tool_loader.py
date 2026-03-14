@@ -1,8 +1,10 @@
 ## Dynamic tool loader for shared MCP runtime.
+from __future__ import annotations
+
 import importlib
 import os
 from types import ModuleType
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 from uuid import UUID
 
 from fastmcp.tools.tool import FunctionTool
@@ -10,6 +12,10 @@ from loguru import logger
 
 from core.services.request_context import DynamicEnvDict
 from core.services.tier_service import CURATED_LIBRARIES, CodeValidator, Tier
+
+if TYPE_CHECKING:
+    from infrastructure.models.mcp_server import MCPServer, MCPTool
+    from infrastructure.repositories.mcp_server import MCPEnvironmentVariableRepo
 
 
 class ToolCompilationError(Exception):
@@ -365,3 +371,78 @@ def get_tool_loader() -> DynamicToolLoader:
     if _tool_loader is None:
         _tool_loader = DynamicToolLoader()
     return _tool_loader
+
+
+async def compile_server_tools(
+    server: "MCPServer",
+    tools: "list[MCPTool]",
+    env_var_repo: "MCPEnvironmentVariableRepo",
+    tool_loader: DynamicToolLoader | None = None,
+    tier: "Tier | None" = None,
+    raise_on_missing_code: bool = False,
+) -> "list[FunctionTool]":
+    """
+    Fetch env-vars and compile all tools for a server.
+
+    This is the single source-of-truth for the env-vars → compile loop
+    that was previously duplicated in activate_server, step_5_deploy_to_shared,
+    remount_mcp_server, and load_and_register_all_mcp_servers.
+
+    Args:
+        server: MCPServer ORM object exposing .id and .customer_id.
+        tools: List of MCPTool ORM objects to compile.
+        env_var_repo: Repository used to fetch environment variables.
+        tool_loader: DynamicToolLoader instance; uses the global singleton if None.
+        tier: Tier enum value (defaults to Tier.FREE when None).
+        raise_on_missing_code: If True, raise ValueError when a tool has no code
+            (appropriate for activation / deploy paths).  If False, skip the
+            tool with a warning (appropriate for startup / remount paths).
+
+    Returns:
+        List of compiled FunctionTool instances ready for FastMCP.
+    """
+    resolved_tier: Tier = tier if tier is not None else Tier.FREE
+    resolved_loader: DynamicToolLoader = (
+        tool_loader if tool_loader is not None else get_tool_loader()
+    )
+
+    env_var_records = await env_var_repo.get_vars_for_server(server.id)
+    env_vars: dict[str, str] = {
+        var.name: var.value for var in env_var_records if var.value is not None
+    }
+
+    compiled: list[FunctionTool] = []
+    for tool in tools:
+        if not tool.code:
+            if raise_on_missing_code:
+                raise ValueError(
+                    f"Tool '{tool.name}' has no code. "
+                    + "Generate code first before deploying."
+                )
+            logger.warning(
+                f"Skipping tool '{tool.name}' for server {server.id}: no code"
+            )
+            continue
+        try:
+            result = resolved_loader.compile_tool(
+                tool_id=str(tool.id),
+                name=tool.name,
+                description=tool.description or "",
+                parameters=tool.parameters_schema,
+                code=tool.code,
+                customer_id=server.customer_id,
+                tier=resolved_tier,
+                env_vars=env_vars,
+            )
+            compiled.append(result)
+        except Exception as exc:
+            if raise_on_missing_code:
+                raise ValueError(
+                    f"Failed to compile tool '{tool.name}': {exc}"
+                ) from exc
+            logger.error(
+                f"Failed to compile tool '{tool.name}' for server {server.id}: {exc}"
+            )
+
+    return compiled
+

@@ -133,8 +133,19 @@ class CodeValidator:
             # Check for dangerous function calls
             elif isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Name):
-                    if node.func.id in ("eval", "exec", "compile", "open"):
-                        errors.append(f"Function '{node.func.id}' is not allowed")
+                    if node.func.id in (
+                        "eval",
+                        "exec",
+                        "compile",
+                        "open",
+                        "dir",
+                        "globals",
+                        "locals",
+                        "vars",
+                    ):
+                        errors.append(
+                            f"Function '{node.func.id}' is not allowed (restricted at runtime)"
+                        )
 
         return errors
 
