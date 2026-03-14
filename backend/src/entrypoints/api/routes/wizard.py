@@ -162,7 +162,7 @@ async def start_wizard(
                 name=f"Server-{request.customer_id}",
                 customer_id=request.customer_id,
                 description=request.description,
-                meta=meta if meta else None,
+                meta=meta,
             )
         )
 

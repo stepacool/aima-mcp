@@ -510,10 +510,24 @@ class WizardStepsService:
             raise ValueError(f"Server {mcp_server_id} not found")
 
         if server.setup_status == MCPServerSetupStatus.code_generating:
-            logger.warning(
-                f"[{mcp_server_id}] Code generation already in progress, skipping duplicate call"
+            # Allow retry if tools have no code (previous run failed)
+            has_code = any(t.code and t.code.strip() for t in server.tools)
+            if has_code:
+                logger.warning(
+                    f"[{mcp_server_id}] Code generation already in progress, skipping duplicate call"
+                )
+                return
+            logger.info(
+                f"[{mcp_server_id}] Retrying code generation (tools have no code from previous failed run)"
             )
-            return
+
+        # Clear any previous processing_error when retrying
+        updated_meta = dict(server.meta or {})
+        if "processing_error" in updated_meta:
+            del updated_meta["processing_error"]
+            await Provider.mcp_server_repo().update(
+                mcp_server_id, MCPServerUpdate(meta=updated_meta)
+            )
 
         # Set generating status
         await Provider.mcp_server_repo().update_setup_status(
@@ -550,7 +564,9 @@ class WizardStepsService:
                     f"- {var.name}: {var.description}"
                     for var in server.environment_variables
                 ),
-                TECHNICAL_DETAILS=",".join(server.meta["technical_details"]),
+                TECHNICAL_DETAILS=",".join(
+                    (server.meta or {}).get("technical_details") or []
+                ),
                 FUNCTION_NAME=tool.name,
                 TOOL_NAME=tool.name,
                 TOOL_DESCRIPTION=tool.description,
@@ -615,23 +631,42 @@ class WizardStepsService:
             for tool in server.tools
         ]
 
-        start_time = time.time()
-        results = await asyncio.gather(*tasks)
-        end_time = time.time()
-        logger.info(f"[{mcp_server_id}] Time taken: {end_time - start_time} seconds")
-        for tool, code in zip(server.tools, results):
-            if not code:
-                logger.error(
-                    f"[{mcp_server_id}] Tool: {tool.name}, failed to generate code"
+        try:
+            start_time = time.time()
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            end_time = time.time()
+            logger.info(f"[{mcp_server_id}] Time taken: {end_time - start_time} seconds")
+            for tool, result in zip(server.tools, results):
+                if isinstance(result, Exception):
+                    logger.error(
+                        f"[{mcp_server_id}] Tool: {tool.name}, failed: {result}"
+                    )
+                    raise result
+                code = result
+                if not code:
+                    logger.error(
+                        f"[{mcp_server_id}] Tool: {tool.name}, failed to generate code"
+                    )
+                await Provider.mcp_tool_repo().update_tool_code(tool.id, code)
+                logger.success(
+                    f"[{mcp_server_id}] Tool: {tool.name}, completed code generation"
                 )
-            await Provider.mcp_tool_repo().update_tool_code(tool.id, code)
-            logger.success(
-                f"[{mcp_server_id}] Tool: {tool.name}, completed code generation"
-            )
 
-        await Provider.mcp_server_repo().update_setup_status(
-            mcp_server_id, MCPServerSetupStatus.code_gen
-        )
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.code_gen
+            )
+        except Exception as e:
+            logger.exception(f"[{mcp_server_id}] Code generation failed: {e}")
+            await Provider.mcp_server_repo().update(
+                mcp_server_id,
+                MCPServerUpdate(
+                    meta={**(server.meta or {}), "processing_error": str(e)},
+                ),
+            )
+            await Provider.mcp_server_repo().update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.deployment_selection
+            )
+            raise
 
     async def regenerate_code_for_tool(
         self,
@@ -744,10 +779,17 @@ class WizardStepsService:
         if not server:
             raise ValueError(f"Server {mcp_server_id} not found")
 
-        # Check if already deployed
+        # Idempotent: if already deployed, return existing endpoint and token
         existing = await deployment_repo.get_by_server_id(mcp_server_id)
         if existing and existing.status == DeploymentStatus.ACTIVE.value:
-            raise ValueError(f"Server {mcp_server_id} is already deployed")
+            api_key = await Provider.static_api_key_repo().get_by_server_id(
+                mcp_server_id
+            )
+            token = api_key.key if api_key else ""
+            await server_repo.update_setup_status(
+                mcp_server_id, MCPServerSetupStatus.ready
+            )
+            return existing.endpoint_url or "", token
 
         # Check tool count for free tier
         if len(server.tools) > FREE_TIER_MAX_TOOLS:
@@ -817,9 +859,14 @@ class WizardStepsService:
             # Set deployed_at
             await deployment_repo.activate(deployment.id, endpoint_url)
 
-        # Generate API key during deployment
-        token = secrets.token_urlsafe(32)
-        await Provider.static_api_key_repo().create_for_server(mcp_server_id, token)
+        # Reuse existing API key if auth step already created one
+        api_key_repo = Provider.static_api_key_repo()
+        existing_key = await api_key_repo.get_by_server_id(mcp_server_id)
+        if existing_key:
+            token = existing_key.key
+        else:
+            token = secrets.token_urlsafe(32)
+            await api_key_repo.create_for_server(mcp_server_id, token)
         await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
 
         # Update server setup status to READY
