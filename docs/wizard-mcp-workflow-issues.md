@@ -77,3 +77,11 @@ Recorded during calculator MCP server creation via MCP Hero Wizard (customer `c4
 **Fix applied:** Updated `step_4_code_generation.yaml` to document restricted builtins and instruct the LLM to use explicit names (e.g. sqrt, sin, cos) instead of `dir(math)`.
 
 **For existing broken tools:** Regenerate code via `POST /api/wizard/{server_id}/tools/{tool_id}/regenerate-code` or recreate the server.
+
+---
+
+## 7. list_server_status: env vars wrong when multiple servers share customer_id
+
+**Root cause:** The tool_loader used `customer_id` as the namespace key. Multiple servers (e.g. MCP Hero Wizard, Calculator) with the same customer_id shared one namespace. When compiling tools for the second server, `namespace["os"]` was overwritten with that server's env vars. The first server's tools then saw the wrong env vars (empty or from the other server).
+
+**Fix applied:** Added `server_id` to `compile_tool`. When provided, `server_id` is used as the namespace key so each server gets its own env vars. `compile_server_tools` now passes `server_id=server.id`.

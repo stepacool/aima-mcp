@@ -5,11 +5,11 @@ Uses the simple register_new_customer_app pattern to mount
 customer MCP servers dynamically.
 """
 
+from collections.abc import Sequence
 from contextlib import AsyncExitStack
 from uuid import UUID
 
-from core.services.tier_service import Tier
-from core.services.tool_loader import get_tool_loader
+from core.services.tool_loader import compile_server_tools
 from fastapi import FastAPI
 from fastmcp import FastMCP
 from fastmcp.tools.tool import FunctionTool, Tool
@@ -20,7 +20,7 @@ from loguru import logger
 from entrypoints.api.routes.oauth import mcp_oauth_router
 
 
-def build_mcp_server(server_id: UUID, tools: list[Tool | FunctionTool]) -> FastMCP:
+def build_mcp_server(server_id: UUID, tools: Sequence[Tool | FunctionTool]) -> FastMCP:
     return FastMCP(
         f"MCPServer({server_id})",
         tools=tools,
@@ -30,7 +30,7 @@ def build_mcp_server(server_id: UUID, tools: list[Tool | FunctionTool]) -> FastM
 async def register_new_customer_app(
     app: FastAPI,
     server_id: UUID,
-    tools: list[Tool | FunctionTool],
+    tools: Sequence[Tool | FunctionTool],
     stack: AsyncExitStack,
 ) -> FastMCP:
     """
@@ -104,7 +104,6 @@ async def remount_mcp_server(
     tool_repo = Provider.mcp_tool_repo()
     env_var_repo = Provider.environment_variable_repo()
     deployment_repo = Provider.deployment_repo()
-    tool_loader = get_tool_loader()
 
     # Only remount if the server is actively deployed on the shared runtime
     deployment = await deployment_repo.get_by_server_id(server_id)
@@ -123,28 +122,11 @@ async def remount_mcp_server(
         return False
 
     tools = await tool_repo.get_tools_for_server(server_id)
-    env_var_records = await env_var_repo.get_vars_for_server(server_id)
-    env_vars = {var.name: var.value for var in env_var_records if var.value is not None}
-
-    compiled_tools: list[Tool | FunctionTool] = []
-    for tool in tools:
-        if not tool.code:
-            continue
-        try:
-            compiled = tool_loader.compile_tool(
-                tool_id=str(tool.id),
-                name=tool.name,
-                description=tool.description,
-                parameters=tool.parameters_schema,
-                code=tool.code,
-                customer_id=server.customer_id,
-                tier=Tier.FREE,
-                env_vars=env_vars,
-            )
-            compiled_tools.append(compiled)
-        except Exception as e:
-            logger.error(f"Failed to compile tool {tool.name} during remount: {e}")
-            continue
+    compiled_tools = await compile_server_tools(
+        server=server,
+        tools=tools,
+        env_var_repo=env_var_repo,
+    )
 
     if not compiled_tools:
         logger.warning(
@@ -175,59 +157,23 @@ async def load_and_register_all_mcp_servers(
     Returns:
         Dictionary mapping server_id to registered FastMCP instances
     """
-    from core.services.tier_service import Tier
-    from core.services.tool_loader import get_tool_loader
-    from infrastructure.repositories.repo_provider import Provider
-
     deployment_repo = Provider.deployment_repo()
     tool_repo = Provider.mcp_tool_repo()
-    tool_loader = get_tool_loader()
+    env_var_repo = Provider.environment_variable_repo()
 
     # Get all active shared deployments from DB
     deployments = await deployment_repo.get_active_shared_deployments()
     registered_servers: dict[UUID, FastMCP] = {}
 
-    env_var_repo = Provider.environment_variable_repo()
-
     for deployment in deployments:
         server = deployment.server
         try:
-            # Get tools for this server
             tools = await tool_repo.get_tools_for_server(server.id)
-
-            # Get environment variables for this server
-            env_var_records = await env_var_repo.get_vars_for_server(server.id)
-            env_vars = {
-                var.name: var.value for var in env_var_records if var.value is not None
-            }
-
-            # Compile tools for this server
-            compiled_tools = []
-
-            for tool in tools:
-                if not tool.code:
-                    logger.warning(
-                        f"Skipping tool {tool.name} for server {server.id}: no code"
-                    )
-                    continue
-
-                try:
-                    compiled = tool_loader.compile_tool(
-                        tool_id=str(tool.id),
-                        name=tool.name,
-                        description=tool.description,
-                        parameters=tool.parameters_schema,
-                        code=tool.code,
-                        customer_id=server.customer_id,
-                        tier=Tier.FREE,
-                        env_vars=env_vars,
-                    )
-                    compiled_tools.append(compiled)
-                except Exception as e:
-                    logger.error(
-                        f"Failed to compile tool {tool.name} for server {server.id}: {e}"
-                    )
-                    continue
+            compiled_tools = await compile_server_tools(
+                server=server,
+                tools=tools,
+                env_var_repo=env_var_repo,
+            )
 
             if compiled_tools:
                 mcp = await register_new_customer_app(

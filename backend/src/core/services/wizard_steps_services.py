@@ -23,7 +23,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from settings import settings
 
-from core.services import get_tool_loader
+from core.services.tool_loader import compile_server_tools
 from core.services.tier_service import (
     BLOCKED_MODULES,
     CURATED_LIBRARIES,
@@ -495,6 +495,103 @@ class WizardStepsService:
         await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
         return token
 
+    async def _generate_tool_code(
+        self,
+        server,  # MCPServer ORM
+        tool: MCPTool,
+        prompt_template: str,
+        tier: Tier,
+        enable_logging: bool = False,
+        server_id_for_log: UUID | None = None,
+    ) -> str:
+        """
+        Build the code-generation prompt for a single tool and call the LLM
+        with a retry loop that validates each attempt via CodeValidator.
+
+        This is the single source of truth for the prompt-building +
+        validation loop that was previously duplicated in
+        step_4_generate_code_for_tools_and_env_vars and
+        regenerate_code_for_tool.
+        """
+        log_prefix = f"[{server_id_for_log or server.id}]"
+        logger_instance = logger.bind(tool_name=tool.name)
+        if enable_logging:
+            logger_instance.info(f"{log_prefix} [{tool.name}] Generating code for tool")
+
+        available_libraries: list[str] = []
+        for package, imports in CURATED_LIBRARIES.items():
+            available_libraries.append(
+                f"- {package}: "
+                + ("all exports" if imports is None else ", ".join(imports))
+            )
+
+        prompt = prompt_template.format(
+            AVAILABLE_LIBRARIES="\n".join(available_libraries),
+            FORBIDDEN_LIBRARIES="\n".join(f"- {lib}" for lib in BLOCKED_MODULES),
+            ENVIRONMENT_VARIABLES="\n".join(
+                f"- {var.name}: {var.description}"
+                for var in server.environment_variables
+            ),
+            TECHNICAL_DETAILS=",".join(
+                (server.meta or {}).get("technical_details") or []
+            ),
+            FUNCTION_NAME=tool.name,
+            TOOL_NAME=tool.name,
+            TOOL_DESCRIPTION=tool.description,
+            MCP_SERVER_DESCRIPTION=server.description or "",
+            ARGUMENTS_DOCSTRING="\n".join(
+                f"{param.get('name', 'arg')}: {param.get('type', 'str')} - {param.get('description', '')}"
+                for param in tool.parameters_schema
+            ),
+            TOOL_ARGUMENTS="\n".join(
+                f"{param.get('name', 'arg')}: {param.get('type', 'str')} = Field(description='{param.get('description', '')}')"
+                for param in tool.parameters_schema
+            ),
+        )
+        if enable_logging:
+            logger_instance.info(f"{log_prefix} [{tool.name}] Prompt: {prompt}")
+
+        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        code_validator = CodeValidator(tier)
+
+        MAX_RETRIES = 5
+        code: str | None = None
+
+        for _ in range(MAX_RETRIES):
+            response = await openai_client.chat.completions.create(
+                model=settings.CODE_GENERATION_MODEL,
+                messages=messages,  # type: ignore[arg-type]
+            )
+            code = response.choices[0].message.content
+            if enable_logging:
+                logger_instance.info(f"{log_prefix} [{tool.name}] Code: {code}")
+            if code is None:
+                continue
+            errors = code_validator.validate(code)
+            if not errors:
+                break
+            if enable_logging:
+                logger_instance.info(
+                    f"{log_prefix} [{tool.name}] Code is not valid. Errors: {errors}"
+                )
+            messages.append({"role": "assistant", "content": code})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"The code is not valid. Please fix the errors and return the code again. Errors: {errors}",
+                }
+            )
+
+        if enable_logging:
+            logger_instance.info(f"{log_prefix} [{tool.name}] Final code: {code}")
+
+        if not code:
+            raise RuntimeError(
+                f"{log_prefix} Tool: {tool.name}, failed to generate code"
+            )
+
+        return code
+
     async def step_4_generate_code_for_tools_and_env_vars(
         self,
         mcp_server_id: UUID,
@@ -546,85 +643,14 @@ class WizardStepsService:
         async def generate_code_for_tool(
             prompt_template: str, tool: MCPTool, enable_logging: bool = False
         ):
-            logger_instance = logger.bind(tool_name=tool.name)
-            if enable_logging:
-                logger_instance.info(f"[{tool.name}] Generating code for tool")
-
-            available_libraries = []
-            for package, imports in CURATED_LIBRARIES.items():
-                available_libraries.append(
-                    f"- {package}: "
-                    + ("all exports" if imports is None else ", ".join(imports))
-                )
-
-            prompt = prompt_template.format(
-                AVAILABLE_LIBRARIES="\n".join(available_libraries),
-                FORBIDDEN_LIBRARIES="\n".join(f"- {lib}" for lib in BLOCKED_MODULES),
-                ENVIRONMENT_VARIABLES="\n".join(
-                    f"- {var.name}: {var.description}"
-                    for var in server.environment_variables
-                ),
-                TECHNICAL_DETAILS=",".join(
-                    (server.meta or {}).get("technical_details") or []
-                ),
-                FUNCTION_NAME=tool.name,
-                TOOL_NAME=tool.name,
-                TOOL_DESCRIPTION=tool.description,
-                MCP_SERVER_DESCRIPTION=server.description,  # needs better formatting at wizard system prompt level
-                ARGUMENTS_DOCSTRING="\n".join(
-                    f"{param.get('name', 'arg')}: {param.get('type', 'str')} - {param.get('description', '')}"
-                    for param in tool.parameters_schema
-                ),
-                TOOL_ARGUMENTS="\n".join(
-                    f"{param.get('name', 'arg')}: {param.get('type', 'str')} = Field(description='{param.get('description', '')}')"
-                    for param in tool.parameters_schema
-                ),
+            return await self._generate_tool_code(
+                server=server,
+                tool=tool,
+                prompt_template=prompt_template,
+                tier=tier,
+                enable_logging=enable_logging,
+                server_id_for_log=mcp_server_id,
             )
-            if enable_logging:
-                logger_instance.info(f"[{tool.name}] Prompt: {prompt}")
-
-            messages: list[dict[str, Any]] = [
-                {"role": "user", "content": prompt},
-            ]
-            code_validator = CodeValidator(tier)
-
-            MAX_GENERATION_RETRIES = 5
-            code: str | None = None
-
-            for _ in range(MAX_GENERATION_RETRIES):
-                response = await openai_client.chat.completions.create(
-                    model=settings.CODE_GENERATION_MODEL,
-                    messages=messages,  # type: ignore[arg-type]
-                )
-                code = response.choices[0].message.content
-                if enable_logging:
-                    logger_instance.info(f"[{tool.name}] Code: {code}")
-                if code is None:
-                    continue
-                errors = code_validator.validate(code)
-                if not errors:
-                    break
-                if enable_logging:
-                    logger_instance.info(
-                        f"[{tool.name}] Code is not valid. Errors: {errors}"
-                    )
-                messages.append({"role": "assistant", "content": code})
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": f"The code is not valid. Please fix the errors and return the code again. Errors: {errors}",
-                    }
-                )
-
-            if enable_logging:
-                logger_instance.info(f"[{tool.name}] Code: {code}")
-
-            if not code:
-                raise RuntimeError(
-                    f"[{mcp_server_id}] Tool: {tool.name}, failed to generate code"
-                )
-
-            return code
 
         tasks = [
             generate_code_for_tool(system_prompt["prompt"], tool)
@@ -696,64 +722,14 @@ class WizardStepsService:
         assert isinstance(system_prompt_data, dict)
         prompt_template = system_prompt_data["prompt"]
 
-        available_libraries = []
-        for package, imports in CURATED_LIBRARIES.items():
-            available_libraries.append(
-                f"- {package}: "
-                + ("all exports" if imports is None else ", ".join(imports))
-            )
-
-        prompt = prompt_template.format(
-            AVAILABLE_LIBRARIES="\n".join(available_libraries),
-            FORBIDDEN_LIBRARIES="\n".join(f"- {lib}" for lib in BLOCKED_MODULES),
-            ENVIRONMENT_VARIABLES="\n".join(
-                f"- {var.name}: {var.description}"
-                for var in server.environment_variables
-            ),
-            TECHNICAL_DETAILS=",".join(
-                (server.meta or {}).get("technical_details") or []
-            ),
-            FUNCTION_NAME=tool.name,
-            TOOL_NAME=tool.name,
-            TOOL_DESCRIPTION=tool.description,
-            MCP_SERVER_DESCRIPTION=server.description or "",
-            ARGUMENTS_DOCSTRING="\n".join(
-                f"{param.get('name', 'arg')}: {param.get('type', 'str')} - {param.get('description', '')}"
-                for param in tool.parameters_schema
-            ),
-            TOOL_ARGUMENTS="\n".join(
-                f"{param.get('name', 'arg')}: {param.get('type', 'str')} = Field(description='{param.get('description', '')}')"
-                for param in tool.parameters_schema
-            ),
+        code = await self._generate_tool_code(
+            server=server,
+            tool=tool,
+            prompt_template=prompt_template,
+            tier=tier,
+            enable_logging=False,
+            server_id_for_log=mcp_server_id,
         )
-
-        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
-        code_validator = CodeValidator(tier)
-        code: str | None = None
-
-        for _ in range(5):
-            response = await openai_client.chat.completions.create(
-                model=settings.CODE_GENERATION_MODEL,
-                messages=messages,
-            )
-            code = response.choices[0].message.content
-            if code is None:
-                continue
-            errors = code_validator.validate(code)
-            if not errors:
-                break
-            messages.append({"role": "assistant", "content": code})
-            messages.append(
-                {
-                    "role": "user",
-                    "content": f"The code is not valid. Please fix the errors and return the code again. Errors: {errors}",
-                }
-            )
-
-        if not code:
-            raise RuntimeError(
-                f"Tool {tool.name} (id={tool_id}): failed to generate code"
-            )
 
         await Provider.mcp_tool_repo().update_tool_code(tool_id, code)
         logger.success(f"[{mcp_server_id}] Regenerated code for tool {tool.name}")
@@ -801,44 +777,13 @@ class WizardStepsService:
             )
 
         # Validate and compile tools
-        tool_loader = get_tool_loader()
-        compiled_tools = []
-        code_validator = CodeValidator(Tier.FREE)
-
-        # Get environment variables for this server
         env_var_repo = Provider.environment_variable_repo()
-        env_var_records = await env_var_repo.get_vars_for_server(mcp_server_id)
-        env_vars = {
-            var.name: var.value for var in env_var_records if var.value is not None
-        }
-
-        for tool in server.tools:
-            if not tool.code:
-                raise ValueError(
-                    f"Tool {tool.name} has no code. Generate code first via step 4."
-                )
-
-            # Validate code for free tier
-            errors = code_validator.validate(tool.code)
-            if errors:
-                raise ValueError(f"Tool {tool.name} validation failed: {errors}")
-
-            # Compile the tool
-            try:
-                compiled = tool_loader.compile_tool(
-                    tool_id=str(tool.id),
-                    name=tool.name,
-                    description=tool.description or "",
-                    parameters=tool.parameters_schema,
-                    code=tool.code,
-                    customer_id=server.customer_id,
-                    tier=Tier.FREE,
-                    env_vars=env_vars,
-                )
-                compiled_tools.append(compiled)
-            except Exception as e:
-                logger.error(f"Failed to compile tool {tool.name}: {e}", tool=tool)
-                raise ValueError(f"Failed to compile tool {tool.name}: {e}")
+        compiled_tools = await compile_server_tools(
+            server=server,
+            tools=server.tools,
+            env_var_repo=env_var_repo,
+            raise_on_missing_code=True,
+        )
 
         # Register with shared runtime
         await register_new_customer_app(app, mcp_server_id, compiled_tools, stack=stack)

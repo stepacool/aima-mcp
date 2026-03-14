@@ -7,11 +7,10 @@ from uuid import UUID
 from core.services.tier_service import (
     CURATED_LIBRARIES,
     FREE_TIER_MAX_TOOLS,
-    CodeValidator,
     Tier,
     get_tier_limits,
 )
-from core.services.tool_loader import get_tool_loader
+from core.services.tool_loader import compile_server_tools
 from fastapi import APIRouter, HTTPException, Request
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
 from infrastructure.models.mcp_server import MCPServerSetupStatus
@@ -27,6 +26,17 @@ from entrypoints.mcp.shared_runtime import (
 )
 
 router = APIRouter()
+
+
+async def _try_remount(request: Request, server_id: UUID) -> None:
+    """Remount the live MCP app if the server is on the shared runtime. Best-effort."""
+    app = request.app
+    stack = getattr(app.state, "mcp_stack", None)
+    if stack:
+        try:
+            await remount_mcp_server(app, server_id, stack)
+        except Exception as e:
+            logger.warning(f"Failed to remount server {server_id}: {e}")
 
 
 class TierInfoResponse(BaseModel):
@@ -139,44 +149,13 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
             f"You have {len(server.tools)}. Upgrade to paid for more.",
         )
 
-    # Get environment variables for this server
-    env_var_records = await env_var_repo.get_vars_for_server(server_id)
-    env_vars = {var.name: var.value for var in env_var_records if var.value is not None}
-
-    # Compile tools from DB
-    tool_loader = get_tool_loader()
-    compiled_tools = []
-
-    for tool in server.tools:
-        if not tool.code:
-            raise HTTPException(
-                400,
-                f"Tool {tool.name} has no code. "
-                f"Generate code first via /wizard/{server_id}/generate-code",
-            )
-
-        # Validate code for free tier
-        validator = CodeValidator(Tier.FREE)
-        errors = validator.validate(tool.code)
-        if errors:
-            raise HTTPException(400, f"Tool {tool.name} validation failed: {errors}")
-
-        # Compile the tool
-        try:
-            compiled = tool_loader.compile_tool(
-                tool_id=str(tool.id),
-                name=tool.name,
-                description=tool.description,
-                parameters=tool.parameters_schema,
-                code=tool.code,
-                customer_id=server.customer_id,
-                tier=Tier.FREE,
-                env_vars=env_vars,
-            )
-            compiled_tools.append(compiled)
-        except Exception as e:
-            logger.error(f"Failed to compile tool {tool.name}: {e}")
-            raise HTTPException(400, f"Failed to compile tool {tool.name}: {e}")
+    # Compile tools from DB (CodeValidator runs inside compile_tool for free tier)
+    compiled_tools = await compile_server_tools(
+        server=server,
+        tools=server.tools,
+        env_var_repo=env_var_repo,
+        raise_on_missing_code=True,
+    )
 
     # Register the MCP app using the simple pattern
     app = request.app
@@ -437,13 +416,7 @@ async def update_server(
     _ = await server_repo.update(server_id, update_data)
 
     # Remount the live MCP app if the server is deployed (best-effort)
-    try:
-        app = request.app
-        stack = getattr(app.state, "mcp_stack", None)
-        if stack:
-            _ = await remount_mcp_server(app, server_id, stack)
-    except Exception as e:
-        logger.warning(f"Failed to remount server {server_id} after update: {e}")
+    await _try_remount(request, server_id)
 
     # Fetch full details to return consistent response format
     server_details = await server_repo.get_with_full_details(server_id)
@@ -492,13 +465,7 @@ async def update_tool(
     _ = await tool_repo.update(tool_id, update_data)
 
     # Remount the live MCP app if the server is deployed (best-effort)
-    try:
-        app = request.app
-        stack = getattr(app.state, "mcp_stack", None)
-        if stack:
-            _ = await remount_mcp_server(app, server_id, stack)
-    except Exception as e:
-        logger.warning(f"Failed to remount server {server_id} after tool update: {e}")
+    await _try_remount(request, server_id)
 
     # Fetch updated tool
     updated_tool = await tool_repo.get_by_uuid(tool_id)
@@ -510,9 +477,9 @@ async def update_tool(
 
 @router.patch("/{server_id}/env-vars/{var_id}")
 async def update_env_var(
-    server_id: UUID, var_id: UUID, request: UpdateEnvVarRequest
+    server_id: UUID, var_id: UUID, request: UpdateEnvVarRequest, req: Request
 ) -> dict:
-    """Update the value of an environment variable."""
+    """Update the value of an environment variable. Remounts the server if deployed."""
     env_var_repo = Provider.environment_variable_repo()
 
     # Verify the variable exists and belongs to this server
@@ -526,5 +493,16 @@ async def update_env_var(
     updated = await env_var_repo.update_value(var_id, request.value)
     if not updated:
         raise HTTPException(500, "Failed to update environment variable")
+
+    # Remount so tools pick up the new env var values (they are injected at compile time)
+    try:
+        app = req.app
+        stack = getattr(app.state, "mcp_stack", None)
+        if stack:
+            _ = await remount_mcp_server(app, server_id, stack)
+    except Exception as e:
+        logger.warning(
+            f"Failed to remount server {server_id} after env var update: {e}"
+        )
 
     return {"status": "updated", "var_id": str(var_id)}

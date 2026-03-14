@@ -143,6 +143,7 @@ class DynamicToolLoader:
         customer_id: UUID,
         tier: Tier = Tier.FREE,
         env_vars: dict[str, str] | None = None,
+        server_id: UUID | None = None,
     ) -> FunctionTool:
         """
         Compile a tool from code and return a fastmcp FunctionTool.
@@ -156,6 +157,8 @@ class DynamicToolLoader:
             customer_id: Customer who owns this tool
             tier: Customer tier for validation
             env_vars: Environment variables from DB to inject into tool namespace
+            server_id: When provided, use per-server namespace so tools from
+                different servers (same customer) get their own env vars.
 
         Returns:
             Compiled fastmcp FunctionTool ready for injection
@@ -167,11 +170,14 @@ class DynamicToolLoader:
             if errors:
                 raise ToolCompilationError(f"Code validation failed: {errors}")
 
-        # Create a namespace for this customer if not exists
-        if customer_id not in self._customer_namespaces:
-            self._customer_namespaces[customer_id] = self._create_safe_namespace()
+        # Use server_id for namespace when available so each server gets its own
+        # env vars. Otherwise multiple servers with same customer_id would share
+        # a namespace and the last compiled server's env vars would overwrite.
+        namespace_key: UUID = server_id if server_id is not None else customer_id
+        if namespace_key not in self._customer_namespaces:
+            self._customer_namespaces[namespace_key] = self._create_safe_namespace()
 
-        namespace = self._customer_namespaces[customer_id]
+        namespace = self._customer_namespaces[namespace_key]
 
         # Compile the function
         try:
@@ -433,6 +439,7 @@ async def compile_server_tools(
                 customer_id=server.customer_id,
                 tier=resolved_tier,
                 env_vars=env_vars,
+                server_id=server.id,
             )
             compiled.append(result)
         except Exception as exc:
@@ -445,4 +452,3 @@ async def compile_server_tools(
             )
 
     return compiled
-
