@@ -28,6 +28,13 @@ async def lifespan(app: FastAPI):
             logger.info("Loaded MCP servers on startup")
         except Exception as e:
             logger.error(f"Failed to load MCP servers on startup: {e}")
+
+        try:
+            from entrypoints.mcp.meta_mcp import mount_meta_mcp
+
+            _ = await mount_meta_mcp(app, stack)
+        except Exception as e:
+            logger.error(f"Failed to mount Meta MCP server: {e}")
             # Optional: Decide if you want to crash startup or continue
             # raise e
 
