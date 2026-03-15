@@ -36,10 +36,16 @@ services:
       - key: DEBUG
         scope: RUN_TIME
         value: "false"
+      - key: OAUTH_ISSUER
+        scope: RUN_TIME
+        value: "https://api.mcphero.app"
+      - key: FRONTEND_URL
+        scope: RUN_TIME
+        value: "https://mcphero.app"
       - key: OPENROUTER_API_KEY
         scope: RUN_TIME
         type: SECRET
-        value: "<user-fills-openrouter-api-key>"
+        value: "secret"
       - key: OPENROUTER_BASE_URL
         scope: RUN_TIME
         value: "https://openrouter.ai/api/v1"
