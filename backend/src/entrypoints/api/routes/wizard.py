@@ -14,6 +14,11 @@ from loguru import logger
 from pydantic import BaseModel
 from settings import settings
 
+from entrypoints.api.deps import (
+    require_org_access_to_customer,
+    require_org_access_to_server,
+)
+
 router = APIRouter()
 
 
@@ -141,7 +146,9 @@ def get_wizard_service() -> WizardStepsService:
 async def start_wizard(
     request: StartWizardRequest,
     background_tasks: BackgroundTasks,
+    req: Request,
 ) -> StartWizardResponse:
+    await require_org_access_to_customer(request.customer_id, req)
     """
     Step 1: Start wizard - describe system.
 
@@ -219,7 +226,9 @@ async def refine_tools(
     server_id: UUID,
     request: RefineToolsRequest,
     background_tasks: BackgroundTasks,
+    req: Request,
 ) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, req)
     """
     Step 1b: Refine tools based on user feedback.
 
@@ -248,7 +257,9 @@ async def submit_tools(
     server_id: UUID,
     request: SubmitToolsRequest,
     background_tasks: BackgroundTasks,
+    req: Request,
 ) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, req)
     """
     Step 1c: Submit selected tools.
 
@@ -292,7 +303,8 @@ async def submit_tools(
 
 
 @router.get("/{server_id}/tools", response_model=list[ToolResponse])
-async def get_tools(server_id: UUID) -> list[ToolResponse]:
+async def get_tools(server_id: UUID, request: Request) -> list[ToolResponse]:
+    await require_org_access_to_server(server_id, request)
     """Get current tools for a server."""
     server = await Provider.mcp_server_repo().get_by_uuid(server_id)
     if not server:
@@ -316,7 +328,9 @@ async def get_tools(server_id: UUID) -> list[ToolResponse]:
 async def suggest_env_vars(
     server_id: UUID,
     background_tasks: BackgroundTasks,
+    request: Request,
 ) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, request)
     """
     Step 2a: Suggest environment variables.
 
@@ -343,7 +357,9 @@ async def refine_env_vars(
     server_id: UUID,
     request: RefineEnvVarsRequest,
     background_tasks: BackgroundTasks,
+    req: Request,
 ) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, req)
     """
     Step 2b: Refine environment variables based on feedback.
 
@@ -370,12 +386,14 @@ async def refine_env_vars(
 async def submit_env_vars(
     server_id: UUID,
     request: SubmitEnvVarsRequest,
+    req: Request,
 ) -> dict[str, Any]:
     """
     Step 2c: Submit environment variable values.
 
     Saves the values and transitions to auth step.
     """
+    await require_org_access_to_server(server_id, req)
     server = await Provider.mcp_server_repo().get_by_uuid(server_id)
     if not server:
         raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
@@ -397,8 +415,9 @@ async def submit_env_vars(
 
 
 @router.get("/{server_id}/env-vars", response_model=list[EnvVarResponse])
-async def get_env_vars(server_id: UUID) -> list[EnvVarResponse]:
+async def get_env_vars(server_id: UUID, request: Request) -> list[EnvVarResponse]:
     """Get current environment variables for a server."""
+    await require_org_access_to_server(server_id, request)
     server = await Provider.mcp_server_repo().get_by_uuid(server_id)
     if not server:
         raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
@@ -416,12 +435,13 @@ async def get_env_vars(server_id: UUID) -> list[EnvVarResponse]:
 
 
 @router.post("/{server_id}/auth", response_model=AuthResponse)
-async def set_auth(server_id: UUID) -> AuthResponse:
+async def set_auth(server_id: UUID, request: Request) -> AuthResponse:
     """
     Step 3: Set header authentication.
 
     Generates a Bearer token and configures the server for auth.
     """
+    await require_org_access_to_server(server_id, request)
     server = await Provider.mcp_server_repo().get_by_uuid(server_id)
     if not server:
         raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
@@ -445,6 +465,7 @@ async def regenerate_tool_code(
     tool_id: UUID,
     request: Request,
 ) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, request)
     """
     Regenerate code for a single tool. Uses same LLM logic as generate-code.
     Returns the new code. Synchronous (waits for LLM).
@@ -486,7 +507,9 @@ async def regenerate_tool_code(
 async def generate_code(
     server_id: UUID,
     background_tasks: BackgroundTasks,
+    request: Request,
 ) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, request)
     """
     Step 4: Generate code for the tools and environment variables.
     """
@@ -510,7 +533,8 @@ async def generate_code(
 
 
 @router.get("/{server_id}/state", response_model=WizardStateResponse)
-async def get_wizard_state(server_id: UUID) -> WizardStateResponse:
+async def get_wizard_state(server_id: UUID, request: Request) -> WizardStateResponse:
+    await require_org_access_to_server(server_id, request)
     """Get current state of a server for the wizard UI."""
     server = await Provider.mcp_server_repo().get_by_uuid(server_id)
     if not server:
@@ -592,6 +616,7 @@ class DeployToSharedResponse(BaseModel):
 
 @router.post("/{server_id}/deploy", response_model=DeployToSharedResponse)
 async def deploy_to_shared(server_id: UUID, request: Request) -> DeployToSharedResponse:
+    await require_org_access_to_server(server_id, request)
     """
     Step 5: Deploy MCP server to shared runtime.
 

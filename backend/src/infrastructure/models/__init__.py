@@ -11,3 +11,4 @@ from infrastructure.models.oauth import OAuthAccessToken as OAuthAccessToken
 from infrastructure.models.oauth import OAuthAuthorizationCode as OAuthAuthorizationCode
 from infrastructure.models.oauth import OAuthClient as OAuthClient
 from infrastructure.models.oauth import OAuthRefreshToken as OAuthRefreshToken
+from infrastructure.models.org_api_key import OrgApiKey as OrgApiKey

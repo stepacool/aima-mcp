@@ -19,6 +19,10 @@ from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 
+from entrypoints.api.deps import (
+    require_org_access_to_customer,
+    require_org_access_to_server,
+)
 from entrypoints.mcp.shared_runtime import (
     register_new_customer_app,
     remount_mcp_server,
@@ -122,6 +126,7 @@ def _get_target_desc(target: DeploymentTarget) -> str:
 
 @router.post("/{server_id}/activate", response_model=ActivateResponse)
 async def activate_server(server_id: UUID, request: Request) -> ActivateResponse:
+    await require_org_access_to_server(server_id, request)
     """
     Activate an MCP server on the shared runtime (free tier).
 
@@ -196,7 +201,10 @@ async def activate_server(server_id: UUID, request: Request) -> ActivateResponse
 
 
 @router.post("/{server_id}/deploy", response_model=DeployResponse)
-async def deploy_server(server_id: UUID, request: DeployRequest) -> DeployResponse:
+async def deploy_server(
+    server_id: UUID, request: DeployRequest, req: Request
+) -> DeployResponse:
+    await require_org_access_to_server(server_id, req)
     """
     Deploy to dedicated VPC (paid tier).
 
@@ -341,7 +349,8 @@ class ServerListResponse(BaseModel):
 
 
 @router.get("/list/{customer_id}", response_model=ServerListResponse)
-async def list_servers(customer_id: UUID) -> ServerListResponse:
+async def list_servers(customer_id: UUID, request: Request) -> ServerListResponse:
+    await require_org_access_to_customer(customer_id, request)
     """
     List all MCP servers for a customer.
 
@@ -354,7 +363,8 @@ async def list_servers(customer_id: UUID) -> ServerListResponse:
 
 
 @router.get("/{server_id}/details", response_model=ServerListItem)
-async def get_server_details(server_id: UUID) -> ServerListItem:
+async def get_server_details(server_id: UUID, request: Request) -> ServerListItem:
+    await require_org_access_to_server(server_id, request)
     """
     Get full details of a server including tools and deployment info.
     """
@@ -367,6 +377,7 @@ async def get_server_details(server_id: UUID) -> ServerListItem:
 
 @router.delete("/{server_id}")
 async def delete_server(server_id: UUID, request: Request) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, request)
     """
     Delete an MCP server.
 
@@ -393,6 +404,7 @@ async def delete_server(server_id: UUID, request: Request) -> dict[str, Any]:
 async def update_server(
     server_id: UUID, body: UpdateServerRequest, request: Request
 ) -> ServerListItem:
+    await require_org_access_to_server(server_id, request)
     """
     Update an MCP server's name and description.
     Remounts the server in the shared runtime if it is actively deployed.
@@ -425,7 +437,8 @@ async def update_server(
 
 
 @router.get("/{server_id}/api-key", response_model=ApiKeyResponse)
-async def get_server_api_key(server_id: UUID) -> ApiKeyResponse:
+async def get_server_api_key(server_id: UUID, request: Request) -> ApiKeyResponse:
+    await require_org_access_to_server(server_id, request)
     """Get the API key for a server."""
     server_repo = Provider.mcp_server_repo()
     server = await server_repo.get_by_uuid(server_id)
@@ -445,6 +458,7 @@ async def get_server_api_key(server_id: UUID) -> ApiKeyResponse:
 async def update_tool(
     server_id: UUID, tool_id: UUID, body: UpdateServerRequest, request: Request
 ) -> MCPToolResponse:
+    await require_org_access_to_server(server_id, request)
     """
     Update an MCP tool's description.
     Remounts the server in the shared runtime if it is actively deployed.
@@ -479,6 +493,7 @@ async def update_tool(
 async def update_env_var(
     server_id: UUID, var_id: UUID, request: UpdateEnvVarRequest, req: Request
 ) -> dict[str, Any]:
+    await require_org_access_to_server(server_id, req)
     """Update the value of an environment variable. Remounts the server if deployed."""
     env_var_repo = Provider.environment_variable_repo()
 

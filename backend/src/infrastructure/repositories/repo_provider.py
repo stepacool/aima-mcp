@@ -17,6 +17,7 @@ from infrastructure.repositories.oauth import (
     OAuthClientRepo,
     OAuthRefreshTokenRepo,
 )
+from infrastructure.repositories.org_api_key import OrgApiKeyRepo
 
 
 class Provider:
@@ -28,6 +29,7 @@ class Provider:
     _deployment_artifact_repo: None | DeploymentArtifactRepo = None
     _environment_variable_repo: None | MCPEnvironmentVariableRepo = None
     _static_api_key_repo: None | StaticAPIKeyRepo = None
+    _org_api_key_repo: None | OrgApiKeyRepo = None
     _oauth_client_repo: None | OAuthClientRepo = None
     _oauth_authorization_code_repo: None | OAuthAuthorizationCodeRepo = None
     _oauth_access_token_repo: None | OAuthAccessTokenRepo = None
@@ -86,6 +88,12 @@ class Provider:
         if cls._static_api_key_repo is None:
             cls._static_api_key_repo = StaticAPIKeyRepo(cls.get_db())
         return cls._static_api_key_repo
+
+    @classmethod
+    def org_api_key_repo(cls) -> OrgApiKeyRepo:
+        if cls._org_api_key_repo is None:
+            cls._org_api_key_repo = OrgApiKeyRepo(cls.get_db())
+        return cls._org_api_key_repo
 
     @classmethod
     def oauth_client_repo(cls) -> OAuthClientRepo:

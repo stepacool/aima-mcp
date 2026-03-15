@@ -2,7 +2,6 @@ import { relations } from "drizzle-orm";
 import {
 	accountTable,
 	aiChatTable,
-	apiKeyTable,
 	billingEventTable,
 	creditBalanceTable,
 	creditDeductionFailureTable,
@@ -61,16 +60,8 @@ export const organizationRelations = relations(
 		leads: many(leadTable),
 		creditBalance: one(creditBalanceTable),
 		creditTransactions: many(creditTransactionTable),
-		apiKeys: many(apiKeyTable),
 	}),
 );
-
-export const apiKeyRelations = relations(apiKeyTable, ({ one }) => ({
-	organization: one(organizationTable, {
-		fields: [apiKeyTable.organizationId],
-		references: [organizationTable.id],
-	}),
-}));
 
 export const sessionRelations = relations(sessionTable, ({ one }) => ({
 	user: one(userTable, {

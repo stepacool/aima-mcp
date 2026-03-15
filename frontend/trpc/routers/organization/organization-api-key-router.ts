@@ -1,10 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
-import { startOfDay } from "date-fns";
 import { z } from "zod/v4";
-import { TRPCError } from "@trpc/server";
-import { db } from "@/lib/db";
-import { apiKeyTable } from "@/lib/db/schema";
-import { generateApiKey, hashApiKey } from "@/lib/api-keys";
+import {
+	createOrgApiKey,
+	listOrgApiKeys,
+	revokeOrgApiKey,
+	updateOrgApiKey,
+} from "@/lib/python-backend";
 import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
 
 const createApiKeySchema = z.object({
@@ -26,94 +26,41 @@ const revokeApiKeySchema = z.object({
 
 export const organizationApiKeyRouter = createTRPCRouter({
 	list: protectedOrganizationProcedure.query(async ({ ctx }) => {
-		const keys = await db
-			.select({
-				id: apiKeyTable.id,
-				description: apiKeyTable.description,
-				lastUsedAt: apiKeyTable.lastUsedAt,
-				expiresAt: apiKeyTable.expiresAt,
-			})
-			.from(apiKeyTable)
-			.where(eq(apiKeyTable.organizationId, ctx.organization.id as string))
-			.orderBy(asc(apiKeyTable.createdAt));
-
+		const keys = await listOrgApiKeys(ctx.organization.id);
 		return keys.map((k) => ({
 			id: k.id,
 			description: k.description,
-			lastUsedAt: k.lastUsedAt ?? undefined,
-			expiresAt: k.expiresAt ?? undefined,
+			lastUsedAt: k.lastUsedAt ? new Date(k.lastUsedAt) : undefined,
+			expiresAt: k.expiresAt ? new Date(k.expiresAt) : undefined,
 		}));
 	}),
 
 	create: protectedOrganizationProcedure
 		.input(createApiKeySchema)
 		.mutation(async ({ ctx, input }) => {
-			const apiKey = generateApiKey();
-			const hashedKey = hashApiKey(apiKey);
-
-			await db.insert(apiKeyTable).values({
-				organizationId: ctx.organization.id as string,
+			const result = await createOrgApiKey({
+				organizationId: ctx.organization.id,
 				description: input.description,
-				hashedKey,
-				expiresAt: input.neverExpires
-					? null
-					: startOfDay(input.expiresAt ?? new Date()),
+				neverExpires: input.neverExpires,
+				expiresAt: input.neverExpires ? undefined : input.expiresAt,
 			});
-
-			return { apiKey };
+			return { apiKey: result.apiKey };
 		}),
 
 	update: protectedOrganizationProcedure
 		.input(updateApiKeySchema)
 		.mutation(async ({ ctx, input }) => {
-			const [key] = await db
-				.select()
-				.from(apiKeyTable)
-				.where(
-					and(
-						eq(apiKeyTable.id, input.id),
-						eq(apiKeyTable.organizationId, ctx.organization.id as string),
-					),
-				);
-
-			if (!key) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "API key not found",
-				});
-			}
-
-			await db
-				.update(apiKeyTable)
-				.set({
-					description: input.description,
-					expiresAt: input.neverExpires
-						? null
-						: startOfDay(input.expiresAt ?? new Date()),
-				})
-				.where(eq(apiKeyTable.id, input.id));
+			await updateOrgApiKey(input.id, {
+				organizationId: ctx.organization.id,
+				description: input.description,
+				neverExpires: input.neverExpires,
+				expiresAt: input.neverExpires ? undefined : input.expiresAt,
+			});
 		}),
 
 	revoke: protectedOrganizationProcedure
 		.input(revokeApiKeySchema)
 		.mutation(async ({ ctx, input }) => {
-			const [key] = await db
-				.select()
-				.from(apiKeyTable)
-				.where(
-					and(
-						eq(apiKeyTable.id, input.id),
-						eq(apiKeyTable.organizationId, ctx.organization.id as string),
-					),
-				);
-
-			if (!key) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "API key not found",
-				});
-			}
-
-			await db.delete(apiKeyTable).where(eq(apiKeyTable.id, input.id));
+			await revokeOrgApiKey(input.id, ctx.organization.id);
 		}),
 });

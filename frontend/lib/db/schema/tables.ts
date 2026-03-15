@@ -150,34 +150,6 @@ export const organizationTable = pgTable(
 	],
 );
 
-/**
- * API key table - organization-scoped API keys for programmatic access
- */
-export const apiKeyTable = pgTable(
-	"api_key",
-	{
-		id: uuid("id").primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
-			.notNull()
-			.references(() => organizationTable.id, { onDelete: "cascade" }),
-		description: text("description").notNull(),
-		hashedKey: text("hashed_key").notNull().unique(),
-		expiresAt: timestamp("expires_at", { withTimezone: true }),
-		lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow()
-			.$onUpdate(() => new Date()),
-	},
-	(table) => [
-		index("api_key_organization_id_idx").on(table.organizationId),
-		index("api_key_hashed_key_idx").on(table.hashedKey),
-	],
-);
-
 export const sessionTable = pgTable(
 	"session",
 	{
