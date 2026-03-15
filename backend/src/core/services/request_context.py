@@ -4,10 +4,16 @@ from collections import UserDict
 from collections.abc import Iterator
 from contextvars import ContextVar
 from typing import override
+from uuid import UUID
 
 # ContextVar for per-request environment variable overrides
 request_env_vars: ContextVar[dict[str, str]] = ContextVar(
     "request_env_vars", default={}
+)
+
+# ContextVar for per-request authenticated customer ID (set by org API key auth)
+request_customer_id: ContextVar[UUID | None] = ContextVar(
+    "request_customer_id", default=None
 )
 
 

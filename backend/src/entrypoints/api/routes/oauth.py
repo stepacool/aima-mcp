@@ -378,6 +378,54 @@ async def revoke_token(
 
 
 # ============================================================================
+# Meta MCP Server OAuth Endpoints
+# ============================================================================
+
+# Virtual server_id used for the meta MCP server's OAuth clients/codes.
+# Using a fixed well-known UUID so the standard OAuth infrastructure (which
+# stores server_id as UUID) works without modification.
+META_SERVER_ID = UUID("00000000-0000-0000-0000-000000000000")
+
+# Router for per-MCP meta server OAuth endpoints (mounted at /mcp/meta)
+meta_oauth_router = APIRouter(tags=["meta-mcp-oauth"])
+
+
+@well_known_router.get(
+    "/.well-known/oauth-protected-resource/mcp/meta/mcp",
+    response_model=ProtectedResourceMetadata,
+)
+async def meta_get_protected_resource_metadata() -> ProtectedResourceMetadata:
+    """RFC 9728 Protected Resource Metadata for the Meta MCP server."""
+    base_url = f"{settings.OAUTH_ISSUER}/mcp/meta"
+    return ProtectedResourceMetadata(
+        resource=base_url,
+        authorization_servers=[base_url],
+        scopes_supported=settings.OAUTH_SCOPES.split(),
+        bearer_methods_supported=["header"],
+    )
+
+
+@well_known_router.get(
+    "/.well-known/oauth-authorization-server/mcp/meta",
+    response_model=AuthorizationServerMetadata,
+)
+async def meta_get_authorization_server_metadata() -> AuthorizationServerMetadata:
+    """RFC 8414 Authorization Server Metadata for the Meta MCP server."""
+    base_url = f"{settings.OAUTH_ISSUER}/mcp/meta"
+    return AuthorizationServerMetadata(
+        issuer=base_url,
+        authorization_endpoint=f"{settings.FRONTEND_URL}/oauth/authorize",
+        token_endpoint=f"{base_url}/oauth/token",
+        registration_endpoint=f"{base_url}/oauth/register",
+        scopes_supported=settings.OAUTH_SCOPES.split(),
+        response_types_supported=["code"],
+        grant_types_supported=["authorization_code", "refresh_token"],
+        code_challenge_methods_supported=["S256"],
+        token_endpoint_auth_methods_supported=["none", "client_secret_post"],
+    )
+
+
+# ============================================================================
 # Per-MCP-Server OAuth Endpoints (mounted at /mcp/{server_id})
 # ============================================================================
 
@@ -627,3 +675,171 @@ async def mcp_revoke_token(
         client_id=client_id,
     )
     return {}
+
+
+@meta_oauth_router.post("/oauth/token", response_model=TokenResponse)
+async def meta_token_endpoint(
+    grant_type: Annotated[str, Form()],
+    client_id: Annotated[str, Form()],
+    code: Annotated[str | None, Form()] = None,
+    redirect_uri: Annotated[str | None, Form()] = None,
+    client_secret: Annotated[str | None, Form()] = None,
+    code_verifier: Annotated[str | None, Form()] = None,
+    refresh_token: Annotated[str | None, Form()] = None,
+    scope: Annotated[str | None, Form()] = None,
+) -> TokenResponse | JSONResponse:
+    """OAuth 2.1 Token Endpoint for the Meta MCP server."""
+    try:
+        if grant_type == "authorization_code":
+            if not code:
+                raise InvalidRequestError("code is required")
+            if not redirect_uri:
+                raise InvalidRequestError("redirect_uri is required")
+            if not code_verifier:
+                raise InvalidRequestError("code_verifier is required for PKCE")
+
+            result = await oauth_service.exchange_code_for_tokens(
+                code=code,
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                code_verifier=code_verifier,
+                client_secret=client_secret,
+            )
+
+            return TokenResponse(
+                access_token=result.access_token,
+                token_type=result.token_type,
+                expires_in=result.expires_in,
+                refresh_token=result.refresh_token,
+                scope=result.scope,
+            )
+
+        elif grant_type == "refresh_token":
+            if not refresh_token:
+                raise InvalidRequestError("refresh_token is required")
+
+            result = await oauth_service.refresh_tokens(
+                refresh_token=refresh_token,
+                client_id=client_id,
+                scope=scope,
+                client_secret=client_secret,
+            )
+
+            return TokenResponse(
+                access_token=result.access_token,
+                token_type=result.token_type,
+                expires_in=result.expires_in,
+                refresh_token=result.refresh_token,
+                scope=result.scope,
+            )
+
+        else:
+            raise InvalidRequestError(f"Unsupported grant_type: {grant_type}")
+
+    except OAuthError as e:
+        logger.warning(f"OAuth token error: {e.error} - {e.description}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": e.error, "error_description": e.description},
+        )
+
+
+@meta_oauth_router.post("/oauth/register", response_model=ClientRegistrationResponse)
+async def meta_register_client(
+    request: ClientRegistrationRequest,
+) -> ClientRegistrationResponse | JSONResponse:
+    """RFC 7591 Dynamic Client Registration for the Meta MCP server."""
+    try:
+        result = await oauth_service.register_client(
+            server_id=META_SERVER_ID,
+            redirect_uris=request.redirect_uris,
+            client_name=request.client_name,
+            grant_types=request.grant_types,
+            is_public=False,
+        )
+
+        return ClientRegistrationResponse(
+            client_id=result.client_id,
+            client_secret=result.client_secret,
+            client_id_issued_at=result.client_id_issued_at,
+            client_secret_expires_at=result.client_secret_expires_at,
+            redirect_uris=result.redirect_uris,
+            grant_types=result.grant_types,
+            token_endpoint_auth_method=result.token_endpoint_auth_method,
+            client_name=result.client_name,
+        )
+
+    except OAuthError as e:
+        logger.warning(f"OAuth registration error: {e.error} - {e.description}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": e.error, "error_description": e.description},
+        )
+
+
+@meta_oauth_router.post(
+    "/oauth/authorize/create-code", response_model=CreateCodeResponse
+)
+async def meta_create_authorization_code(
+    request: CreateCodeRequest,
+) -> CreateCodeResponse | JSONResponse:
+    """Internal API for frontend consent page for the Meta MCP server."""
+    try:
+        code = await oauth_service.create_authorization_code(
+            client_id=request.client_id,
+            user_id=request.user_id,
+            redirect_uri=request.redirect_uri,
+            scope=request.scope,
+            code_challenge=request.code_challenge,
+            code_challenge_method=request.code_challenge_method,
+            server_id=META_SERVER_ID,
+            state=request.state,
+        )
+
+        return CreateCodeResponse(code=code, state=request.state)
+
+    except OAuthError as e:
+        logger.warning(f"OAuth code creation error: {e.error} - {e.description}")
+        return JSONResponse(
+            status_code=400,
+            content={"error": e.error, "error_description": e.description},
+        )
+
+
+@meta_oauth_router.get("/oauth/client/{client_id}", response_model=ClientInfoResponse)
+async def meta_get_client_info(
+    client_id: str,
+) -> ClientInfoResponse:
+    """Get client information for consent page for the Meta MCP server."""
+    from infrastructure.repositories.repo_provider import Provider
+
+    client = await Provider.oauth_client_repo().get_by_client_id(client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    if client.server_id != META_SERVER_ID:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    return ClientInfoResponse(
+        client_id=client.client_id,
+        client_name=client.name,
+        redirect_uris=client.redirect_uris,
+        scopes=client.scopes,
+        server_id=str(client.server_id),
+    )
+
+
+@meta_oauth_router.post("/oauth/revoke")
+async def meta_revoke_token(
+    token: Annotated[str, Form()],
+    token_type_hint: Annotated[str | None, Form()] = None,
+    client_id: Annotated[str | None, Form()] = None,
+) -> dict[str, Any]:
+    """RFC 7009 Token Revocation for the Meta MCP server."""
+    _ = await oauth_service.revoke_token(
+        token=token,
+        token_type_hint=token_type_hint,
+        client_id=client_id,
+    )
+    return {}
+

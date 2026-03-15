@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { getSession } from "@/lib/auth/server";
+import { assertUserIsOrgMember, getSession } from "@/lib/auth/server";
 import { logger } from "@/lib/logger";
 import { pythonBackendClient } from "@/lib/python-backend/client";
 
@@ -48,8 +48,27 @@ export async function POST(req: Request): Promise<Response> {
 		return errorResponse("invalid_request", "Invalid request body", 400);
 	}
 
-	// Verify the userId matches the authenticated user
-	if (body.userId !== session.user.id) {
+	// For meta server, userId is the organizationId (customer context)
+	const isMetaServer =
+		body.serverId === "00000000-0000-0000-0000-000000000000";
+	if (isMetaServer) {
+		const activeOrgId = session.session?.activeOrganizationId;
+		if (!activeOrgId) {
+			return errorResponse(
+				"invalid_request",
+				"Please select an organization first to use the MCP wizard",
+				400,
+			);
+		}
+		if (body.userId !== activeOrgId) {
+			return errorResponse(
+				"invalid_request",
+				"Organization ID must match active organization",
+				400,
+			);
+		}
+		await assertUserIsOrgMember(body.userId, session.user.id);
+	} else if (body.userId !== session.user.id) {
 		logger.warn(
 			{ requestedUserId: body.userId, actualUserId: session.user.id },
 			"User ID mismatch in OAuth create-code request",

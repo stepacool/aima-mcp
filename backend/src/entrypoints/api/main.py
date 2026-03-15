@@ -19,6 +19,25 @@ async def lifespan(app: FastAPI):
     # Initialize the ExitStack to manage dynamic sub-app lifespans
     async with AsyncExitStack() as stack:
         app.state.mcp_stack = stack
+
+        # Store app/stack refs for the meta MCP server deploy tool
+        from entrypoints.mcp.meta_server import meta_mcp, set_app_refs
+
+        set_app_refs(app, stack)
+
+        # On startup: Initialize Meta MCP server lifespan
+        try:
+            # We must use exactly the same instance that was mounted in main.py
+            meta_app = getattr(app.state, "meta_mcp_app", None)
+            if not meta_app:
+                meta_app = meta_mcp.http_app()
+                logger.warning("meta_mcp_app not found on state; initializing a new instance for lifespan")
+                
+            _ = await stack.enter_async_context(meta_app.lifespan(app))
+            logger.info("Initialized Meta MCP Server lifespan")
+        except Exception as e:
+            logger.error(f"Failed to initialize Meta MCP Server lifespan: {e}")
+
         # On startup: load all active MCP servers from DB
         from entrypoints.mcp.shared_runtime import load_and_register_all_mcp_servers
 
@@ -28,8 +47,40 @@ async def lifespan(app: FastAPI):
             logger.info("Loaded MCP servers on startup")
         except Exception as e:
             logger.error(f"Failed to load MCP servers on startup: {e}")
-            # Optional: Decide if you want to crash startup or continue
-            # raise e
+
+        # Ensure META Server dummy records exist for OAuth client registrations
+        from entrypoints.api.routes.oauth import META_SERVER_ID
+        from infrastructure.models.customer import Customer
+        from infrastructure.models.mcp_server import MCPServer
+        from sqlalchemy import select
+
+        try:
+            db = Provider.get_db()
+            async with db.session() as session:
+                # 1. Customer
+                result = await session.execute(select(Customer).filter_by(id=META_SERVER_ID))
+                customer = result.scalar_one_or_none()
+                if not customer:
+                    customer = Customer(id=META_SERVER_ID, name="Meta System Customer")
+                    session.add(customer)
+                    await session.commit()
+                
+                # 2. MCP Server
+                result = await session.execute(select(MCPServer).filter_by(id=META_SERVER_ID))
+                server = result.scalar_one_or_none()
+                if not server:
+                    server = MCPServer(
+                        id=META_SERVER_ID,
+                        name="Meta MCP Server",
+                        customer_id=META_SERVER_ID,
+                        setup_status="ready",
+                        auth_type="oauth",
+                    )
+                    session.add(server)
+                    await session.commit()
+            logger.info("Initialized Meta MCP Server database records")
+        except Exception as e:
+            logger.error(f"Failed to initialize Meta MCP Server records: {e}")
 
         # Yield control back to FastAPI.
         # The 'stack' keeps all MCP lifespans active while the app runs.
@@ -113,9 +164,26 @@ class Application:
         self.app.add_middleware(MCPEnvMiddleware)
 
         self.app.include_router(api_router)
+        
+        # Meta MCP server OAuth routes at /mcp/meta/oauth/* MUST be included
+        # before the dynamic {server_id} routes to prevent 422 conflicts.
+        from entrypoints.api.routes.oauth import meta_oauth_router
+        self.app.include_router(meta_oauth_router, prefix="/mcp/meta")
+
         # Per-MCP-server OAuth routes at /mcp/{server_id}/.well-known/* and /mcp/{server_id}/oauth/*
         self.app.include_router(mcp_oauth_router, prefix="/mcp/{server_id}")
         self.app.include_router(well_known_router)
+
+        # Mount the Meta MCP server (always available at /mcp/meta)
+        from entrypoints.mcp.meta_server import meta_mcp
+
+        meta_app = meta_mcp.http_app()
+        self.app.state.meta_mcp_app = meta_app
+
+        self.app.mount("/mcp/meta", meta_app)
+        
+        # Note: The lifespan for the meta_mcp app MUST be started in the lifespan event below.
+
 
     def create_database_pool(self) -> None:
         _ = Provider.get_db(

@@ -34,6 +34,8 @@ type ClientInfo = {
 	serverId: string;
 };
 
+const META_SERVER_ID = "00000000-0000-0000-0000-000000000000";
+
 export function OAuthConsentCard({
 	clientId,
 	redirectUri,
@@ -44,7 +46,7 @@ export function OAuthConsentCard({
 	resource,
 }: OAuthConsentCardProps): React.JSX.Element {
 	const router = useRouter();
-	const { user, loaded: sessionLoaded } = useSession();
+	const { user, session, loaded: sessionLoaded } = useSession();
 	const [clientInfo, setClientInfo] = React.useState<ClientInfo | null>(null);
 	const [isLoading, setIsLoading] = React.useState(true);
 	const [isAuthorizing, setIsAuthorizing] = React.useState(false);
@@ -110,6 +112,13 @@ export function OAuthConsentCard({
 	const handleAllow = async () => {
 		if (!user || !clientInfo) return;
 
+		// For meta server, we need organization context (customer_id in token)
+		const isMetaServer = clientInfo.serverId === META_SERVER_ID;
+		if (isMetaServer && !session?.activeOrganizationId) {
+			setError("Please select an organization first to use the MCP wizard.");
+			return;
+		}
+
 		setIsAuthorizing(true);
 		setError(null);
 
@@ -121,7 +130,9 @@ export function OAuthConsentCard({
 				},
 				body: JSON.stringify({
 					clientId,
-					userId: user.id,
+					userId: isMetaServer
+						? session!.activeOrganizationId!
+						: user.id,
 					redirectUri,
 					scope,
 					codeChallenge,
