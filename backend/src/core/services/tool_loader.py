@@ -226,7 +226,7 @@ class DynamicToolLoader:
         Returns:
             List of compiled Tools
         """
-        tools = []
+        tools: list[FunctionTool] = []
         for spec in tool_specs:
             cache_key = f"{customer_id}:{spec['id']}"
 
