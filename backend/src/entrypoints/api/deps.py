@@ -71,3 +71,34 @@ async def require_org_access_to_customer(customer_id: UUID, request: Request) ->
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization",
         )
+
+
+def resolve_customer_id(customer_id: UUID | None, request: Request) -> UUID:
+    """Resolve customer_id from request. When org auth, use auth_org_id if not provided."""
+    auth_type = getattr(request.state, "auth_type", None)
+    auth_org_id = getattr(request.state, "auth_org_id", None)
+    if settings.DEBUG:
+        if customer_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="customer_id is required",
+            )
+        return customer_id
+    if auth_type == "org" and auth_org_id:
+        if customer_id is not None and customer_id != auth_org_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this organization",
+            )
+        return customer_id if customer_id is not None else auth_org_id
+    if auth_type == "admin":
+        if customer_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="customer_id is required for admin API",
+            )
+        return customer_id
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Organization access required",
+    )

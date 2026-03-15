@@ -11,7 +11,7 @@ from core.services.tier_service import (
     get_tier_limits,
 )
 from core.services.tool_loader import compile_server_tools
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
 from infrastructure.models.mcp_server import MCPServerSetupStatus
 from infrastructure.repositories.deployment import DeploymentCreate
@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from entrypoints.api.deps import (
     require_org_access_to_customer,
     require_org_access_to_server,
+    resolve_customer_id,
 )
 from entrypoints.mcp.shared_runtime import (
     register_new_customer_app,
@@ -348,14 +349,30 @@ class ServerListResponse(BaseModel):
     servers: list[ServerListItem]
 
 
-@router.get("/list/{customer_id}", response_model=ServerListResponse)
-async def list_servers(customer_id: UUID, request: Request) -> ServerListResponse:
-    await require_org_access_to_customer(customer_id, request)
-    """
-    List all MCP servers for a customer.
+@router.get("/list", response_model=ServerListResponse)
+async def list_servers(
+    request: Request,
+    customer_id: UUID | None = Query(
+        None, description="Customer ID (optional when using org API key)"
+    ),
+) -> ServerListResponse:
+    """List all MCP servers for a customer.
 
-    Returns both drafts and completed servers with basic info.
+    When using an org API key, customer_id is optional and defaults to the key's organization.
+    When using admin API key, customer_id is required.
     """
+    resolved_id = resolve_customer_id(customer_id, request)
+    await require_org_access_to_customer(resolved_id, request)
+    servers = await Provider.mcp_server_repo().get_by_customer_with_stats(resolved_id)
+    return ServerListResponse(
+        servers=[ServerListItem.model_validate(server) for server in servers]
+    )
+
+
+@router.get("/list/{customer_id}", response_model=ServerListResponse)
+async def list_servers_by_id(customer_id: UUID, request: Request) -> ServerListResponse:
+    """List all MCP servers for a customer (path param, for backward compatibility)."""
+    await require_org_access_to_customer(customer_id, request)
     servers = await Provider.mcp_server_repo().get_by_customer_with_stats(customer_id)
     return ServerListResponse(
         servers=[ServerListItem.model_validate(server) for server in servers]

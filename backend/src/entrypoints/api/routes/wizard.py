@@ -17,13 +17,14 @@ from settings import settings
 from entrypoints.api.deps import (
     require_org_access_to_customer,
     require_org_access_to_server,
+    resolve_customer_id,
 )
 
 router = APIRouter()
 
 
 class StartWizardRequest(BaseModel):
-    customer_id: UUID
+    customer_id: UUID | None = None  # Optional when using org API key
     description: str
     technical_details: list[str] | None = None
 
@@ -148,7 +149,8 @@ async def start_wizard(
     background_tasks: BackgroundTasks,
     req: Request,
 ) -> StartWizardResponse:
-    await require_org_access_to_customer(request.customer_id, req)
+    customer_id = resolve_customer_id(request.customer_id, req)
+    await require_org_access_to_customer(customer_id, req)
     """
     Step 1: Start wizard - describe system.
 
@@ -165,8 +167,8 @@ async def start_wizard(
 
         server = await Provider.mcp_server_repo().create(
             MCPServerCreate(
-                name=f"Server-{request.customer_id}",
-                customer_id=request.customer_id,
+                name=f"Server-{customer_id}",
+                customer_id=customer_id,
                 description=request.description,
                 meta=meta,
             )
