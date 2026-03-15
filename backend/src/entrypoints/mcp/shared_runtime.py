@@ -17,8 +17,6 @@ from infrastructure.models.deployment import DeploymentStatus, DeploymentTarget
 from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 
-from entrypoints.api.routes.oauth import mcp_oauth_router
-
 
 def build_mcp_server(server_id: UUID, tools: Sequence[Tool | FunctionTool]) -> FastMCP:
     return FastMCP(
@@ -47,7 +45,9 @@ async def register_new_customer_app(
         mcp_sub_app,
     )
 
-    # 2. Mount oauth routes
+    # 2. Mount oauth routes (lazy import to avoid circular import)
+    from entrypoints.api.routes.oauth import mcp_oauth_router
+
     app.include_router(mcp_oauth_router, prefix=f"/mcp/{server_id}")
 
     # 3. Manually trigger its lifespan using the stack
