@@ -102,7 +102,7 @@ class DeploymentRepo(BaseCRUDRepo[Deployment, DeploymentCreate, DeploymentUpdate
             deployment = result.scalars().first()
             if deployment:
                 deployment.status = DeploymentStatus.ACTIVE.value
-                deployment.deployed_at = datetime.now(timezone.utc)
+                deployment.deployed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 if endpoint_url:
                     deployment.endpoint_url = endpoint_url
                 await session.commit()
