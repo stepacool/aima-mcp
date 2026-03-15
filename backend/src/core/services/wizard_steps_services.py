@@ -21,7 +21,7 @@ from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from settings import settings
 
 from core.services.tier_service import (
@@ -67,6 +67,18 @@ class ToolsResponse(BaseModel):
         default=None,
         description="Additional technical details generated during refinement (API schemas, endpoint specifications, etc.)",
     )
+
+    @field_validator("technical_details", mode="before")
+    @classmethod
+    def _technical_details_to_list(cls, v: object) -> list[str] | None:
+        """Coerce LLM output: sometimes returns string instead of array."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [v.strip()] if v.strip() else []
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if str(item).strip()]
+        return []
 
 
 class EnvVarsResponse(BaseModel):
