@@ -150,7 +150,10 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
                             request_customer_id.reset(ctx_token)
                     except (ValueError, TypeError):
                         pass
-                return await call_next(request)
+                # OAuth valid but no usable customer_id – reject (security: never allow through without customer context)
+                return _unauthorized_response(
+                    "Invalid or expired token", META_SERVER_ID
+                )
 
         # Try org API key – also sets customer context
         org_id = await Provider.org_api_key_repo().verify(token)

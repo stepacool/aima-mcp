@@ -180,6 +180,31 @@ class Application:
         meta_app = meta_mcp.http_app()
         self.app.state.meta_mcp_app = meta_app
 
+        # Defense-in-depth: reject any request that reaches meta app without customer context
+        # (parent MCPAccessMiddleware should have set this; this guards against scope/state bugs)
+        # OAuth paths (/oauth/*) are excluded – they handle their own auth
+        from starlette.middleware.base import BaseHTTPMiddleware
+
+        class MetaAuthGuardMiddleware(BaseHTTPMiddleware):
+            async def dispatch(self, request, call_next):
+                path = request.scope.get("path", "")
+                if path.startswith("/oauth"):
+                    return await call_next(request)
+                if not getattr(request.state, "mcp_customer_id", None):
+                    from entrypoints.api.middleware import _build_www_authenticate_header
+                    from entrypoints.api.routes.oauth import META_SERVER_ID
+                    from starlette.responses import JSONResponse
+
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Not authenticated – missing customer context"},
+                        headers={
+                            "WWW-Authenticate": _build_www_authenticate_header(META_SERVER_ID)
+                        },
+                    )
+                return await call_next(request)
+
+        meta_app.add_middleware(MetaAuthGuardMiddleware)
         self.app.mount("/mcp/meta", meta_app)
         
         # Note: The lifespan for the meta_mcp app MUST be started in the lifespan event below.
