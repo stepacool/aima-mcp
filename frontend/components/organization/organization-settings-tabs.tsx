@@ -2,6 +2,7 @@
 
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import type * as React from "react";
+import { ApiKeysCard } from "@/components/organization/developers/api-keys-card";
 import { CreditsSettingsTab } from "@/components/billing/credits-settings-tab";
 import { SubscriptionSettingsTab } from "@/components/billing/subscription-settings-tab";
 import { DeleteOrganizationCard } from "@/components/organization/delete-organization-card";
@@ -17,7 +18,13 @@ import {
 } from "@/components/ui/custom/underlined-tabs";
 import { billingConfig } from "@/config/billing.config";
 
-const tabValues = ["general", "members", "subscription", "credits"] as const;
+const tabValues = [
+	"general",
+	"members",
+	"developers",
+	"subscription",
+	"credits",
+] as const;
 type TabValue = (typeof tabValues)[number];
 
 type OrganizationSettingsTabsProps = {
@@ -41,6 +48,9 @@ export function OrganizationSettingsTabs({
 			<UnderlinedTabsList className="mb-6 sm:-ml-4">
 				<UnderlinedTabsTrigger value="general">General</UnderlinedTabsTrigger>
 				<UnderlinedTabsTrigger value="members">Members</UnderlinedTabsTrigger>
+				<UnderlinedTabsTrigger value="developers">
+					Developers
+				</UnderlinedTabsTrigger>
 				{billingConfig.enabled && (
 					<UnderlinedTabsTrigger value="subscription">
 						Subscription
@@ -61,6 +71,11 @@ export function OrganizationSettingsTabs({
 				<div className="space-y-4">
 					{isAdmin && <OrganizationInviteMemberCard />}
 					<OrganizationMembersCard />
+				</div>
+			</UnderlinedTabsContent>
+			<UnderlinedTabsContent value="developers">
+				<div className="space-y-4">
+					<ApiKeysCard />
 				</div>
 			</UnderlinedTabsContent>
 			{billingConfig.enabled && (

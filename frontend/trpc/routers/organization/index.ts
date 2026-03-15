@@ -15,6 +15,7 @@ import {
 } from "@/schemas/organization-schemas";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { organizationAiRouter } from "@/trpc/routers/organization/organization-ai-router";
+import { organizationApiKeyRouter } from "@/trpc/routers/organization/organization-api-key-router";
 import { organizationCreditRouter } from "@/trpc/routers/organization/organization-credit-router";
 import { organizationLeadRouter } from "@/trpc/routers/organization/organization-lead-router";
 import { organizationServerRouter } from "@/trpc/routers/organization/organization-server-router";
@@ -134,9 +135,10 @@ export const organizationRouter = createTRPCRouter({
 			return organization;
 		}),
 
-	// Context-specific sub-routers
-	ai: organizationAiRouter,
-	credit: organizationCreditRouter,
+		// Context-specific sub-routers
+		ai: organizationAiRouter,
+		apiKey: organizationApiKeyRouter,
+		credit: organizationCreditRouter,
 	lead: organizationLeadRouter,
 	server: organizationServerRouter,
 	subscription: organizationSubscriptionRouter,
