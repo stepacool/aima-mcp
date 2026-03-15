@@ -5,6 +5,7 @@ import secrets
 from datetime import datetime, timezone
 from uuid import UUID
 
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import select, update
 
@@ -136,6 +137,11 @@ class OrgApiKeyRepo(BaseRepo):
 
     async def verify(self, plain_key: str) -> UUID | None:
         """Verify an API key. Returns organization_id if valid, None otherwise."""
+        key_masked = (
+            f"{plain_key[:4]}...{plain_key[-4:]} (len={len(plain_key)})"
+            if len(plain_key) > 12
+            else f"<len={len(plain_key)}>"
+        )
         hashed = _hash_api_key(plain_key)
         async with self.db.session() as session:
             result = await session.execute(
@@ -143,9 +149,18 @@ class OrgApiKeyRepo(BaseRepo):
             )
             record = result.scalars().first()
             if not record:
+                logger.info(
+                    "MCP_AUTH: org_api_key verify NOT FOUND key_masked={key}",
+                    key=key_masked,
+                )
                 return None
             now = datetime.now(timezone.utc)
             if record.expires_at and record.expires_at < now:
+                logger.info(
+                    "MCP_AUTH: org_api_key verify EXPIRED key_masked={key} org_id={oid}",
+                    key=key_masked,
+                    oid=str(record.organization_id),
+                )
                 return None
             # Update last_used_at
             await session.execute(
@@ -154,4 +169,9 @@ class OrgApiKeyRepo(BaseRepo):
                 .values(last_used_at=now)
             )
             await session.commit()
+            logger.info(
+                "MCP_AUTH: org_api_key verify SUCCESS key_masked={key} org_id={oid}",
+                key=key_masked,
+                oid=str(record.organization_id),
+            )
             return record.organization_id

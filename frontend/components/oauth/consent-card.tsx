@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, ExternalLink, Shield, XCircle } from "lucide-react";
+import { CheckCircle, ChevronsUpDown, ExternalLink, Shield, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -14,7 +14,21 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Command,
+	CommandGroup,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { useSession } from "@/hooks/use-session";
+import { authClient } from "@/lib/auth/client";
+import { cn } from "@/lib/utils";
+import { trpc } from "@/trpc/client";
 
 type OAuthConsentCardProps = {
 	clientId: string;
@@ -46,11 +60,19 @@ export function OAuthConsentCard({
 	resource,
 }: OAuthConsentCardProps): React.JSX.Element {
 	const router = useRouter();
-	const { user, session, loaded: sessionLoaded } = useSession();
+	const { user, session, loaded: sessionLoaded, reloadSession } = useSession();
 	const [clientInfo, setClientInfo] = React.useState<ClientInfo | null>(null);
 	const [isLoading, setIsLoading] = React.useState(true);
 	const [isAuthorizing, setIsAuthorizing] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
+	const [orgSwitcherOpen, setOrgSwitcherOpen] = React.useState(false);
+
+	const isMetaServer = clientInfo?.serverId === META_SERVER_ID;
+	const { data: activeOrganization } = authClient.useActiveOrganization();
+	const { data: allOrganizations = [] } = trpc.organization.list.useQuery(
+		undefined,
+		{ enabled: !!isMetaServer },
+	);
 
 	// Redirect to sign-in if not authenticated
 	React.useEffect(() => {
@@ -109,11 +131,20 @@ export function OAuthConsentCard({
 		return clientInfo.redirectUris.includes(redirectUri);
 	}, [clientInfo, redirectUri]);
 
+	const handleSelectOrganization = async (organizationId: string) => {
+		try {
+			await authClient.organization.setActive({ organizationId });
+			await reloadSession();
+			setOrgSwitcherOpen(false);
+		} catch (err) {
+			console.error("Failed to switch organization:", err);
+			setError("Failed to switch organization");
+		}
+	};
+
 	const handleAllow = async () => {
 		if (!user || !clientInfo) return;
 
-		// For meta server, we need organization context (customer_id in token)
-		const isMetaServer = clientInfo.serverId === META_SERVER_ID;
 		if (isMetaServer && !session?.activeOrganizationId) {
 			setError("Please select an organization first to use the MCP wizard.");
 			return;
@@ -290,6 +321,70 @@ export function OAuthConsentCard({
 							<span className="font-medium text-foreground">{user.email}</span>
 						</p>
 					</div>
+
+					{/* Organization switcher (meta server only – controls which org resources are accessed) */}
+					{isMetaServer && (
+						<div className="space-y-2">
+							<p className="font-medium text-sm">
+								Access resources as organization
+							</p>
+							<Popover
+								open={orgSwitcherOpen}
+								onOpenChange={setOrgSwitcherOpen}
+							>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										role="combobox"
+										aria-expanded={orgSwitcherOpen}
+										className="w-full justify-between"
+									>
+										{activeOrganization ? (
+											<span className="truncate">
+												{activeOrganization.name}
+											</span>
+										) : allOrganizations.length > 0 ? (
+											<span className="text-muted-foreground">
+												Select organization
+											</span>
+										) : (
+											<span className="text-muted-foreground">
+												No organizations – create one first
+											</span>
+										)}
+										<ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+									<Command>
+										<CommandList>
+											<CommandGroup>
+												{allOrganizations.map((org) => (
+													<CommandItem
+														key={org.id}
+														value={org.name}
+														onSelect={() =>
+															handleSelectOrganization(org.id)
+														}
+													>
+														<CheckCircle
+															className={cn(
+																"mr-2 size-4",
+																activeOrganization?.id === org.id
+																	? "opacity-100"
+																	: "opacity-0",
+															)}
+														/>
+														{org.name}
+													</CommandItem>
+												))}
+											</CommandGroup>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+						</div>
+					)}
 
 					{/* Requested permissions */}
 					<div>

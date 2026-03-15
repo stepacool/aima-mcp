@@ -31,8 +31,10 @@ async def lifespan(app: FastAPI):
             meta_app = getattr(app.state, "meta_mcp_app", None)
             if not meta_app:
                 meta_app = meta_mcp.http_app()
-                logger.warning("meta_mcp_app not found on state; initializing a new instance for lifespan")
-                
+                logger.warning(
+                    "meta_mcp_app not found on state; initializing a new instance for lifespan"
+                )
+
             _ = await stack.enter_async_context(meta_app.lifespan(app))
             logger.info("Initialized Meta MCP Server lifespan")
         except Exception as e:
@@ -49,24 +51,29 @@ async def lifespan(app: FastAPI):
             logger.error(f"Failed to load MCP servers on startup: {e}")
 
         # Ensure META Server dummy records exist for OAuth client registrations
-        from entrypoints.api.routes.oauth import META_SERVER_ID
         from infrastructure.models.customer import Customer
         from infrastructure.models.mcp_server import MCPServer
         from sqlalchemy import select
+
+        from entrypoints.api.routes.oauth import META_SERVER_ID
 
         try:
             db = Provider.get_db()
             async with db.session() as session:
                 # 1. Customer
-                result = await session.execute(select(Customer).filter_by(id=META_SERVER_ID))
+                result = await session.execute(
+                    select(Customer).filter_by(id=META_SERVER_ID)
+                )
                 customer = result.scalar_one_or_none()
                 if not customer:
                     customer = Customer(id=META_SERVER_ID, name="Meta System Customer")
                     session.add(customer)
                     await session.commit()
-                
+
                 # 2. MCP Server
-                result = await session.execute(select(MCPServer).filter_by(id=META_SERVER_ID))
+                result = await session.execute(
+                    select(MCPServer).filter_by(id=META_SERVER_ID)
+                )
                 server = result.scalar_one_or_none()
                 if not server:
                     server = MCPServer(
@@ -164,10 +171,11 @@ class Application:
         self.app.add_middleware(MCPEnvMiddleware)
 
         self.app.include_router(api_router)
-        
+
         # Meta MCP server OAuth routes at /mcp/meta/oauth/* MUST be included
         # before the dynamic {server_id} routes to prevent 422 conflicts.
         from entrypoints.api.routes.oauth import meta_oauth_router
+
         self.app.include_router(meta_oauth_router, prefix="/mcp/meta")
 
         # Per-MCP-server OAuth routes at /mcp/{server_id}/.well-known/* and /mcp/{server_id}/oauth/*
@@ -189,26 +197,36 @@ class Application:
             async def dispatch(self, request, call_next):
                 path = request.scope.get("path", "")
                 if path.startswith("/oauth"):
+                    logger.info(
+                        "MCP_AUTH: meta guard – oauth path, pass path={path}",
+                        path=path,
+                    )
                     return await call_next(request)
-                if not getattr(request.state, "mcp_customer_id", None):
-                    from entrypoints.api.middleware import _build_www_authenticate_header
-                    from entrypoints.api.routes.oauth import META_SERVER_ID
+                customer_id = getattr(request.state, "mcp_customer_id", None)
+                if not customer_id:
+                    logger.warning(
+                        "MCP_AUTH: meta guard REJECT – missing mcp_customer_id path={path}",
+                        path=path,
+                    )
                     from starlette.responses import JSONResponse
 
                     return JSONResponse(
-                        status_code=401,
-                        content={"detail": "Not authenticated – missing customer context"},
-                        headers={
-                            "WWW-Authenticate": _build_www_authenticate_header(META_SERVER_ID)
+                        status_code=403,
+                        content={
+                            "detail": "Not authenticated – missing customer context"
                         },
                     )
+                logger.info(
+                    "MCP_AUTH: meta guard ALLOW path={path} customer_id={cid}",
+                    path=path,
+                    cid=str(customer_id),
+                )
                 return await call_next(request)
 
         meta_app.add_middleware(MetaAuthGuardMiddleware)
         self.app.mount("/mcp/meta", meta_app)
-        
-        # Note: The lifespan for the meta_mcp app MUST be started in the lifespan event below.
 
+        # Note: The lifespan for the meta_mcp app MUST be started in the lifespan event below.
 
     def create_database_pool(self) -> None:
         _ = Provider.get_db(
