@@ -84,6 +84,13 @@ api_router.include_router(
     dependencies=[] if settings.DEBUG else [Depends(require_admin_or_org_api_keys)],
     tags=["api-keys"],
 )
-api_router.include_router(wizard_router, prefix="/wizard", tags=["wizard"])
+# Wizard routes always require API key auth (admin or org) so org API keys work
+# even when DEBUG disables auth on the parent api_router
+api_router.include_router(
+    wizard_router,
+    prefix="/wizard",
+    tags=["wizard"],
+    dependencies=[Depends(verify_api_key)],
+)
 api_router.include_router(servers_router, prefix="/servers", tags=["servers"])
 api_router.include_router(customers_router, prefix="/customers", tags=["customers"])
