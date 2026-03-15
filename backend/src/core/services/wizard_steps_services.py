@@ -818,10 +818,21 @@ class WizardStepsService:
             raise_on_missing_code=True,
         )
 
-        # Register with shared runtime
-        _ = await register_new_customer_app(
-            app, mcp_server_id, compiled_tools, stack=stack
-        )
+        # Register with shared runtime.
+        # Must run in a separate task to avoid cancel-scope conflict: entering the
+        # new server's lifespan binds a cancel scope to the current task, which
+        # breaks the meta server's MCP session cleanup (RuntimeError: "Attempted
+        # to exit a cancel scope that isn't the current task's current cancel scope").
+        done: asyncio.Event = asyncio.Event()
+
+        async def _register_in_task() -> None:
+            await register_new_customer_app(
+                app, mcp_server_id, compiled_tools, stack=stack
+            )
+            done.set()
+
+        _ = asyncio.create_task(_register_in_task())
+        await done.wait()
 
         # Create or update deployment record
         endpoint_url = f"/mcp/{mcp_server_id}/mcp"
