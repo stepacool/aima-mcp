@@ -140,7 +140,8 @@ class OAuthAuthorizationCodeRepo(
                 select(self.model).where(
                     self.model.code == code,
                     self.model.is_used.is_(False),
-                    self.model.expires_at > datetime.now(timezone.utc),
+                    self.model.expires_at
+                    > datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
             return result.scalars().first()
@@ -152,7 +153,8 @@ class OAuthAuthorizationCodeRepo(
         async with self.db.session() as session:
             result = await session.execute(
                 sa_delete(self.model).where(
-                    self.model.expires_at < datetime.now(timezone.utc)
+                    self.model.expires_at
+                    < datetime.now(timezone.utc).replace(tzinfo=None)
                 )
             )
             await session.commit()
@@ -238,7 +240,8 @@ class OAuthAccessTokenRepo(
                 select(self.model).where(
                     self.model.jti == jti,
                     self.model.is_revoked.is_(False),
-                    self.model.expires_at > datetime.now(timezone.utc),
+                    self.model.expires_at
+                    > datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
             return result.scalars().first() is not None
@@ -292,7 +295,8 @@ class OAuthRefreshTokenRepo(
                 select(self.model).where(
                     self.model.token_hash == token_hash,
                     self.model.is_revoked.is_(False),
-                    self.model.expires_at > datetime.now(timezone.utc),
+                    self.model.expires_at
+                    > datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
             return result.scalars().first()

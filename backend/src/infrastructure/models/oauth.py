@@ -98,7 +98,7 @@ class OAuthAuthorizationCode(CustomBase):
     @property
     def is_expired(self) -> bool:
         """Check if the authorization code is expired."""
-        return datetime.now(timezone.utc) > self.expires_at
+        return datetime.now(timezone.utc).replace(tzinfo=None) > self.expires_at
 
 
 class OAuthAccessToken(CustomBase):
@@ -145,7 +145,7 @@ class OAuthAccessToken(CustomBase):
     @property
     def is_expired(self) -> bool:
         """Check if the access token is expired."""
-        return datetime.now(timezone.utc) > self.expires_at
+        return datetime.now(timezone.utc).replace(tzinfo=None) > self.expires_at
 
     @property
     def is_valid(self) -> bool:
@@ -200,7 +200,7 @@ class OAuthRefreshToken(CustomBase):
     @property
     def is_expired(self) -> bool:
         """Check if the refresh token is expired."""
-        return datetime.now(timezone.utc) > self.expires_at
+        return datetime.now(timezone.utc).replace(tzinfo=None) > self.expires_at
 
     @property
     def is_valid(self) -> bool:

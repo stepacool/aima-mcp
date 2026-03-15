@@ -228,9 +228,9 @@ class OAuthService:
 
         # Generate authorization code
         code = secrets.token_urlsafe(48)
-        expires_at = datetime.now(timezone.utc) + timedelta(
-            seconds=self.auth_code_lifetime
-        )
+        expires_at = (
+            datetime.now(timezone.utc) + timedelta(seconds=self.auth_code_lifetime)
+        ).replace(tzinfo=None)
 
         # Store the code
         code_create = OAuthAuthorizationCodeCreate(
@@ -422,7 +422,7 @@ class OAuthService:
             scope=scope,
             audience=str(server_id),
             server_id=server_id,
-            expires_at=access_token_expires,
+            expires_at=access_token_expires.replace(tzinfo=None),
         )
         access_token_record = await Provider.oauth_access_token_repo().create(
             access_token_create
@@ -440,7 +440,7 @@ class OAuthService:
             access_token_id=access_token_record.id,
             scope=scope,
             server_id=server_id,
-            expires_at=refresh_token_expires,
+            expires_at=refresh_token_expires.replace(tzinfo=None),
         )
         _ = await Provider.oauth_refresh_token_repo().create(refresh_token_create)
 
