@@ -1,21 +1,9 @@
-import { createOpenAI } from "@ai-sdk/openai"; // Changed import
-import { streamText } from "ai";
-import { z } from "zod"; // Assuming standard zod or zod/v4
+import { z } from "zod";
 import { assertUserIsOrgMember, getSession } from "@/lib/auth/server";
 import { logger } from "@/lib/logger";
-import { STEP_ZERO_SYSTEM_PROMPT } from "@/lib/wizard/prompts";
+import { pythonBackendClient } from "@/lib/python-backend/client";
 
-export const maxDuration = 30;
-
-const openrouter = createOpenAI({
-	baseURL: "https://openrouter.ai/api/v1",
-	apiKey: process.env.OPENROUTER_API_KEY,
-	// Optional: OpenRouter recommends these headers for rankings/analytics
-	headers: {
-		"HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-		"X-Title": "MCP Wizard",
-	},
-});
+export const maxDuration = 60;
 
 const wizardChatRequestSchema = z.object({
 	messages: z.array(
@@ -27,6 +15,7 @@ const wizardChatRequestSchema = z.object({
 			.passthrough(),
 	),
 	organizationId: z.string().uuid(),
+	serverId: z.string().uuid().optional(),
 });
 
 // Standard error response helper
@@ -50,48 +39,37 @@ export async function POST(req: Request) {
 	}
 
 	// Validate request body
-	let messages: { role: "user" | "assistant" | "system"; content: string }[];
+	let lastUserMessage: string;
 	let organizationId: string;
+	let serverId: string | undefined;
 
 	try {
 		const body = await req.json();
 		const parsed = wizardChatRequestSchema.parse(body);
 
-		logger.debug(
-			{ messages: parsed.messages },
-			"Received wizard chat messages",
-		);
-
 		organizationId = parsed.organizationId;
+		serverId = parsed.serverId;
 
-		// Normalize messages to ensure proper content string
-		// useChat sends messages with parts array, but OpenRouter expects content string
-		messages = parsed.messages.map((msg) => {
-			let content = "";
-
-			// First try to extract from parts (preferred format from useChat)
-			const msgAny = msg as unknown as {
-				parts?: { type: string; text?: string }[];
-				content?: string;
-			};
-
-			if (Array.isArray(msgAny.parts)) {
-				const textPart = msgAny.parts.find((p) => p.type === "text");
-				if (textPart?.text) {
-					content = textPart.text;
+		// Extract just the last user message – the backend manages full history
+		const userMessages = parsed.messages
+			.filter((m) => m.role === "user")
+			.map((msg) => {
+				const msgAny = msg as unknown as {
+					parts?: { type: string; text?: string }[];
+					content?: string;
+				};
+				if (Array.isArray(msgAny.parts)) {
+					const textPart = msgAny.parts.find((p) => p.type === "text");
+					if (textPart?.text) return textPart.text;
 				}
-			}
+				return typeof msgAny.content === "string" ? msgAny.content : "";
+			});
 
-			// Fall back to content string if no parts found
-			if (!content && typeof msgAny.content === "string") {
-				content = msgAny.content;
-			}
-
-			return {
-				role: msg.role,
-				content,
-			};
-		});
+		const last = userMessages[userMessages.length - 1];
+		if (!last) {
+			return errorResponse("invalid_request", "No user message found", 400);
+		}
+		lastUserMessage = last;
 	} catch (error) {
 		logger.warn({ error }, "Invalid wizard chat request body");
 		return errorResponse("invalid_request", "Invalid request body", 400);
@@ -108,18 +86,46 @@ export async function POST(req: Request) {
 		return errorResponse("forbidden", "Access denied", 403);
 	}
 
-	// Prepend system message
-	const messagesWithSystem = [
-		{ role: "system" as const, content: STEP_ZERO_SYSTEM_PROMPT },
-		...messages,
-	];
+	try {
+		// If no serverId, create a session first
+		if (!serverId) {
+			const sessionResponse = await pythonBackendClient.post<{
+				serverId: string;
+			}>("/api/wizard/sessions", {
+				customerId: organizationId,
+			});
+			serverId = sessionResponse.data.serverId;
+		}
 
-	const result = streamText({
-		// Use .chat() to force Chat Completions API instead of Responses API
-		// (OpenRouter doesn't support the Responses API)
-		model: openrouter.chat("google/gemini-3.1-flash-lite-preview"),
-		messages: messagesWithSystem,
-	});
+		// Proxy to the Python backend chat endpoint with streaming
+		const backendResponse = await pythonBackendClient.post(
+			`/api/wizard/${serverId}/chat`,
+			{
+				message: lastUserMessage,
+				stream: true,
+			},
+			{
+				responseType: "stream",
+				headers: {
+					Accept: "text/plain; charset=utf-8",
+				},
+			},
+		);
 
-	return result.toTextStreamResponse();
+		// Pass the stream through to the frontend
+		const stream = backendResponse.data as ReadableStream;
+		return new Response(stream, {
+			headers: {
+				"Content-Type": "text/plain; charset=utf-8",
+				"X-Server-Id": serverId,
+			},
+		});
+	} catch (error) {
+		logger.error({ error, serverId }, "Wizard chat proxy error");
+		return errorResponse(
+			"internal_error",
+			"Failed to process wizard chat",
+			500,
+		);
+	}
 }

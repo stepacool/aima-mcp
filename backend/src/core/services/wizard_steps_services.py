@@ -1,9 +1,14 @@
+from aima-mcp.backend.src.infrastructure.models.mcp_server import MCPServer
+from aima-mcp.backend.src.infrastructure.models.mcp_server import MCPServer
+from aima-mcp.backend.src.infrastructure.models.mcp_server import MCPServer
 import asyncio
+import json
+from collections.abc import AsyncGenerator
 import secrets
 import time
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 import yaml
@@ -20,7 +25,7 @@ from infrastructure.repositories.mcp_server import (
 from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
 from pydantic import BaseModel, Field, field_validator
 from settings import settings
 
@@ -106,6 +111,204 @@ class WizardStepsService:
     Core idea is for any current state to be present in database, no browser-session temporary state.
     methods that include LLMs should always be background_jobs spawned, not sync, as they take time.
     """
+
+    # ── Marker constants (kept in sync with step_0_wizard_chat.yaml) ──
+    READY_TO_START_MARKER: str = "---READY_TO_START---"
+    END_READY_MARKER: str = "---END_READY---"
+    TECHNICAL_DETAILS_MARKER: str = "---TECHNICAL_DETAILS---"
+    END_TECHNICAL_DETAILS_MARKER: str = "---END_TECHNICAL_DETAILS---"
+
+    # ── Step 0: Wizard chat session ──────────────────────────────────
+
+    async def start_wizard_session(self, customer_id: UUID) -> MCPServer:
+        """
+        Create a new MCPServer in gathering_requirements status.
+        Initialises empty chat history in meta.
+        """
+        from infrastructure.repositories.mcp_server import MCPServerCreate
+
+        server: MCPServer = await Provider.mcp_server_repo().create(
+            MCPServerCreate(
+                name="New MCP Server",
+                customer_id=customer_id,
+                meta={"step_zero_chat_history": []},
+            )
+        )
+        _ = await Provider.mcp_server_repo().update_setup_status(
+            server.id, MCPServerSetupStatus.gathering_requirements
+        )
+        return server
+
+    async def _save_chat_history(
+        self, server_id: UUID, history: list[dict[str, str]]
+    ) -> None:
+        """Persist the chat history list into server.meta."""
+        server: MCPServer | None = await Provider.mcp_server_repo().get(server_id)  # type: ignore[arg-type]
+        updated_meta: dict[Any, Any] = dict(server.meta) if server and server.meta else {}
+        updated_meta["step_zero_chat_history"] = history
+        _ = await Provider.mcp_server_repo().update(
+            server_id, MCPServerUpdate(meta=updated_meta)
+        )
+
+    def _extract_ready_description(self, text: str) -> str | None:
+        """Extract description between READY_TO_START markers."""
+        start = text.find(self.READY_TO_START_MARKER)
+        end = text.find(self.END_READY_MARKER)
+        if start == -1 or end == -1 or end <= start:
+            return None
+        desc = text[start + len(self.READY_TO_START_MARKER) : end].strip()
+        return desc or None
+
+    def _extract_technical_details(self, text: str) -> str | None:
+        """Extract technical details between markers."""
+        start = text.find(self.TECHNICAL_DETAILS_MARKER)
+        end = text.find(self.END_TECHNICAL_DETAILS_MARKER)
+        if start == -1 or end == -1 or end <= start:
+            return None
+        details = text[start + len(self.TECHNICAL_DETAILS_MARKER) : end].strip()
+        return details or None
+
+    def is_ready_to_start(self, text: str) -> bool:
+        """Check if text contains the ready-to-start markers."""
+        return (
+            self.READY_TO_START_MARKER in text and self.END_READY_MARKER in text
+        )
+
+    async def _post_process_assistant_response(
+        self,
+        server_id: UUID,
+        assistant_text: str,
+        history: list[dict[str, str]],
+    ) -> None:
+        """
+        After an assistant response is fully accumulated:
+        – save it to chat history
+        – extract technical details and description if ready
+        """
+        history.append({"role": "assistant", "content": assistant_text})
+        await self._save_chat_history(server_id, history)
+
+        # Extract and merge technical details from all assistant messages
+        all_technical_details: list[str] = []
+        for msg in history:
+            if msg["role"] == "assistant":
+                details = self._extract_technical_details(msg["content"])
+                if details:
+                    all_technical_details.append(details)
+
+        if all_technical_details:
+            server: MCPServer | None = await Provider.mcp_server_repo().get(server_id)  # type: ignore[arg-type]
+            updated_meta: dict[Any, Any] = dict(server.meta) if server and server.meta else {}
+            updated_meta["technical_details"] = all_technical_details
+            _ = await Provider.mcp_server_repo().update(
+                server_id, MCPServerUpdate(meta=updated_meta)
+            )
+
+        # If ready, extract description too
+        if self.is_ready_to_start(assistant_text):
+            description = self._extract_ready_description(assistant_text)
+            if description:
+                _ = await Provider.mcp_server_repo().update(
+                    server_id, MCPServerUpdate(description=description)
+                )
+
+    async def process_wizard_chat_message_stream(
+        self,
+        mcp_server_id: UUID,
+        message: str,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Process a user message in the Step 0 chat with streaming.
+        Yields Vercel AI SDK compatible text-stream chunks: ``0:"text"\\n``.
+        Persists the full assistant response to DB after the stream completes.
+        """
+        server = await Provider.mcp_server_repo().get(mcp_server_id)  # type: ignore[arg-type]
+        if server is None:
+            raise ValueError(f"Server {mcp_server_id} not found")
+
+        # Load existing history
+        history: list[dict[str, str]] = list(
+            (server.meta or {}).get("step_zero_chat_history", [])
+        )
+        history.append({"role": "user", "content": message})
+        # Persist user message immediately
+        await self._save_chat_history(mcp_server_id, history)
+
+        # Build LLM messages
+        system_prompt = load_prompt("step_0_wizard_chat.yaml")
+        llm_messages: list[ChatCompletionMessageParam] = cast(
+            list[ChatCompletionMessageParam],
+            [
+                {"role": "system", "content": system_prompt},
+                *[{"role": m["role"], "content": m["content"]} for m in history],
+            ],
+        )
+
+        # Stream from LLM
+        stream = await openai_client.chat.completions.create(
+            model=settings.WIZARD_CHAT_MODEL,
+            messages=llm_messages,
+            stream=True,
+        )
+
+        accumulated = ""
+        async for chunk in stream:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            content = delta.content if delta else None
+            if content:
+                accumulated += content
+                # Vercel AI SDK text-stream protocol: 0:"escaped text"\n
+                yield f"0:{json.dumps(content)}\n"
+
+        # Post-process: save response, extract markers
+        await self._post_process_assistant_response(
+            mcp_server_id, accumulated, history
+        )
+
+    async def process_wizard_chat_message(
+        self,
+        mcp_server_id: UUID,
+        message: str,
+    ) -> str:
+        """
+        Process a user message in the Step 0 chat without streaming (for CLI/agents).
+        Returns the full assistant response text.
+        Persists the full assistant response to DB.
+        """
+        server = await Provider.mcp_server_repo().get(mcp_server_id)  # type: ignore[arg-type]
+        if server is None:
+            raise ValueError(f"Server {mcp_server_id} not found")
+
+        # Load existing history
+        history: list[dict[str, str]] = list(
+            (server.meta or {}).get("step_zero_chat_history", [])
+        )
+        history.append({"role": "user", "content": message})
+        # Persist user message immediately
+        await self._save_chat_history(mcp_server_id, history)
+
+        # Build LLM messages
+        system_prompt = load_prompt("step_0_wizard_chat.yaml")
+        llm_messages: list[ChatCompletionMessageParam] = cast(
+            list[ChatCompletionMessageParam],
+            [
+                {"role": "system", "content": system_prompt},
+                *[{"role": m["role"], "content": m["content"]} for m in history],
+            ],
+        )
+
+        response: ChatCompletion = await openai_client.chat.completions.create(
+            model=settings.WIZARD_CHAT_MODEL,
+            messages=llm_messages,
+        )
+        assistant_text: Any | Literal[''] = response.choices[0].message.content or ""
+
+        # Post-process: save response, extract markers
+        await self._post_process_assistant_response(
+            mcp_server_id, assistant_text, history
+        )
+
+        return assistant_text
 
     async def step_1a_suggest_tools_for_mcp_server(
         self,
@@ -218,7 +421,7 @@ class WizardStepsService:
                 f"- {tool.name}: {tool.description}" for tool in server_tools
             )
 
-            system_prompt = load_prompt(prompt_file)
+            system_prompt: str | dict[str, object] = load_prompt(prompt_file)
 
             # Include technical details from meta if available
             technical_details: list[str] = cast(
@@ -233,7 +436,7 @@ class WizardStepsService:
                 )
                 technical_details_text = f"\n\n---\n\nTECHNICAL DETAILS (use these to refine tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen refining tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
 
-            server_desc = server.description if server else ""
+            server_desc: str = server.description if server else ""
             user_content = f"Server description:\n{server_desc}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}{technical_details_text}"
 
             messages: list[ChatCompletionMessageParam] = cast(
@@ -243,13 +446,13 @@ class WizardStepsService:
                     {"role": "user", "content": user_content},
                 ],
             )
-            response = await openai_client.chat.completions.parse(
+            response: ChatCompletion = await openai_client.chat.completions.parse(
                 model=settings.TOOL_GENERATION_MODEL,
                 messages=messages,
                 response_format=ToolsResponse,
             )
             parsed_response = response.choices[0].message.parsed
-            parsed: list[Tool] = parsed_response.tools if parsed_response else []
+            parsed: list[Tool] = cast(list[Tool], parsed_response.tools if parsed_response else [])
 
             # Extract and merge additional technical details
             new_technical_details = (
