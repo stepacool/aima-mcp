@@ -119,7 +119,12 @@ function createPythonBackendClient(): AxiosInstance {
 	// Response interceptor: Convert response data keys to camelCase
 	client.interceptors.response.use(
 		(response) => {
-			if (response.data && typeof response.data === "object") {
+			// Skip conversion for stream responses — converting would destroy the stream object
+			if (
+				response.data &&
+				typeof response.data === "object" &&
+				response.config.responseType !== "stream"
+			) {
 				response.data = keysToCamelCase(response.data);
 			}
 			return response;

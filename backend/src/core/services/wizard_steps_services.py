@@ -254,8 +254,7 @@ class WizardStepsService:
             content = delta.content if delta else None
             if content:
                 accumulated += content
-                # Vercel AI SDK text-stream protocol: 0:"escaped text"\n
-                yield f"0:{json.dumps(content)}\n"
+                yield content
 
         # Post-process: save response, extract markers
         await self._post_process_assistant_response(
