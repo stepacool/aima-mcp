@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -279,3 +279,40 @@ class MCPEnvironmentVariableRepo(
                 count += 1
             await session.commit()
             return count
+
+
+# ---------------------------------------------------------------------------
+# Lightweight Pydantic projections for batch / startup loading
+# ---------------------------------------------------------------------------
+
+
+class MCPEnvVarData(BaseModel):
+    """Pydantic projection of MCPEnvironmentVariable for pre-loaded queries."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    value: str | None = None
+
+
+class MCPToolData(BaseModel):
+    """Pydantic projection of MCPTool for pre-loaded queries."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    description: str
+    parameters_schema: list[dict[str, Any]]
+    code: str
+
+
+class ServerStartupData(BaseModel):
+    """Server with all dependencies pre-loaded — avoids N+1 on startup."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    customer_id: UUID
+    tools: list[MCPToolData]
+    environment_variables: list[MCPEnvVarData]

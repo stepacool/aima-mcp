@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -14,6 +16,9 @@ from infrastructure.models.deployment import (
     DeploymentTarget,
 )
 from infrastructure.repositories.base import BaseCRUDRepo
+
+if TYPE_CHECKING:
+    from infrastructure.repositories.mcp_server import ServerStartupData
 
 
 class DeploymentCreate(BaseModel):
@@ -78,6 +83,33 @@ class DeploymentRepo(BaseCRUDRepo[Deployment, DeploymentCreate, DeploymentUpdate
                 .options(selectinload(self.model.server))
             )
             return list(result.scalars().all())
+
+    async def get_active_shared_servers(self) -> "list[ServerStartupData]":
+        """Get all active shared servers with tools and env vars pre-loaded.
+
+        Returns a flat list of ServerStartupData — one entry per active shared
+        deployment.  Uses nested selectinload so the full load is 4 queries
+        regardless of the number of servers (no N+1).
+        """
+        from infrastructure.models.mcp_server import MCPServer
+        from infrastructure.repositories.mcp_server import ServerStartupData
+
+        async with self.db.session() as session:
+            result = await session.execute(
+                select(self.model)
+                .where(self.model.target == DeploymentTarget.SHARED.value)
+                .where(self.model.status == DeploymentStatus.ACTIVE.value)
+                .options(
+                    selectinload(self.model.server).selectinload(MCPServer.tools),
+                    selectinload(self.model.server).selectinload(
+                        MCPServer.environment_variables
+                    ),
+                )
+            )
+            return [
+                ServerStartupData.model_validate(d.server)
+                for d in result.scalars().all()
+            ]
 
     async def get_with_server_and_tools(self, deployment_id: UUID) -> Deployment | None:
         """Get deployment with eager-loaded server and tools."""

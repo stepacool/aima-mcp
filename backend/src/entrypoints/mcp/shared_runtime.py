@@ -158,36 +158,39 @@ async def load_and_register_all_mcp_servers(
         Dictionary mapping server_id to registered FastMCP instances
     """
     deployment_repo = Provider.deployment_repo()
-    tool_repo = Provider.mcp_tool_repo()
-    env_var_repo = Provider.environment_variable_repo()
 
-    # Get all active shared deployments from DB
-    deployments = await deployment_repo.get_active_shared_deployments()
+    # Single batch load: deployments → servers → tools + env_vars (4 queries total)
+    servers = await deployment_repo.get_active_shared_servers()
     registered_servers: dict[UUID, FastMCP] = {}
 
-    for deployment in deployments:
-        server = deployment.server
+    for server_data in servers:
         try:
-            tools = await tool_repo.get_tools_for_server(server.id)
+            env_vars = {
+                var.name: var.value
+                for var in server_data.environment_variables
+                if var.value is not None
+            }
             compiled_tools = await compile_server_tools(
-                server=server,
-                tools=tools,
-                env_var_repo=env_var_repo,
+                server=server_data,
+                tools=server_data.tools,
+                env_vars=env_vars,
             )
 
             if compiled_tools:
                 mcp = await register_new_customer_app(
                     app,
-                    server.id,
+                    server_data.id,
                     compiled_tools,
                     stack,
                 )
-                registered_servers[server.id] = mcp
+                registered_servers[server_data.id] = mcp
             else:
-                logger.warning(f"Server {server.id} has no valid tools, skipping")
+                logger.warning(
+                    f"Server {server_data.id} has no valid tools, skipping"
+                )
 
         except Exception as e:
-            logger.error(f"Failed to register server {server.id}: {e}")
+            logger.error(f"Failed to register server {server_data.id}: {e}")
 
     logger.info(f"Startup complete: registered {len(registered_servers)} MCP servers")
     return registered_servers

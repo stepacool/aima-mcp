@@ -137,7 +137,6 @@ def map_setup_status_to_wizard_step(setup_status: MCPServerSetupStatus) -> Wizar
 def get_processing_status(setup_status: MCPServerSetupStatus) -> str:
     """Determine processing status from setup_status."""
     generating_states = {
-        MCPServerSetupStatus.gathering_requirements,
         MCPServerSetupStatus.tools_generating,
         MCPServerSetupStatus.env_vars_generating,
         MCPServerSetupStatus.code_generating,
@@ -199,7 +198,7 @@ async def wizard_chat(
     server_id: UUID,
     request: WizardChatRequest,
     req: Request,
-) -> StreamingResponse | WizardChatResponse:
+) -> WizardChatResponse:
     """
     Step 0: Send a message in the wizard chat.
 

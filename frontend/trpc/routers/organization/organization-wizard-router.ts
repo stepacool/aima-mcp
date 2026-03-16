@@ -2,6 +2,7 @@ import { logger } from "@/lib/logger";
 import {
 	activateServer,
 	configureWizardAuth,
+	createWizardSession,
 	generateWizardCode,
 	getEnvVars,
 	getWizardState,
@@ -37,13 +38,24 @@ import { createTRPCRouter, protectedOrganizationProcedure } from "@/trpc/init";
  * Step 0 (onboarding chat) is handled client-side before calling startWizard.
  */
 export const organizationWizardRouter = createTRPCRouter({
-	// Start wizard - creates a new wizard in Python backend
-	// Called after Step 0 chat when user provides a valid description
+	// Create a step 0 chat session - called on wizard mount before any messages
+	createSession: protectedOrganizationProcedure.mutation(async ({ ctx }) => {
+		const result = await createWizardSession(ctx.organization.id);
+		logger.info(
+			{ serverId: result.serverId, organizationId: ctx.organization.id },
+			"Wizard session created",
+		);
+		return result;
+	}),
+
+	// Start wizard - transitions an existing session to tool generation
+	// Called after Step 0 chat when user confirms readiness
 	start: protectedOrganizationProcedure
 		.input(startWizardSchema)
 		.mutation(async ({ ctx, input }) => {
 			const result = await startWizard({
 				customerId: ctx.organization.id,
+				serverId: input.serverId,
 				description: input.description,
 				openapiSchema: input.openapiSchema,
 				technicalDetails: input.technicalDetails,

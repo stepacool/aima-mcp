@@ -30,7 +30,12 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
-	// Wizard state - Step 0 is client-side, rest is managed by Python backend
+	// Check for existing serverId in URL (must be declared before state that uses it)
+	const urlServerId = searchParams.get("serverId");
+
+	// Wizard state - Step 0 chat session ID (created on mount, persisted in URL)
+	const [chatServerId, setChatServerId] = useState<string | null>(urlServerId);
+	// Active server ID for steps 1+ (same server, set after startWizard confirms)
 	const [currentStep, setCurrentStep] = useState<WizardStep>(
 		WizardStep.stepZero,
 	);
@@ -50,14 +55,13 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		useWizardSessions(organizationId);
 
 	// Mutations
+	const createSessionMutation =
+		trpc.organization.wizard.createSession.useMutation();
 	const startWizardMutation = trpc.organization.wizard.start.useMutation();
 	const retryMutation = trpc.organization.wizard.retry.useMutation();
 
 	const generateCodeMutation =
 		trpc.organization.wizard.generateCode.useMutation();
-
-	// Check for existing serverId in URL
-	const urlServerId = searchParams.get("serverId");
 
 	// Use the polling hook for auto-refreshing wizard state
 	const {
@@ -91,10 +95,27 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		},
 	});
 
-	// Reset state when navigating to a new chat (no serverId in URL)
+	// Create a chat session on mount when starting fresh (no serverId in URL).
+	// On resume (urlServerId present), sync chatServerId from URL.
+	useEffect(() => {
+		if (urlServerId) {
+			setChatServerId(urlServerId);
+			return;
+		}
+		// Fresh wizard: create a session and push its ID into the URL so that
+		// subsequent messages use the same persistent server.
+		createSessionMutation.mutateAsync().then((result) => {
+			setChatServerId(result.serverId);
+			router.replace(
+				`/dashboard/organization/new-mcp-server?serverId=${result.serverId}`,
+			);
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	// Reset UI state when navigating to a new chat (no serverId in URL)
 	useEffect(() => {
 		if (!urlServerId) {
-			// Reset all state to initial values for new chat
 			setServerId(null);
 			setCurrentStep(WizardStep.stepZero);
 			setPreWizardMessages([]);
@@ -126,12 +147,13 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		setServerUrl(wizardState.serverUrl);
 	}, [urlServerId, wizardState]);
 
-	// Handle Step 0 readiness - start the Python backend wizard
+	// Handle Step 0 readiness - transition the existing session to tool generation
 	const handleStepZeroReady = useCallback(
 		async (description: string, technicalDetails: string[]) => {
 			setIsStarting(true);
 			try {
 				const result = await startWizardMutation.mutateAsync({
+					serverId: chatServerId ?? undefined,
 					description,
 					technicalDetails:
 						technicalDetails.length > 0 ? technicalDetails : undefined,
@@ -143,20 +165,17 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 				setCurrentStep(WizardStep.tools);
 
 				// Add to in-progress sessions for async tracking
-				// User can navigate away and return later
 				addWizardSession(result.serverId, description);
 
-				// Update URL with server ID for resumability
-				router.replace(
-					`/dashboard/organization/new-mcp-server?serverId=${result.serverId}`,
-				);
+				// Restart polling - it was idle during step 0, now backend is generating tools
+				refetch();
 			} catch (_error) {
 				toast.error("Failed to start wizard");
 			} finally {
 				setIsStarting(false);
 			}
 		},
-		[startWizardMutation, router, addWizardSession],
+		[startWizardMutation, chatServerId, addWizardSession, refetch],
 	);
 
 	// Handle messages update in Step 0 (client-side only, not persisted)
@@ -259,13 +278,13 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 			<div className="min-h-0 flex-1">
 				{currentStep === WizardStep.stepZero && (
 					<>
-						{isStarting ? (
+						{isStarting || !chatServerId ? (
 							<div className="flex h-full items-center justify-center">
 								<CenteredSpinner />
 							</div>
 						) : (
 							<StepZeroChat
-								sessionId="step-zero"
+								serverId={chatServerId}
 								organizationId={organizationId}
 								initialMessages={preWizardMessages}
 								onReady={handleStepZeroReady}

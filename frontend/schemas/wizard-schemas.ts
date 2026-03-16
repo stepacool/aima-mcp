@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 
 // Wizard step enum (managed by Python backend)
 export const WizardStep = {
-	stepZero: "step_zero", // AI onboarding chat (frontend only)
+	stepZero: "gathering_requirements", // AI onboarding chat (matches backend status)
 	describe: "describe", // Processing initial description
 	tools: "tools", // Select tools
 	envVars: "env_vars", // Configure environment variables
@@ -54,6 +54,7 @@ export type WizardMessage = z.infer<typeof wizardMessageSchema>;
 
 // Start wizard (calls Python backend /api/wizard/start)
 export const startWizardSchema = z.object({
+	serverId: z.string().uuid().optional(), // Existing session from step 0 chat
 	description: z.string().min(1, "Description is required"),
 	openapiSchema: z.string().optional().nullable(),
 	technicalDetails: z.array(z.string()).optional(),
