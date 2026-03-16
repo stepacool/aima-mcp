@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { CompleteStep } from "@/components/wizard/complete-step";
@@ -33,6 +33,9 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	// Check for existing serverId in URL (must be declared before state that uses it)
 	const urlServerId = searchParams.get("serverId");
 
+	// True if serverId was already in the URL at mount time (resuming an existing session)
+	const [isResume] = useState(() => !!searchParams.get("serverId"));
+
 	// Wizard state - Step 0 chat session ID (created on mount, persisted in URL)
 	const [chatServerId, setChatServerId] = useState<string | null>(urlServerId);
 	// Active server ID for steps 1+ (same server, set after startWizard confirms)
@@ -62,6 +65,9 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 
 	const generateCodeMutation =
 		trpc.organization.wizard.generateCode.useMutation();
+
+	// Guard against StrictMode double-invocation and "Create New" spam
+	const sessionCreatingRef = useRef(false);
 
 	// Use the polling hook for auto-refreshing wizard state
 	const {
@@ -95,23 +101,32 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		},
 	});
 
-	// Create a chat session on mount when starting fresh (no serverId in URL).
-	// On resume (urlServerId present), sync chatServerId from URL.
+	// Create a chat session when there's no serverId in the URL, or sync from URL on resume.
+	// Runs whenever urlServerId changes (covers "Create New" navigations).
+	// The ref guard prevents StrictMode's double-invocation from creating two sessions.
 	useEffect(() => {
 		if (urlServerId) {
+			// Resume: sync chatServerId from URL and reset the guard for future "Create New"
 			setChatServerId(urlServerId);
+			sessionCreatingRef.current = false;
 			return;
 		}
-		// Fresh wizard: create a session and push its ID into the URL so that
-		// subsequent messages use the same persistent server.
+
+		// Fresh wizard: guard against duplicate calls
+		if (sessionCreatingRef.current) return;
+		sessionCreatingRef.current = true;
+		setChatServerId(null); // show spinner while creating
+
 		createSessionMutation.mutateAsync().then((result) => {
 			setChatServerId(result.serverId);
 			router.replace(
 				`/dashboard/organization/new-mcp-server?serverId=${result.serverId}`,
 			);
+		}).catch(() => {
+			sessionCreatingRef.current = false; // allow retry on failure
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [urlServerId]);
 
 	// Reset UI state when navigating to a new chat (no serverId in URL)
 	useEffect(() => {
@@ -229,8 +244,10 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		}
 	}, [serverId, refetch, retryMutation]);
 
-	// Show loading state when restoring from URL (brief initial load)
-	if (urlServerId && isLoadingState && !wizardState) {
+	// Only block render waiting for wizardState when resuming an existing session.
+	// For fresh starts (isResume=false), the chat UI renders immediately; wizardState
+	// loads in the background and only matters if/when the user is past step 0.
+	if (isResume && urlServerId && isLoadingState && !wizardState) {
 		return <CenteredSpinner />;
 	}
 
