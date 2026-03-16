@@ -446,6 +446,8 @@ export async function activateServer(
 	try {
 		const response = await pythonBackendClient.post<ActivateServerResponse>(
 			`/api/wizard/${serverId}/deploy`,
+			undefined,
+			{ timeout: 60000 }, // deploy can take 30-60s (code compilation + runtime registration)
 		);
 		logger.info({ serverId }, "Server deployed in Python backend");
 		return response.data;

@@ -1,5 +1,4 @@
 import asyncio
-import json
 from collections.abc import AsyncGenerator
 import secrets
 import time
@@ -432,7 +431,7 @@ class WizardStepsService:
                 )
                 technical_details_text = f"\n\n---\n\nTECHNICAL DETAILS (use these to refine tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen refining tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
 
-            server_desc: str = server.description if server else ""
+            server_desc: str = (server.description if server and server.description is not None else "")
             user_content = f"Server description:\n{server_desc}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}{technical_details_text}"
 
             messages: list[ChatCompletionMessageParam] = cast(
