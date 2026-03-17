@@ -483,7 +483,6 @@ async def submit_tools(
         await service.step_1c_submit_selected_tools(
             mcp_server_id=server_id,
             selected_tool_ids=request.selected_tool_ids,
-            setup_status_override=MCPServerSetupStatus.env_vars_generating,
         )
         background_tasks.add_task(
             service.step_2a_suggest_environment_variables_for_mcp_server,

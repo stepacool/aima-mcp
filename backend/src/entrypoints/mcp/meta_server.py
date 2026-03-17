@@ -13,7 +13,7 @@ from core.services.tier_service import FREE_TIER_MAX_TOOLS
 from core.services.wizard_steps_services import WizardStepsService, openai_client
 from fastmcp import Context, FastMCP
 from infrastructure.models.mcp_server import MCPServerSetupStatus
-from infrastructure.repositories.mcp_server import MCPServerCreate, MCPServerUpdate
+from infrastructure.repositories.mcp_server import MCPServerUpdate
 from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 from settings import settings
@@ -65,36 +65,123 @@ def _get_wizard_service() -> WizardStepsService:
 
 
 @meta_mcp.tool()
-async def wizard_start(
-    description: str,
+async def wizard_create_session(
     ctx: Context,
-    technical_details: list[str] | None = None,
+    customer_id: str | None = None,
 ) -> dict[str, Any]:
-    """Start the MCP server creation wizard.
+    """Create a new wizard session to start gathering requirements.
 
-    Provide a description of the MCP server you want to create.
-    Optionally attach technical details (API specs, schemas, etc.)
-    as separate markdown strings. Tool suggestion runs in the background –
-    poll with wizard_state to check progress.
+    Creates an MCP server in gathering_requirements status with an empty
+    chat history. Use wizard_chat to iterate on requirements with the AI,
+    then call wizard_start once the AI indicates readiness.
 
     Args:
-        description: Server description in natural language.
-        technical_details: Optional list of markdown strings with technical specs.
+        customer_id: Optional customer UUID (for org API keys with multiple customers).
     """
-    customer_id = _get_customer_id(ctx)
+    resolved_customer_id = _get_customer_id(ctx)
+    if customer_id:
+        resolved_customer_id = UUID(customer_id)
 
-    meta: dict[str, Any] = {}
-    if technical_details:
-        meta["technical_details"] = technical_details
+    service = _get_wizard_service()
+    server = await service.start_wizard_session(customer_id=resolved_customer_id)
+    return {"server_id": str(server.id)}
 
-    server = await Provider.mcp_server_repo().create(
-        MCPServerCreate(
-            name=f"Server-{customer_id}",
-            customer_id=customer_id,
-            description=description,
-            meta=meta,
+
+@meta_mcp.tool()
+async def wizard_chat(
+    server_id: str,
+    message: str,
+    ctx: Context,
+) -> dict[str, Any]:
+    """Send a message in the wizard requirements-gathering chat.
+
+    Iterate on server requirements with the AI until it indicates readiness
+    (is_ready=True). Then call wizard_start with the server_id to kick off
+    tool suggestion.
+
+    Args:
+        server_id: Server UUID (from wizard_create_session).
+        message: Your message to the AI.
+    """
+    sid = UUID(server_id)
+    await _require_server_ownership(ctx, sid)
+
+    server = await Provider.mcp_server_repo().get_by_uuid(sid)
+    if not server:
+        raise ValueError(f"Server {sid} not found")
+    if server.setup_status != MCPServerSetupStatus.gathering_requirements:
+        raise ValueError(
+            "Server is not in gathering_requirements state. "
+            f"Current state: {server.setup_status.value}"
         )
+
+    service = _get_wizard_service()
+    response_text = await service.process_wizard_chat_message(
+        mcp_server_id=sid,
+        message=message,
     )
+    return {
+        "server_id": server_id,
+        "content": response_text,
+        "is_ready": service.is_ready_to_start(response_text),
+    }
+
+
+@meta_mcp.tool()
+async def wizard_start(
+    server_id: str,
+    ctx: Context,
+    description: str | None = None,
+    technical_details: list[str] | None = None,
+) -> dict[str, Any]:
+    """Transition from requirements gathering to tool suggestion.
+
+    The server must be in gathering_requirements state and the AI must have
+    indicated readiness (wizard_chat returned is_ready=True). Tool suggestion
+    runs in the background – poll with wizard_state to check progress.
+
+    Args:
+        server_id: Server UUID (from wizard_create_session).
+        description: Optional description override (uses chat-derived value if omitted).
+        technical_details: Optional technical details override.
+    """
+    sid = UUID(server_id)
+    await _require_server_ownership(ctx, sid)
+
+    server = await Provider.mcp_server_repo().get_by_uuid(sid)
+    if not server:
+        raise ValueError(f"Server {sid} not found")
+
+    service = _get_wizard_service()
+
+    # Enforce readiness gate
+    chat_history: list[dict[str, str]] = (server.meta or {}).get(
+        "step_zero_chat_history", []
+    )
+    has_ready_marker = any(
+        service.is_ready_to_start(msg.get("content", ""))
+        for msg in chat_history
+        if msg.get("role") == "assistant"
+    )
+    if not has_ready_marker:
+        raise ValueError(
+            "The specification is not ready to proceed. Continue the conversation until the AI indicates readiness."
+        )
+
+    final_description: str = description or server.description or ""
+
+    # Apply any overrides
+    update_payload: dict[str, Any] = {}
+    if description:
+        update_payload["description"] = description
+    if technical_details:
+        updated_meta: dict[str, Any] = dict(server.meta or {})
+        updated_meta["technical_details"] = technical_details
+        update_payload["meta"] = updated_meta
+    if update_payload:
+        _ = await Provider.mcp_server_repo().update(
+            server.id, MCPServerUpdate(**update_payload)
+        )
 
     # Generate a descriptive name using LLM
     try:
@@ -107,7 +194,7 @@ async def wizard_start(
                         "Generate a short, descriptive name "
                         "(2-4 words) for an MCP server based "
                         "on this description: "
-                        f"{description}. "
+                        f"{final_description}. "
                         "Return only the name, nothing else."
                     ),
                 }
@@ -129,16 +216,15 @@ async def wizard_start(
     except Exception as e:
         logger.warning(f"Failed to generate server name: {e}")
 
-    service = _get_wizard_service()
     _ = asyncio.create_task(
         service.step_1a_suggest_tools_for_mcp_server(
-            description=description,
+            description=final_description,
             mcp_server_id=server.id,
         )
     )
 
     return {
-        "server_id": str(server.id),
+        "server_id": server_id,
         "status": "processing",
     }
 
@@ -231,7 +317,6 @@ async def wizard_submit_tools(
     await service.step_1c_submit_selected_tools(
         mcp_server_id=sid,
         selected_tool_ids=uuids,
-        setup_status_override=MCPServerSetupStatus.env_vars_generating,
     )
 
     _ = asyncio.create_task(
