@@ -59,8 +59,13 @@ export interface WizardState {
 	updatedAt: string;
 }
 
+export interface CreateWizardSessionResponse {
+	serverId: string;
+}
+
 export interface StartWizardParams {
 	customerId: string;
+	serverId?: string; // Existing session from step 0 chat
 	description: string;
 	openapiSchema?: string | null;
 	technicalDetails?: string[];
@@ -148,6 +153,26 @@ export interface RetryToolGenerationResponse {
 }
 
 /**
+ * Creates a new wizard session (step 0 chat server) in the Python backend.
+ */
+export async function createWizardSession(
+	customerId: string,
+): Promise<CreateWizardSessionResponse> {
+	try {
+		const response =
+			await pythonBackendClient.post<CreateWizardSessionResponse>(
+				"/api/wizard/sessions",
+				{ customerId },
+			);
+		logger.info({ customerId, serverId: response.data.serverId }, "Wizard session created");
+		return response.data;
+	} catch (error) {
+		logger.error({ customerId, error }, "Failed to create wizard session");
+		throw error;
+	}
+}
+
+/**
  * Starts a new wizard session in the Python backend.
  * This initiates the MCP server creation process and returns suggested tools.
  */
@@ -157,6 +182,7 @@ export async function startWizard(
 	try {
 		const response = await pythonBackendClient.post<any>("/api/wizard/start", {
 			customerId: params.customerId,
+			serverId: params.serverId ?? null,
 			description: params.description,
 			openapiSchema: params.openapiSchema ?? null,
 			technicalDetails: params.technicalDetails ?? null,
@@ -420,6 +446,8 @@ export async function activateServer(
 	try {
 		const response = await pythonBackendClient.post<ActivateServerResponse>(
 			`/api/wizard/${serverId}/deploy`,
+			undefined,
+			{ timeout: 60000 }, // deploy can take 30-60s (code compilation + runtime registration)
 		);
 		logger.info({ serverId }, "Server deployed in Python backend");
 		return response.data;

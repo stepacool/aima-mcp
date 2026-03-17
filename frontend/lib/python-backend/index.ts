@@ -28,6 +28,8 @@ export {
 export {
 	type ActivateServerResponse,
 	activateServer,
+	type CreateWizardSessionResponse,
+	createWizardSession,
 	type ConfigureWizardAuthParams,
 	type ConfigureWizardAuthResponse,
 	configureWizardAuth,

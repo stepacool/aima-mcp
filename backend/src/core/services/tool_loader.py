@@ -15,7 +15,11 @@ from core.services.tier_service import CURATED_LIBRARIES, CodeValidator, Tier
 
 if TYPE_CHECKING:
     from infrastructure.models.mcp_server import MCPServer, MCPTool
-    from infrastructure.repositories.mcp_server import MCPEnvironmentVariableRepo
+    from infrastructure.repositories.mcp_server import (
+        MCPEnvironmentVariableRepo,
+        MCPToolData,
+        ServerStartupData,
+    )
 
 
 class ToolCompilationError(Exception):
@@ -380,9 +384,10 @@ def get_tool_loader() -> DynamicToolLoader:
 
 
 async def compile_server_tools(
-    server: "MCPServer",
-    tools: "list[MCPTool]",
-    env_var_repo: "MCPEnvironmentVariableRepo",
+    server: "MCPServer | ServerStartupData",
+    tools: "list[MCPTool] | list[MCPToolData]",
+    env_var_repo: "MCPEnvironmentVariableRepo | None" = None,
+    env_vars: "dict[str, str] | None" = None,
     tool_loader: DynamicToolLoader | None = None,
     tier: "Tier | None" = None,
     raise_on_missing_code: bool = False,
@@ -395,9 +400,13 @@ async def compile_server_tools(
     remount_mcp_server, and load_and_register_all_mcp_servers.
 
     Args:
-        server: MCPServer ORM object exposing .id and .customer_id.
-        tools: List of MCPTool ORM objects to compile.
-        env_var_repo: Repository used to fetch environment variables.
+        server: MCPServer ORM object (or ServerStartupData) exposing .id and
+            .customer_id.
+        tools: List of MCPTool ORM objects (or MCPToolData) to compile.
+        env_var_repo: Repository used to fetch environment variables.  Must be
+            provided when env_vars is None.
+        env_vars: Pre-loaded env-var mapping.  When supplied, skips the repo
+            call entirely (used by the startup batch path to avoid N+1 queries).
         tool_loader: DynamicToolLoader instance; uses the global singleton if None.
         tier: Tier enum value (defaults to Tier.FREE when None).
         raise_on_missing_code: If True, raise ValueError when a tool has no code
@@ -412,10 +421,13 @@ async def compile_server_tools(
         tool_loader if tool_loader is not None else get_tool_loader()
     )
 
-    env_var_records = await env_var_repo.get_vars_for_server(server.id)
-    env_vars: dict[str, str] = {
-        var.name: var.value for var in env_var_records if var.value is not None
-    }
+    if env_vars is None:
+        if env_var_repo is None:
+            raise ValueError("Either env_var_repo or env_vars must be provided")
+        env_var_records = await env_var_repo.get_vars_for_server(server.id)
+        env_vars = {
+            var.name: var.value for var in env_var_records if var.value is not None
+        }
 
     compiled: list[FunctionTool] = []
     for tool in tools:

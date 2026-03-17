@@ -7,8 +7,9 @@ from uuid import UUID
 from core.services.tier_service import FREE_TIER_MAX_TOOLS
 from core.services.wizard_steps_services import WizardStepsService, openai_client
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from infrastructure.models.mcp_server import MCPServerSetupStatus
-from infrastructure.repositories.mcp_server import MCPServerUpdate
+from infrastructure.repositories.mcp_server import MCPServerCreate, MCPServerUpdate
 from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 from pydantic import BaseModel
@@ -25,8 +26,13 @@ router = APIRouter()
 
 class StartWizardRequest(BaseModel):
     customer_id: UUID | None = None  # Optional when using org API key
-    description: str
-    technical_details: list[str] | None = None
+    server_id: UUID | None = (
+        None  # If provided, use existing server from POST /sessions
+    )
+    description: str | None = None  # Optional: override description from chat
+    technical_details: list[str] | None = (
+        None  # Optional: override technical details from chat
+    )
 
 
 class StartWizardResponse(BaseModel):
@@ -81,6 +87,7 @@ class AuthResponse(BaseModel):
 
 
 class WizardStep(str, Enum):
+    GATHERING_REQUIREMENTS = "gathering_requirements"
     TOOLS = "tools"
     ENV_VARS = "env_vars"
     AUTH = "auth"
@@ -112,6 +119,7 @@ class WizardStateResponse(BaseModel):
 def map_setup_status_to_wizard_step(setup_status: MCPServerSetupStatus) -> WizardStep:
     """Map backend setup_status to frontend wizard_step."""
     mapping = {
+        MCPServerSetupStatus.gathering_requirements: WizardStep.GATHERING_REQUIREMENTS,
         MCPServerSetupStatus.tools_generating: WizardStep.TOOLS,
         MCPServerSetupStatus.tools_selection: WizardStep.TOOLS,
         MCPServerSetupStatus.env_vars_generating: WizardStep.ENV_VARS,
@@ -123,7 +131,7 @@ def map_setup_status_to_wizard_step(setup_status: MCPServerSetupStatus) -> Wizar
         MCPServerSetupStatus.deployment_selection: WizardStep.DEPLOY,
         MCPServerSetupStatus.ready: WizardStep.COMPLETE,
     }
-    return mapping.get(setup_status, WizardStep.TOOLS)
+    return mapping.get(setup_status, WizardStep.GATHERING_REQUIREMENTS)
 
 
 def get_processing_status(setup_status: MCPServerSetupStatus) -> str:
@@ -143,25 +151,212 @@ def get_wizard_service() -> WizardStepsService:
     return WizardStepsService()
 
 
+class CreateSessionRequest(BaseModel):
+    customer_id: UUID | None = None  # Optional when using org API key
+
+
+class CreateSessionResponse(BaseModel):
+    server_id: UUID
+
+
+class WizardChatRequest(BaseModel):
+    message: str
+    stream: bool = True
+
+
+class WizardChatResponse(BaseModel):
+    role: str = "assistant"
+    content: str
+    is_ready: bool = False
+
+
+@router.post("/sessions", response_model=CreateSessionResponse)
+async def create_session(
+    request: CreateSessionRequest,
+    req: Request,
+) -> CreateSessionResponse:
+    """
+    Step 0: Create a new wizard session.
+
+    Creates an MCPServer in gathering_requirements status
+    with empty chat history. Used by frontend and CLI.
+    """
+    customer_id = resolve_customer_id(request.customer_id, req)
+    await require_org_access_to_customer(customer_id, req)
+
+    try:
+        service = get_wizard_service()
+        server = await service.start_wizard_session(customer_id=customer_id)
+        return CreateSessionResponse(server_id=server.id)
+    except Exception as e:
+        logger.error(f"Error creating wizard session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{server_id}/chat")
+async def wizard_chat(
+    server_id: UUID,
+    request: WizardChatRequest,
+    req: Request,
+) -> WizardChatResponse:
+    """
+    Step 0: Send a message in the wizard chat.
+
+    If stream=True (default), returns a StreamingResponse with Vercel AI SDK
+    compatible text-stream chunks (0:"text"\\n).
+    If stream=False, returns a JSON response with the full assistant message.
+    """
+    await require_org_access_to_server(server_id, req)
+
+    # Validate server is in gathering_requirements status
+    server = await Provider.mcp_server_repo().get_by_uuid(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail=f"Server {server_id} not found")
+    if server.setup_status != MCPServerSetupStatus.gathering_requirements:
+        raise HTTPException(
+            status_code=400,
+            detail="Server is not in gathering_requirements state. "
+            + f"Current state: {server.setup_status.value}",
+        )
+
+    service = get_wizard_service()
+
+    if request.stream:
+        return StreamingResponse(  # pyright: ignore[reportUnknownVariableType]
+            service.process_wizard_chat_message_stream(
+                mcp_server_id=server_id,
+                message=request.message,
+            ),
+            media_type="text/plain; charset=utf-8",
+        )
+    else:
+        try:
+            response_text: str = await service.process_wizard_chat_message(
+                mcp_server_id=server_id,
+                message=request.message,
+            )
+            return WizardChatResponse(
+                content=response_text,
+                is_ready=service.is_ready_to_start(response_text),
+            )
+        except Exception as e:
+            logger.error(f"Error in wizard chat: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/start", response_model=StartWizardResponse)
 async def start_wizard(
     request: StartWizardRequest,
     background_tasks: BackgroundTasks,
     req: Request,
 ) -> StartWizardResponse:
+    """
+    Transition from Step 0 to Step 1: Start tool suggestion.
+
+    Requires that the LLM has indicated readiness via READY_TO_START marker
+    in the chat history. The server must already exist (created via POST /sessions).
+
+    If description/technical_details are provided, they override what was
+    extracted from the chat. Otherwise, the backend uses values already
+    stored in the server's meta from the chat.
+    """
     customer_id = resolve_customer_id(request.customer_id, req)
     await require_org_access_to_customer(customer_id, req)
-    """
-    Step 1: Start wizard - describe system.
 
-    Creates draft server and triggers background generation of tools.
-    Returns immediately with status="processing".
-    """
-    from infrastructure.repositories.mcp_server import MCPServerCreate
+    service = get_wizard_service()
 
     try:
-        # Prepare meta with technical details if provided
-        meta = {}
+        server = (
+            await Provider.mcp_server_repo().get_by_uuid(request.server_id)
+            if request.server_id
+            else None
+        )
+
+        if server:
+            # ── Existing server (created via POST /sessions) ──
+            # Enforce readiness gate: check that chat history contains READY_TO_START
+            chat_history: list[dict[str, str]] = (server.meta or {}).get(
+                "step_zero_chat_history", []
+            )
+            has_ready_marker = any(
+                service.is_ready_to_start(msg.get("content", ""))
+                for msg in chat_history
+                if msg.get("role") == "assistant"
+            )
+            if not has_ready_marker:
+                raise HTTPException(
+                    status_code=400,
+                    detail="The specification is not ready to proceed. Continue the conversation until the AI indicates readiness.",
+                )
+
+            # Use provided values or fall back to what's in meta/description
+            description: str = request.description or server.description or ""
+
+            # Update server with final description and technical details
+            update_payload: dict[str, Any] = {}
+            if request.description:
+                update_payload["description"] = request.description
+            if request.technical_details:
+                updated_meta: dict[str, Any] = dict(server.meta or {})
+                updated_meta["technical_details"] = request.technical_details
+                update_payload["meta"] = updated_meta
+
+            if update_payload:
+                _ = await Provider.mcp_server_repo().update(
+                    server.id, MCPServerUpdate(**update_payload)
+                )
+
+            # Generate a descriptive name using LLM
+            try:
+                name_response = await openai_client.chat.completions.create(
+                    model=settings.SERVER_DETAILS_GENERATION_MODEL,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": (
+                                "Generate a short, descriptive name "
+                                "(2-4 words) for an MCP server based "
+                                "on this description: "
+                                f"{description}. "
+                                "Return only the name, nothing else."
+                            ),
+                        }
+                    ],
+                    max_tokens=30,
+                    temperature=0.3,
+                )
+                generated_name = (
+                    (name_response.choices[0].message.content or "")
+                    .strip()
+                    .strip('"')
+                    .strip("'")
+                )
+                if generated_name:
+                    _ = await Provider.mcp_server_repo().update(
+                        server.id,
+                        MCPServerUpdate(name=generated_name),
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to generate server name: {e}")
+
+            background_tasks.add_task(
+                service.step_1a_suggest_tools_for_mcp_server,
+                description=description,
+                mcp_server_id=server.id,
+            )
+
+            return StartWizardResponse(
+                server_id=server.id,
+                status="processing",
+            )
+
+        if not request.description:
+            raise HTTPException(
+                status_code=400,
+                detail="description is required when creating a new server",
+            )
+
+        meta: dict[str, Any] = {}
         if request.technical_details:
             meta["technical_details"] = request.technical_details
 
@@ -207,7 +402,6 @@ async def start_wizard(
         except Exception as e:
             logger.warning(f"Failed to generate server name: {e}")
 
-        service = get_wizard_service()
         background_tasks.add_task(
             service.step_1a_suggest_tools_for_mcp_server,
             description=request.description,
@@ -218,6 +412,8 @@ async def start_wizard(
             server_id=server.id,
             status="processing",
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error starting wizard: {e}")
         raise HTTPException(status_code=500, detail=str(e))

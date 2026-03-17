@@ -62,6 +62,7 @@ class LLMSettings(BaseSettings):
     TOOL_GENERATION_MODEL: str = "google/gemini-2.5-flash"
     ENV_VARS_GENERATION_MODEL: str = "google/gemini-2.5-flash"
     CODE_GENERATION_MODEL: str = "google/gemini-2.5-flash"
+    WIZARD_CHAT_MODEL: str = "google/gemini-3.1-flash-lite-preview"
 
 
 class PostgresSettings(BaseSettings):

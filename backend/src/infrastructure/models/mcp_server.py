@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 
 
 class MCPServerSetupStatus(str, Enum):
+    # Step 0 – Conversation / requirements gathering
+    gathering_requirements = "gathering_requirements"  # Chat with LLM to refine spec
+
     # Tools step
     tools_generating = "tools_generating"  # LLM is generating/refining tools
     tools_selection = "tools_selection"  # User reviews and selects tools

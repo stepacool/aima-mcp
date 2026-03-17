@@ -49,7 +49,7 @@ import {
 import type { WizardMessage } from "@/schemas/wizard-schemas";
 
 interface StepZeroChatProps {
-	sessionId: string;
+	serverId: string;
 	organizationId: string;
 	initialMessages: WizardMessage[];
 	onReady: (description: string, technicalDetails: string[]) => void;
@@ -82,7 +82,7 @@ function getUserMessageText(
 	return text;
 }
 export function StepZeroChat({
-	sessionId,
+	serverId,
 	organizationId,
 	initialMessages,
 	onReady,
@@ -101,11 +101,12 @@ export function StepZeroChat({
 	const [allTechnicalDetails, setAllTechnicalDetails] = useState<string[]>([]);
 
 	const { messages, setMessages, sendMessage, status } = useChat({
-		id: sessionId,
+		id: serverId,
 		transport: new TextStreamChatTransport({
 			api: "/api/ai/wizard-chat",
 			body: {
 				organizationId,
+				serverId,
 			},
 		}),
 		onError: (err) => {
