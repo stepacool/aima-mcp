@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
-import { CompleteStep } from "@/components/wizard/complete-step";
 import { DeployStep } from "@/components/wizard/deploy-step";
 import { EnvVarsStep } from "@/components/wizard/env-vars-step";
 import { StepZeroChat } from "@/components/wizard/step-zero-chat";
@@ -49,8 +48,6 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 	const [suggestedTools, setSuggestedTools] = useState<WizardTool[]>([]);
 	const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
 	const [suggestedEnvVars, setSuggestedEnvVars] = useState<WizardEnvVar[]>([]);
-	const [bearerToken, setBearerToken] = useState<string | null>(null);
-	const [serverUrl, setServerUrl] = useState<string | null>(null);
 	const [isStarting, setIsStarting] = useState(false);
 
 	// Wizard session management for async processing
@@ -137,8 +134,6 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 			setSuggestedTools([]);
 			setSelectedToolIds([]);
 			setSuggestedEnvVars([]);
-			setBearerToken(null);
-			setServerUrl(null);
 			setIsStarting(false);
 		}
 	}, [urlServerId]);
@@ -156,10 +151,6 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		if (wizardState.envVars) {
 			setSuggestedEnvVars(wizardState.envVars);
 		}
-		if (wizardState.bearerToken) {
-			setBearerToken(wizardState.bearerToken);
-		}
-		setServerUrl(wizardState.serverUrl);
 	}, [urlServerId, wizardState]);
 
 	// Handle Step 0 readiness - transition the existing session to tool generation
@@ -219,16 +210,14 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 		});
 	}, [serverId, generateCodeMutation, refetch]);
 
-	// Handle server activated - transition to COMPLETE
-	// Now receives bearer token from deploy step
+	// Handle server activated - show toast and redirect to server detail
 	const handleServerActivated = useCallback(
-		(url: string, token: string) => {
-			setServerUrl(url);
-			setBearerToken(token);
+		(_url: string, _token: string) => {
 			refetch();
-			setCurrentStep(WizardStep.complete);
+			toast.success("Your MCP server is live!");
+			router.push(`/dashboard/organization/mcp-servers/${serverId}`);
 		},
-		[refetch],
+		[refetch, serverId, router],
 	);
 
 	// Handle retry after failure
@@ -351,15 +340,7 @@ export function McpWizardChat({ organizationId }: McpWizardChatProps) {
 						/>
 					)}
 
-				{currentStep === WizardStep.complete && serverUrl && bearerToken && (
-					<CompleteStep
-						serverUrl={serverUrl}
-						deployment={wizardState?.deployment ?? null}
-						bearerToken={bearerToken}
-						serverName={wizardState?.description ?? undefined}
-					/>
-				)}
-			</div>
+				</div>
 		</div>
 	);
 }

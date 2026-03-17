@@ -6,6 +6,7 @@ import {
 	BracesIcon,
 	CheckCircle2Icon,
 	CheckIcon,
+	ChevronDownIcon,
 	CircleDotIcon,
 	ClipboardCopyIcon,
 	ClockIcon,
@@ -28,6 +29,7 @@ import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { EditMcpServerModal } from "@/components/organization/edit-mcp-server-modal";
+import { ToolTester } from "@/components/organization/tool-tester";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +39,11 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { CenteredSpinner } from "@/components/ui/custom/centered-spinner";
 import { InputPassword } from "@/components/ui/custom/input-password";
 import { Input } from "@/components/ui/input";
@@ -568,232 +575,112 @@ export function McpServerDetail({
 	const isValidUpdatedDate = updatedAt && !Number.isNaN(updatedAt.getTime());
 
 	return (
-		<div className="space-y-6">
-			{/* Header Card */}
-			<Card>
-				<CardHeader>
-					<div className="flex items-start justify-between">
-						<div>
-							<CardTitle className="text-xl">{server.name}</CardTitle>
-							{server.description && (
-								<div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
-									<ReactMarkdown>{server.description}</ReactMarkdown>
-								</div>
-							)}
-						</div>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() =>
-									NiceModal.show(EditMcpServerModal, {
-										serverId: server.id,
-										initialName: server.name,
-										initialDescription: server.description || undefined,
-									})
-								}
-							>
-								Edit
-							</Button>
-							<Badge
-								variant="outline"
-								className={cn("border-none", status.color)}
-							>
-								<StatusIcon className="mr-1 size-3" />
-								{status.label}
-							</Badge>
-							{server.isDeployed && (
+		<div className="flex flex-col lg:flex-row lg:gap-6 lg:items-start">
+			{/* Left panel */}
+			<div className="lg:w-[55%] space-y-4 min-w-0">
+				{/* Header Card */}
+				<Card>
+					<CardHeader>
+						<div className="flex items-start justify-between">
+							<div>
+								<CardTitle className="text-xl">{server.name}</CardTitle>
+								{server.description && (
+									<div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+										<ReactMarkdown>{server.description}</ReactMarkdown>
+									</div>
+								)}
+							</div>
+							<div className="flex flex-wrap gap-2 justify-end shrink-0 ml-4">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() =>
+										NiceModal.show(EditMcpServerModal, {
+											serverId: server.id,
+											initialName: server.name,
+											initialDescription: server.description || undefined,
+										})
+									}
+								>
+									Edit
+								</Button>
 								<Badge
 									variant="outline"
-									className="border-none bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+									className={cn("border-none", status.color)}
 								>
-									<ExternalLinkIcon className="mr-1 size-3" />
-									Deployed
+									<StatusIcon className="mr-1 size-3" />
+									{status.label}
 								</Badge>
-							)}
+								{server.isDeployed && (
+									<Badge
+										variant="outline"
+										className="border-none bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+									>
+										<ExternalLinkIcon className="mr-1 size-3" />
+										Deployed
+									</Badge>
+								)}
+							</div>
 						</div>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-						<div>
-							<p className="text-sm text-muted-foreground">Tier</p>
-							<p className="font-medium capitalize">{server.tier}</p>
-						</div>
-						<div>
-							<p className="text-sm text-muted-foreground">Authentication</p>
-							<p className="flex items-center font-medium">
-								<AuthIcon className="mr-1.5 size-4 text-muted-foreground" />
-								{authConfig.label}
-							</p>
-						</div>
-						<div>
-							<p className="text-sm text-muted-foreground">Created</p>
-							<p className="font-medium">
-								{isValidCreatedDate
-									? format(createdAt, "MMM d, yyyy 'at' h:mm a")
-									: "Date unavailable"}
-							</p>
-						</div>
-						<div>
-							<p className="text-sm text-muted-foreground">Last Updated</p>
-							<p className="font-medium">
-								{isValidUpdatedDate
-									? format(updatedAt, "MMM d, yyyy 'at' h:mm a")
-									: "Date unavailable"}
-							</p>
-						</div>
-					</div>
-					{server.setupStatus !== "ready" && (
-						<div className="mt-4 pt-4 border-t">
-							<Button asChild className="w-full sm:w-auto">
-								<Link
-									href={`/dashboard/organization/new-mcp-server?serverId=${server.id}`}
-								>
-									Continue Setup
-								</Link>
-							</Button>
-						</div>
-					)}
-				</CardContent>
-			</Card>
-
-			{/* Endpoint Card - Only show if deployed */}
-			{server.mcpEndpoint && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="flex items-center text-base">
-							<ExternalLinkIcon className="mr-2 size-4" />
-							MCP Endpoint
-						</CardTitle>
-						<CardDescription>
-							Use this endpoint to connect your AI client to this MCP server.
-						</CardDescription>
 					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
-							<code className="flex-1 truncate font-mono text-sm">
-								{getFullBackendUrl(server.mcpEndpoint)}
-							</code>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() =>
-									copyToClipboard(
-										getFullBackendUrl(server.mcpEndpoint),
-										"Endpoint URL",
-									)
-								}
-							>
-								<ClipboardCopyIcon className="mr-2 size-4" />
-								Copy
-							</Button>
+					<CardContent>
+						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+							<div>
+								<p className="text-sm text-muted-foreground">Tier</p>
+								<p className="font-medium capitalize">{server.tier}</p>
+							</div>
+							<div>
+								<p className="text-sm text-muted-foreground">Authentication</p>
+								<p className="flex items-center font-medium">
+									<AuthIcon className="mr-1.5 size-4 text-muted-foreground" />
+									{authConfig.label}
+								</p>
+							</div>
+							<div>
+								<p className="text-sm text-muted-foreground">Created</p>
+								<p className="font-medium">
+									{isValidCreatedDate
+										? format(createdAt, "MMM d, yyyy 'at' h:mm a")
+										: "Date unavailable"}
+								</p>
+							</div>
+							<div>
+								<p className="text-sm text-muted-foreground">Last Updated</p>
+								<p className="font-medium">
+									{isValidUpdatedDate
+										? format(updatedAt, "MMM d, yyyy 'at' h:mm a")
+										: "Date unavailable"}
+								</p>
+							</div>
 						</div>
-
-						{/* One-Click Installation Buttons */}
-						<div className="space-y-2">
-							<p className="text-sm font-medium">One-Click Installation</p>
-							<div className="flex flex-col gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleInstallCursor}
-									className="w-full justify-start"
-								>
-									<DownloadIcon className="mr-2 size-4" />
-									Add to Cursor
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleInstallLmStudio}
-									className="w-full justify-start"
-								>
-									<DownloadIcon className="mr-2 size-4" />
-									Add to LM Studio
-								</Button>
-								{/* <Button
-									variant="outline"
-									size="sm"
-									onClick={handleInstallVSCode}
-									className="w-full justify-start"
-								>
-									<DownloadIcon className="mr-2 size-4" />
-									Add to VS Code
-								</Button> */}
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleInstallClaudeCode}
-									className="w-full justify-start"
-								>
-									<CopyIcon className="mr-2 size-4" />
-									Add to Claude Code
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleInstallRaycast}
-									className="w-full justify-start"
-								>
-									<DownloadIcon className="mr-2 size-4" />
-									Add to Raycast
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleCopyWindsurfConfig}
-									className="w-full justify-start"
-								>
-									<CopyIcon className="mr-2 size-4" />
-									Add to Windsurf
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleCopyClaudeDesktopConfig}
-									className="w-full justify-start"
-								>
-									<CopyIcon className="mr-2 size-4" />
-									Add to Claude Desktop
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleCopyJsonConfig}
-									className="w-full justify-start"
-								>
-									<CopyIcon className="mr-2 size-4" />
-									Copy Config for Other Tools
+						{server.setupStatus !== "ready" && (
+							<div className="mt-4 pt-4 border-t">
+								<Button asChild className="w-full sm:w-auto">
+									<Link
+										href={`/dashboard/organization/new-mcp-server?serverId=${server.id}`}
+									>
+										Continue Setup
+									</Link>
 								</Button>
 							</div>
-							{server.authType !== "none" && !apiKeyData?.apiKey && (
-								<p className="text-xs text-muted-foreground">
-									Note: If your server requires authentication, you may need to
-									configure it manually in your MCP client settings.
-								</p>
-							)}
-						</div>
+						)}
 					</CardContent>
 				</Card>
-			)}
 
-			{/* Connection Definition Card - Only show if deployed */}
-			{server.mcpEndpoint && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="flex items-center text-base">
-							<BracesIcon className="mr-2 size-4" />
-							Connection Definition
-						</CardTitle>
-						<CardDescription>
-							Connection details and JSON configuration for this MCP server.
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						{/* Connection sub-section */}
-						<div className="space-y-3">
-							<p className="text-sm font-medium">Connection</p>
+				{/* Connection Card — merged endpoint + install + raw JSON */}
+				{server.mcpEndpoint && (
+					<Card>
+						<CardHeader>
+							<CardTitle className="flex items-center text-base">
+								<ExternalLinkIcon className="mr-2 size-4" />
+								Connection
+							</CardTitle>
+							<CardDescription>
+								Connect your AI client to this MCP server.
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							{/* Endpoint + API Key rows */}
 							<div className="space-y-2">
 								<div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2">
 									<div className="min-w-0 flex-1">
@@ -839,162 +726,284 @@ export function McpServerDetail({
 									</div>
 								)}
 							</div>
-						</div>
 
-						<Separator />
+							<Separator />
 
-						{/* Raw JSON config */}
-						<div className="space-y-3">
-							<p className="text-sm font-medium">Raw JSON Config</p>
-							<div className="relative rounded-lg border bg-muted/50 p-4">
-								<Button
-									variant="outline"
-									size="sm"
-									className="absolute top-3 right-3"
-									onClick={() => {
-										const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-										const config = createMcpConfig(
-											endpointUrl,
-											apiKeyData?.apiKey ?? null,
-										);
-										const jsonConfig = generateMcpJsonConfig(
-											server.name,
-											config,
-										);
-										copyToClipboard(jsonConfig, "Connection definition");
-									}}
-								>
-									<CopyIcon className="mr-2 size-4" />
-									Copy
-								</Button>
-								<pre className="overflow-x-auto">
-									<code className="font-mono text-sm">
-										{(() => {
-											const endpointUrl = getFullBackendUrl(server.mcpEndpoint);
-											const config = createMcpConfig(
-												endpointUrl,
-												apiKeyData?.apiKey ?? null,
-											);
-											return generateMcpJsonConfig(server.name, config);
-										})()}
-									</code>
-								</pre>
+							{/* One-Click Installation */}
+							<div className="space-y-2">
+								<p className="text-sm font-medium">One-Click Installation</p>
+								<div className="flex flex-col gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleInstallCursor}
+										className="w-full justify-start"
+									>
+										<DownloadIcon className="mr-2 size-4" />
+										Add to Cursor
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleInstallLmStudio}
+										className="w-full justify-start"
+									>
+										<DownloadIcon className="mr-2 size-4" />
+										Add to LM Studio
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleInstallClaudeCode}
+										className="w-full justify-start"
+									>
+										<CopyIcon className="mr-2 size-4" />
+										Add to Claude Code
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleInstallRaycast}
+										className="w-full justify-start"
+									>
+										<DownloadIcon className="mr-2 size-4" />
+										Add to Raycast
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleCopyWindsurfConfig}
+										className="w-full justify-start"
+									>
+										<CopyIcon className="mr-2 size-4" />
+										Add to Windsurf
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleCopyClaudeDesktopConfig}
+										className="w-full justify-start"
+									>
+										<CopyIcon className="mr-2 size-4" />
+										Add to Claude Desktop
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleCopyJsonConfig}
+										className="w-full justify-start"
+									>
+										<CopyIcon className="mr-2 size-4" />
+										Copy Config for Other Tools
+									</Button>
+								</div>
+								{server.authType !== "none" && !apiKeyData?.apiKey && (
+									<p className="text-xs text-muted-foreground">
+										Note: If your server requires authentication, you may need
+										to configure it manually in your MCP client settings.
+									</p>
+								)}
 							</div>
+
+							<Separator />
+
+							{/* Collapsible Raw JSON Config */}
+							<Collapsible>
+								<CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium hover:text-foreground/80">
+									<span className="flex items-center gap-2">
+										<BracesIcon className="size-4" />
+										Raw JSON Config
+									</span>
+									<ChevronDownIcon className="size-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="mt-3">
+									<div className="relative rounded-lg border bg-muted/50 p-4">
+										<Button
+											variant="outline"
+											size="sm"
+											className="absolute top-3 right-3"
+											onClick={() => {
+												const endpointUrl = getFullBackendUrl(
+													server.mcpEndpoint,
+												);
+												const config = createMcpConfig(
+													endpointUrl,
+													apiKeyData?.apiKey ?? null,
+												);
+												const jsonConfig = generateMcpJsonConfig(
+													server.name,
+													config,
+												);
+												copyToClipboard(jsonConfig, "Connection definition");
+											}}
+										>
+											<CopyIcon className="mr-2 size-4" />
+											Copy
+										</Button>
+										<pre className="overflow-x-auto pr-16">
+											<code className="font-mono text-sm">
+												{(() => {
+													const endpointUrl = getFullBackendUrl(
+														server.mcpEndpoint,
+													);
+													const config = createMcpConfig(
+														endpointUrl,
+														apiKeyData?.apiKey ?? null,
+													);
+													return generateMcpJsonConfig(server.name, config);
+												})()}
+											</code>
+										</pre>
+									</div>
+								</CollapsibleContent>
+							</Collapsible>
+						</CardContent>
+					</Card>
+				)}
+
+				{/* Environment Variables Card */}
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center text-base">
+							<VariableIcon className="mr-2 size-4" />
+							Environment Variables ({server.environmentVariables.length})
+						</CardTitle>
+						<CardDescription>
+							Environment variables configured for this MCP server.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{server.environmentVariables.length === 0 ? (
+							<p className="py-4 text-center text-sm text-muted-foreground">
+								No environment variables configured.
+							</p>
+						) : (
+							<div className="space-y-3">
+								{server.environmentVariables.map((envVar, index) => (
+									<React.Fragment key={envVar.id}>
+										{index > 0 && <Separator />}
+										<EnvVarRow
+											envVar={envVar}
+											serverId={serverId}
+											onUpdate={(varId, value) =>
+												updateEnvVarMutation.mutate({
+													serverId,
+													varId,
+													value,
+												})
+											}
+											isUpdating={updateEnvVarMutation.isPending}
+										/>
+									</React.Fragment>
+								))}
+							</div>
+						)}
+					</CardContent>
+				</Card>
+
+				{/* Tool Configuration Card */}
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center text-base">
+							<WrenchIcon className="mr-2 size-4" />
+							Tool Configuration ({server.toolsCount})
+						</CardTitle>
+						<CardDescription>
+							The tools available on this MCP server.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{server.toolsCount === 0 ? (
+							<p className="py-4 text-center text-sm text-muted-foreground">
+								No tools configured yet.
+							</p>
+						) : (
+							<div className="space-y-3">
+								{server.tools.map((tool, index) => (
+									<React.Fragment key={tool.id}>
+										{index > 0 && <Separator />}
+										<ToolRow
+											tool={tool}
+											serverId={serverId}
+											onUpdate={(toolId, description) =>
+												updateToolMutation.mutate({
+													serverId,
+													toolId,
+													description,
+												})
+											}
+											isUpdating={updateToolMutation.isPending}
+										/>
+									</React.Fragment>
+								))}
+							</div>
+						)}
+					</CardContent>
+				</Card>
+
+				{/* Danger Zone */}
+				<Card className="border-destructive/50">
+					<CardHeader>
+						<CardTitle className="text-base text-destructive">
+							Danger Zone
+						</CardTitle>
+						<CardDescription>
+							Irreversible actions that will permanently affect this server.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="flex items-center justify-between rounded-lg border border-destructive/30 p-4">
+							<div>
+								<p className="font-medium">Delete this server</p>
+								<p className="text-sm text-muted-foreground">
+									Once deleted, this server and all its tools will be permanently
+									removed.
+								</p>
+							</div>
+							<Button
+								variant="destructive"
+								onClick={handleDeleteServer}
+								disabled={deleteServerMutation.isPending}
+							>
+								<Trash2Icon className="mr-2 size-4" />
+								Delete Server
+							</Button>
 						</div>
 					</CardContent>
 				</Card>
-			)}
+			</div>
 
-			{/* Environment Variables Card */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center text-base">
-						<VariableIcon className="mr-2 size-4" />
-						Environment Variables ({server.environmentVariables.length})
-					</CardTitle>
-					<CardDescription>
-						Environment variables configured for this MCP server.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{server.environmentVariables.length === 0 ? (
-						<p className="py-4 text-center text-sm text-muted-foreground">
-							No environment variables configured.
-						</p>
-					) : (
-						<div className="space-y-3">
-							{server.environmentVariables.map((envVar, index) => (
-								<React.Fragment key={envVar.id}>
-									{index > 0 && <Separator />}
-									<EnvVarRow
-										envVar={envVar}
-										serverId={serverId}
-										onUpdate={(varId, value) =>
-											updateEnvVarMutation.mutate({
-												serverId,
-												varId,
-												value,
-											})
-										}
-										isUpdating={updateEnvVarMutation.isPending}
-									/>
-								</React.Fragment>
-							))}
-						</div>
-					)}
-				</CardContent>
-			</Card>
-
-			{/* Tools Card */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center text-base">
-						<WrenchIcon className="mr-2 size-4" />
-						Tools ({server.toolsCount})
-					</CardTitle>
-					<CardDescription>
-						The tools available on this MCP server.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{server.toolsCount === 0 ? (
-						<p className="py-4 text-center text-sm text-muted-foreground">
-							No tools configured yet.
-						</p>
-					) : (
-						<div className="space-y-3">
-							{server.tools.map((tool, index) => (
-								<React.Fragment key={tool.id}>
-									{index > 0 && <Separator />}
-									<ToolRow
-										tool={tool}
-										serverId={serverId}
-										onUpdate={(toolId, description) =>
-											updateToolMutation.mutate({
-												serverId,
-												toolId,
-												description,
-											})
-										}
-										isUpdating={updateToolMutation.isPending}
-									/>
-								</React.Fragment>
-							))}
-						</div>
-					)}
-				</CardContent>
-			</Card>
-
-			{/* Danger Zone */}
-			<Card className="border-destructive/50">
-				<CardHeader>
-					<CardTitle className="text-base text-destructive">
-						Danger Zone
-					</CardTitle>
-					<CardDescription>
-						Irreversible actions that will permanently affect this server.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-center justify-between rounded-lg border border-destructive/30 p-4">
-						<div>
-							<p className="font-medium">Delete this server</p>
-							<p className="text-sm text-muted-foreground">
-								Once deleted, this server and all its tools will be permanently
-								removed.
-							</p>
-						</div>
-						<Button
-							variant="destructive"
-							onClick={handleDeleteServer}
-							disabled={deleteServerMutation.isPending}
-						>
-							<Trash2Icon className="mr-2 size-4" />
-							Delete Server
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
+			{/* Right panel */}
+			<div className="lg:w-[45%] lg:sticky lg:top-6 min-w-0 mt-4 lg:mt-0">
+				{server.setupStatus === "ready" && server.tools.length > 0 ? (
+					<ToolTester
+						serverId={serverId}
+						tools={server.tools.map((t) => ({
+							id: t.id,
+							name: t.name,
+							description: t.description,
+							parameters: (t.parametersSchema ?? []) as Array<{
+								name: string;
+								type: string;
+								required: boolean;
+								description: string;
+							}>,
+						}))}
+						environmentVariables={server.environmentVariables}
+					/>
+				) : (
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base flex items-center gap-2">
+								<WrenchIcon className="size-4" /> Tool Tester
+							</CardTitle>
+							<CardDescription>
+								Available once your server is deployed.
+							</CardDescription>
+						</CardHeader>
+					</Card>
+				)}
+			</div>
 		</div>
 	);
 }
