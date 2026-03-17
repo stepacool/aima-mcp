@@ -121,13 +121,14 @@ export const organizationServerRouter = createTRPCRouter({
 			return result;
 		}),
 
-	// Update a tool's description
+	// Update a tool's description and/or code
 	updateTool: protectedOrganizationProcedure
 		.input(
 			z.object({
 				serverId: z.string().uuid(),
 				toolId: z.string().uuid(),
-				description: z.string().min(1, "Description is required"),
+				description: z.string().min(1, "Description is required").optional(),
+				code: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -135,6 +136,7 @@ export const organizationServerRouter = createTRPCRouter({
 				input.serverId,
 				input.toolId,
 				input.description,
+				input.code,
 			);
 
 			logger.info(

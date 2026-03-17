@@ -2,6 +2,7 @@
 
 import { ChevronDownIcon, Loader2Icon, PlugIcon } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/trpc/client";
 
 interface ToolParameter {
 	name: string;
@@ -33,6 +35,7 @@ interface Tool {
 	id: string;
 	name: string;
 	description: string;
+	code: string;
 	parameters: ToolParameter[];
 }
 
@@ -50,6 +53,7 @@ interface ToolTesterProps {
 type ContentItem = { type: string; text?: string; [key: string]: unknown };
 
 export function ToolTester({ serverId, tools, environmentVariables }: ToolTesterProps) {
+	const utils = trpc.useUtils();
 	const [sessionId, setSessionId] = useState<string | null>(null);
 	const [isConnecting, setIsConnecting] = useState(false);
 	const [connectError, setConnectError] = useState<string | null>(null);
@@ -61,6 +65,17 @@ export function ToolTester({ serverId, tools, environmentVariables }: ToolTester
 	const [envEntries, setEnvEntries] = useState(() =>
 		(environmentVariables ?? []).map((ev) => ({ key: ev.name, value: "" }))
 	);
+	const [editedCode, setEditedCode] = useState<string>("");
+
+	const saveCodeMutation = trpc.organization.server.updateTool.useMutation({
+		onSuccess: () => {
+			toast.success("Code saved");
+			utils.organization.server.getDetails.invalidate({ serverId });
+		},
+		onError: (err) => {
+			toast.error(err.message);
+		},
+	});
 
 	const handleConnect = async () => {
 		setIsConnecting(true);
@@ -101,6 +116,7 @@ export function ToolTester({ serverId, tools, environmentVariables }: ToolTester
 		setResult(null);
 		setError(null);
 		setEnvEntries((environmentVariables ?? []).map((ev) => ({ key: ev.name, value: "" })));
+		setEditedCode(tool.code ?? "");
 	};
 
 	const hasAllRequired = selectedTool
@@ -359,6 +375,51 @@ export function ToolTester({ serverId, tools, environmentVariables }: ToolTester
 										</CollapsibleContent>
 									</Collapsible>
 								)}
+
+								<Collapsible defaultOpen>
+									<CollapsibleTrigger className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+										<span className="flex items-center gap-1.5">
+											Source Code
+											{editedCode !== (selectedTool.code ?? "") && (
+												<span className="size-1.5 rounded-full bg-orange-400" />
+											)}
+										</span>
+										<ChevronDownIcon className="size-3.5 transition-transform duration-200 data-[state=open]:rotate-180" />
+									</CollapsibleTrigger>
+									<CollapsibleContent className="mt-2 space-y-2">
+										<Textarea
+											value={editedCode}
+											onChange={(e) => setEditedCode(e.target.value)}
+											className="font-mono text-xs resize-y"
+											rows={12}
+										/>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() =>
+												saveCodeMutation.mutate({
+													serverId,
+													toolId: selectedTool.id,
+													description: selectedTool.description,
+													code: editedCode,
+												})
+											}
+											disabled={
+												saveCodeMutation.isPending ||
+												editedCode === (selectedTool.code ?? "")
+											}
+										>
+											{saveCodeMutation.isPending ? (
+												<>
+													<Loader2Icon className="mr-2 size-3 animate-spin" />
+													Saving...
+												</>
+											) : (
+												"Save Code"
+											)}
+										</Button>
+									</CollapsibleContent>
+								</Collapsible>
 
 								<Button
 									size="sm"

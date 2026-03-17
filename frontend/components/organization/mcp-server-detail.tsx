@@ -382,11 +382,11 @@ export function McpServerDetail({
 
 	const updateToolMutation = trpc.organization.server.updateTool.useMutation({
 		onSuccess: () => {
-			toast.success("Tool description updated");
+			toast.success("Tool updated");
 			utils.organization.server.getDetails.invalidate({ serverId });
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to update tool description");
+			toast.error(error.message || "Failed to update tool");
 		},
 	});
 
@@ -982,6 +982,7 @@ export function McpServerDetail({
 							id: t.id,
 							name: t.name,
 							description: t.description,
+							code: t.code,
 							parameters: (t.parametersSchema ?? []) as Array<{
 								name: string;
 								type: string;
