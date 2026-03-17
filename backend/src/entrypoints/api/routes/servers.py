@@ -75,6 +75,11 @@ class UpdateServerRequest(BaseModel):
     description: str | None = None
 
 
+class UpdateToolRequest(BaseModel):
+    description: str | None = None
+    code: str | None = None
+
+
 class ApiKeyResponse(BaseModel):
     api_key: str | None
     auth_type: str
@@ -473,11 +478,11 @@ async def get_server_api_key(server_id: UUID, request: Request) -> ApiKeyRespons
 
 @router.patch("/{server_id}/tools/{tool_id}", response_model=MCPToolResponse)
 async def update_tool(
-    server_id: UUID, tool_id: UUID, body: UpdateServerRequest, request: Request
+    server_id: UUID, tool_id: UUID, body: UpdateToolRequest, request: Request
 ) -> MCPToolResponse:
     await require_org_access_to_server(server_id, request)
     """
-    Update an MCP tool's description.
+    Update an MCP tool's description and/or code.
     Remounts the server in the shared runtime if it is actively deployed.
     """
     from infrastructure.repositories.mcp_server import MCPToolUpdate
@@ -492,6 +497,8 @@ async def update_tool(
     update_data = MCPToolUpdate()
     if body.description is not None:
         update_data.description = body.description
+    if body.code is not None:
+        update_data.code = body.code
 
     _ = await tool_repo.update(tool_id, update_data)
 

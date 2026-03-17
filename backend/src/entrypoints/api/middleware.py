@@ -127,6 +127,23 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
             )
 
         token = auth_raw[7:]  # Strip "Bearer " prefix
+
+        # Allow internal calls from the Next.js server using the admin API key
+        if token == settings.ADMIN_ROUTES_API_KEY:
+            logger.info(
+                "MCP_AUTH: per-server ALLOW – internal admin key path={path} server_id={sid}",
+                path=path,
+                sid=str(server_id),
+            )
+            response = await call_next(request)
+            logger.info(
+                "MCP_LIB: per-server response status={status} path={path} server_id={sid}",
+                status=response.status_code,
+                path=path,
+                sid=str(server_id),
+            )
+            return response
+
         logger.info(
             "MCP_AUTH: per-server validating path={path} server_id={sid} token={token} dots={dots}",
             path=path,
@@ -152,7 +169,14 @@ class MCPAccessMiddleware(BaseHTTPMiddleware):
                 path=path,
                 sid=str(server_id),
             )
-            return await call_next(request)
+            response = await call_next(request)
+            logger.info(
+                "MCP_LIB: per-server response status={status} path={path} server_id={sid}",
+                status=response.status_code,
+                path=path,
+                sid=str(server_id),
+            )
+            return response
 
         # OAuth validation failed
         logger.warning(
