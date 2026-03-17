@@ -1,7 +1,7 @@
 import asyncio
-from collections.abc import AsyncGenerator
 import secrets
 import time
+from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -21,7 +21,7 @@ from infrastructure.repositories.mcp_server import (
 from infrastructure.repositories.repo_provider import Provider
 from loguru import logger
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
+from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 from pydantic import BaseModel, Field, field_validator
 from settings import settings
 
@@ -140,7 +140,9 @@ class WizardStepsService:
     ) -> None:
         """Persist the chat history list into server.meta."""
         server: MCPServer | None = await Provider.mcp_server_repo().get(server_id)  # type: ignore[arg-type]
-        updated_meta: dict[Any, Any] = dict(server.meta) if server and server.meta else {}
+        updated_meta: dict[Any, Any] = (
+            dict(server.meta) if server and server.meta else {}
+        )
         updated_meta["step_zero_chat_history"] = history
         _ = await Provider.mcp_server_repo().update(
             server_id, MCPServerUpdate(meta=updated_meta)
@@ -166,9 +168,7 @@ class WizardStepsService:
 
     def is_ready_to_start(self, text: str) -> bool:
         """Check if text contains the ready-to-start markers."""
-        return (
-            self.READY_TO_START_MARKER in text and self.END_READY_MARKER in text
-        )
+        return self.READY_TO_START_MARKER in text and self.END_READY_MARKER in text
 
     async def _post_process_assistant_response(
         self,
@@ -194,7 +194,9 @@ class WizardStepsService:
 
         if all_technical_details:
             server: MCPServer | None = await Provider.mcp_server_repo().get(server_id)  # type: ignore[arg-type]
-            updated_meta: dict[Any, Any] = dict(server.meta) if server and server.meta else {}
+            updated_meta: dict[Any, Any] = (
+                dict(server.meta) if server and server.meta else {}
+            )
             updated_meta["technical_details"] = all_technical_details
             _ = await Provider.mcp_server_repo().update(
                 server_id, MCPServerUpdate(meta=updated_meta)
@@ -256,9 +258,7 @@ class WizardStepsService:
                 yield content
 
         # Post-process: save response, extract markers
-        await self._post_process_assistant_response(
-            mcp_server_id, accumulated, history
-        )
+        await self._post_process_assistant_response(mcp_server_id, accumulated, history)
 
     async def process_wizard_chat_message(
         self,
@@ -296,7 +296,7 @@ class WizardStepsService:
             model=settings.WIZARD_CHAT_MODEL,
             messages=llm_messages,
         )
-        assistant_text: Any | Literal[''] = response.choices[0].message.content or ""
+        assistant_text: Any | Literal[""] = response.choices[0].message.content or ""
 
         # Post-process: save response, extract markers
         await self._post_process_assistant_response(
@@ -431,7 +431,9 @@ class WizardStepsService:
                 )
                 technical_details_text = f"\n\n---\n\nTECHNICAL DETAILS (use these to refine tools with exact specifications):\n{technical_details_text}\n\n---\n\nWhen refining tools, ensure they match the technical details above. Use exact endpoint names, parameter names, types, and requirements from the technical details."
 
-            server_desc: str = (server.description if server and server.description is not None else "")
+            server_desc: str = (
+                server.description if server and server.description is not None else ""
+            )
             user_content = f"Server description:\n{server_desc}\n\nCurrent tools:\n{tools_description}\n\nUser feedback:\n{feedback}{technical_details_text}"
 
             messages: list[ChatCompletionMessageParam] = cast(
@@ -447,7 +449,9 @@ class WizardStepsService:
                 response_format=ToolsResponse,
             )
             parsed_response = response.choices[0].message.parsed
-            parsed: list[Tool] = cast(list[Tool], parsed_response.tools if parsed_response else [])
+            parsed: list[Tool] = cast(
+                list[Tool], parsed_response.tools if parsed_response else []
+            )
 
             # Extract and merge additional technical details
             new_technical_details = (
@@ -502,8 +506,6 @@ class WizardStepsService:
         self,
         mcp_server_id: UUID,
         selected_tool_ids: list[UUID],
-        # TODO: remove this override when suggest is called normally.
-        setup_status_override: MCPServerSetupStatus | None = None,
     ) -> None:
         """
         Transition mcp server to another setup_status, delete the other tools
@@ -512,11 +514,6 @@ class WizardStepsService:
         _ = await Provider.mcp_tool_repo().delete_tools_not_in_list(
             mcp_server_id, selected_tool_ids
         )
-        if setup_status_override:
-            _ = await Provider.mcp_server_repo().update_setup_status(
-                mcp_server_id,
-                setup_status_override,
-            )
         _ = await Provider.mcp_server_repo().update_setup_status(
             mcp_server_id,
             MCPServerSetupStatus.env_vars_setup,
