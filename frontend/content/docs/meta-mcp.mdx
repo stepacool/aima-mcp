@@ -1,0 +1,123 @@
+---
+title: Meta-MCP Server
+description: Control MCPHero from any MCP client using the Meta-MCP server
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Overview
+
+The Meta-MCP server is an MCP-native interface to the MCPHero wizard pipeline. It exposes the same capabilities as `mcpheroctl` — creating servers, running the wizard, managing tools and env vars, deploying — but accessible from any MCP client such as Claude Desktop or Cursor. No terminal required.
+
+---
+
+## Server URL
+
+```
+https://api.mcphero.app/mcp/meta/mcp
+```
+
+---
+
+## Authentication
+
+The Meta-MCP server uses **OAuth 2.1 with JWT tokens**. Modern MCP clients (Claude Desktop, Cursor, etc.) handle the OAuth flow automatically when you first connect — you will be prompted to log in via your browser.
+
+<Callout type="info">
+You do not need to add an `Authorization` header manually. Your MCP client handles OAuth transparently via the standard MCP auth protocol.
+</Callout>
+
+---
+
+## Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `create_session` | Start a new wizard session; returns a server ID |
+| `send_conversation_message` | Send a requirement message; iterate until `is_ready: true` |
+| `get_conversation_status` | Check if requirements gathering is complete |
+| `start_wizard` | Transition session to tool suggestion phase |
+| `list_tools` | Show AI-suggested tools for the server |
+| `refine_tools` | Request changes to suggested tools |
+| `submit_tools` | Confirm the tool list |
+| `suggest_env_vars` | Generate environment variable suggestions |
+| `list_env_vars` | Show suggested environment variables |
+| `refine_env_vars` | Request changes to suggested env vars |
+| `submit_env_vars` | Confirm the env var list |
+| `set_auth` | Generate a bearer token for the server |
+| `generate_code` | Trigger async code generation |
+| `deploy` | Deploy generated code to the MCPHero runtime |
+| `get_server_details` | Fetch status and metadata for a server |
+| `get_wizard_state` | Show the current wizard pipeline state |
+
+---
+
+## Setup
+
+### Claude Desktop
+
+Add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "mcphero": {
+      "url": "https://api.mcphero.app/mcp/meta/mcp"
+    }
+  }
+}
+```
+
+Claude Desktop will initiate the OAuth flow on first use.
+
+### Cursor
+
+In Cursor settings under **MCP Servers**, add:
+
+```json
+{
+  "mcphero": {
+    "url": "https://api.mcphero.app/mcp/meta/mcp"
+  }
+}
+```
+
+### Any MCP Client
+
+Point your client at `https://api.mcphero.app/mcp/meta/mcp`. Any client that supports the MCP authentication spec will handle OAuth automatically.
+
+---
+
+## Wizard Flow via MCP
+
+The wizard pipeline works the same as with the CLI:
+
+1. **`create_session`** — get a `server_id`
+2. **`send_conversation_message`** — describe your server; repeat until `is_ready: true`
+3. **`start_wizard`** — move to tool suggestion
+4. **`list_tools`** → **`refine_tools`** (optional) → **`submit_tools`**
+5. **`suggest_env_vars`** → **`list_env_vars`** → **`refine_env_vars`** (optional) → **`submit_env_vars`**
+6. **`set_auth`** — generate a bearer token
+7. **`generate_code`** — trigger async code generation
+8. **`deploy`** — deploy to runtime
+
+---
+
+## Comparison with CLI
+
+Both the CLI (`mcpheroctl`) and the Meta-MCP server talk to the same backend service (`WizardStepsService`). The difference is transport:
+
+| | CLI | Meta-MCP |
+|-|-----|----------|
+| Transport | REST API over HTTPS | MCP protocol |
+| Auth | `~/.config/mcpheroctl/config.json` | OAuth 2.1 via MCP client |
+| Use case | Scripting, CI/CD | Interactive use inside an AI client |
+| Output | Terminal / `--json` | Tool call results |
+
+---
+
+## Further Reading
+
+- [mcphero-cli on GitHub](https://github.com/arterialist/mcphero-cli)
+- [mcphero Python SDK on GitHub](https://github.com/stepacool/mcphero)
+- [CLI Reference](/docs/cli)

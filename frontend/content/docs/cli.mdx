@@ -1,0 +1,212 @@
+---
+title: mcpheroctl CLI Reference
+description: Command-line interface for creating, managing, and deploying MCP servers with MCPHero
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Overview
+
+`mcpheroctl` is the official CLI for MCPHero. Source code on [GitHub](https://github.com/arterialist/mcphero-cli). It lets you authenticate, create and manage MCP servers, run the AI-guided wizard pipeline, and retrieve API keys — all from your terminal.
+
+---
+
+## Installation
+
+### Homebrew (macOS / Linux)
+
+```bash
+brew install arterialist/mcpheroctl/mcpheroctl
+```
+
+### uv (cross-platform)
+
+```bash
+uv tool install mcpheroctl
+```
+
+---
+
+## Authentication
+
+Config is stored at `~/.config/mcpheroctl/config.json`.
+
+| Command | Description |
+|---------|-------------|
+| `mcpheroctl auth login --token <TOKEN>` | Save an API token and authenticate |
+| `mcpheroctl auth status` | Show the currently authenticated account |
+| `mcpheroctl auth logout` | Remove saved credentials |
+
+```bash
+mcpheroctl auth login --token <TOKEN>
+mcpheroctl auth status
+```
+
+---
+
+## Server Management
+
+| Command | Description |
+|---------|-------------|
+| `mcpheroctl server list` | List all deployed MCP servers |
+| `mcpheroctl server get <SERVER_ID>` | Show details for a specific server |
+| `mcpheroctl server delete <SERVER_ID>` | Delete a server |
+| `mcpheroctl server api-key <SERVER_ID>` | Retrieve the bearer token for a server |
+| `mcpheroctl server logs <SERVER_ID>` | Stream runtime logs |
+
+---
+
+## Wizard Pipeline
+
+The wizard pipeline takes a server from an initial idea through to a running deployment. Steps must be executed in order.
+
+### 1. Create a session
+
+```bash
+mcpheroctl wizard create-session
+```
+
+Outputs a `SERVER_ID` — use this in all subsequent steps.
+
+### 2. Gather requirements via conversation
+
+```bash
+mcpheroctl wizard conversation <SERVER_ID> -m "I need a weather API server"
+```
+
+Repeat this step (adding more messages with `-m`) until the wizard reports `is_ready: true`. This step is **required** before starting.
+
+### 3. Start the wizard
+
+```bash
+mcpheroctl wizard start <SERVER_ID>
+```
+
+Transitions the session to tool suggestion.
+
+### 4. Define tools
+
+```bash
+mcpheroctl wizard list-tools <SERVER_ID>
+mcpheroctl wizard refine-tools <SERVER_ID> -m "Remove the forecast tool"
+mcpheroctl wizard submit-tools <SERVER_ID>
+```
+
+### 5. Define environment variables
+
+```bash
+mcpheroctl wizard suggest-env-vars <SERVER_ID>
+mcpheroctl wizard list-env-vars <SERVER_ID>
+mcpheroctl wizard refine-env-vars <SERVER_ID> -m "Add a UNITS variable"
+mcpheroctl wizard submit-env-vars <SERVER_ID>
+```
+
+### 6. Set authentication
+
+```bash
+mcpheroctl wizard set-auth <SERVER_ID>
+```
+
+Generates a bearer token for the server.
+
+### 7. Generate code
+
+```bash
+mcpheroctl wizard generate-code <SERVER_ID>
+```
+
+Triggers async code generation. Poll `server get` until `status` changes.
+
+### 8. Deploy
+
+```bash
+mcpheroctl wizard deploy <SERVER_ID>
+```
+
+Deploys the generated code to the MCPHero runtime.
+
+---
+
+### All Wizard Commands
+
+| Command | Description |
+|---------|-------------|
+| `wizard create-session` | Start a new wizard session; returns SERVER_ID |
+| `wizard conversation <SERVER_ID> -m "..."` | Send a message; iterate until `is_ready: true` |
+| `wizard start <SERVER_ID>` | Transition to tool suggestion |
+| `wizard list-tools <SERVER_ID>` | Show suggested tools |
+| `wizard refine-tools <SERVER_ID> -m "..."` | Refine tool suggestions |
+| `wizard submit-tools <SERVER_ID>` | Confirm tool list |
+| `wizard suggest-env-vars <SERVER_ID>` | Generate env var suggestions |
+| `wizard list-env-vars <SERVER_ID>` | Show suggested env vars |
+| `wizard refine-env-vars <SERVER_ID> -m "..."` | Refine env var suggestions |
+| `wizard submit-env-vars <SERVER_ID>` | Confirm env vars |
+| `wizard set-auth <SERVER_ID>` | Generate bearer token |
+| `wizard generate-code <SERVER_ID>` | Trigger code generation |
+| `wizard deploy <SERVER_ID>` | Deploy to runtime |
+| `wizard status <SERVER_ID>` | Show current wizard state |
+
+---
+
+## Global Options
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output result as JSON (works on every command) |
+| `--version` | Print mcpheroctl version |
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | General error |
+| `2` | Authentication error (not logged in or invalid token) |
+| `3` | Resource not found |
+| `4` | Validation error (bad arguments) |
+| `5` | Server / API error |
+| `6` | Wizard state error (step called out of order) |
+
+---
+
+## Example: End-to-End Workflow
+
+```bash
+# 1. Authenticate
+mcpheroctl auth login --token <TOKEN>
+
+# 2. Start a wizard session
+SERVER_ID=$(mcpheroctl wizard create-session --json | jq -r '.server_id')
+
+# 3. Describe requirements
+mcpheroctl wizard conversation $SERVER_ID -m "I need a weather API server with current conditions and forecasts"
+# Repeat until is_ready: true
+
+# 4. Start tool suggestion
+mcpheroctl wizard start $SERVER_ID
+
+# 5. Review and submit tools
+mcpheroctl wizard list-tools $SERVER_ID
+mcpheroctl wizard submit-tools $SERVER_ID
+
+# 6. Review and submit env vars
+mcpheroctl wizard suggest-env-vars $SERVER_ID
+mcpheroctl wizard submit-env-vars $SERVER_ID
+
+# 7. Generate and deploy
+mcpheroctl wizard generate-code $SERVER_ID
+mcpheroctl wizard deploy $SERVER_ID
+
+# 8. Get the server URL and API key
+mcpheroctl server get $SERVER_ID
+mcpheroctl server api-key $SERVER_ID
+```
+
+---
+
+## Further Reading
+
+- [mcphero-cli on GitHub](https://github.com/arterialist/mcphero-cli)
+- [mcpheroctl on PyPI](https://pypi.org/project/mcpheroctl/)

@@ -13,6 +13,9 @@
 		"claude.mdx",
 		"grok.mdx",
 		"gemini.mdx",
-		"programmatic-usage"
+		"programmatic-usage",
+		"---Developer Tools---",
+		"cli",
+		"meta-mcp"
 	]
 }

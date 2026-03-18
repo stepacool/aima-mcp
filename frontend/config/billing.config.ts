@@ -17,8 +17,8 @@ export const billingConfig = {
 			isFree: true,
 			features: [
 				"Shared runtime environment",
-				"Up to 3 tools per server",
-				"1 MCP server",
+				"Up to 5 tools per server",
+				"Unlimited MCP servers",
 				"Limited usage",
 				"Community support",
 			],

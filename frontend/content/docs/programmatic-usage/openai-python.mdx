@@ -27,11 +27,13 @@ pip install mcphero openai
 ## Step 1: Create the MCP Adapter
 
 ```python
-from mcphero.adapters.openai import MCPToolAdapterOpenAI
+from mcphero import MCPToolAdapterOpenAI, MCPServerConfig
 
 adapter = MCPToolAdapterOpenAI(
-    "https://api.mcphero.app/mcp/{server_id}",
-    headers={"Authorization": "Bearer YOUR_API_KEY"},
+    MCPServerConfig(
+        url="https://api.mcphero.app/mcp/{server_id}",
+        headers={"Authorization": "Bearer YOUR_API_KEY"},
+    )
 )
 ```
 
@@ -95,12 +97,14 @@ if response.choices[0].message.tool_calls:
 ```python
 import asyncio
 from openai import OpenAI
-from mcphero.adapters.openai import MCPToolAdapterOpenAI
+from mcphero import MCPToolAdapterOpenAI, MCPServerConfig
 
 async def main():
     adapter = MCPToolAdapterOpenAI(
-        "https://api.mcphero.app/mcp/{server_id}",
-        headers={"Authorization": "Bearer YOUR_API_KEY"},
+        MCPServerConfig(
+            url="https://api.mcphero.app/mcp/{server_id}",
+            headers={"Authorization": "Bearer YOUR_API_KEY"},
+        )
     )
     client = OpenAI()
 
@@ -153,10 +157,14 @@ results = await adapter.process_tool_calls(tool_calls, return_errors=False)
 ## Adapter Reference
 
 ```python
+from mcphero import MCPToolAdapterOpenAI, MCPServerConfig
+
 MCPToolAdapterOpenAI(
-    base_url="https://api.mcphero.app/mcp/{server_id}",
-    timeout=30.0,       # optional, request timeout in seconds
-    headers={...},       # optional, custom headers (e.g. Authorization)
+    servers=MCPServerConfig(
+        url="https://api.mcphero.app/mcp/{server_id}",
+        headers={"Authorization": "Bearer YOUR_API_KEY"},
+    ),
+    # Pass a list[MCPServerConfig] to connect to multiple servers at once
 )
 ```
 
