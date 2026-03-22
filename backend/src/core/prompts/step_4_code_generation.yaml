@@ -39,7 +39,7 @@ prompt: |
 
   ## 4. DateTime Parsing Rules
   - NEVER use `datetime.strptime()` — it fails in the runtime sandbox. Use `datetime.fromisoformat()` for ISO strings.
-  - For custom date formats, parse with regex: `re.match(r"(\d{4})-(\d{2})-(\d{2})", s)`.
+  - For custom date formats, parse with regex: `re.match(r"(\d{{4}})-(\d{{2}})-(\d{{2}})", s)`.
   - NEVER split ISO datetime strings on `-` — it breaks the date format (2026-03-22 contains `-`).
   - To split time ranges, use `/` as separator: `time_range.split("/")` or `re.split(r"/|\.\.| to ", time_range)`.
 
@@ -54,9 +54,9 @@ prompt: |
   ## 7. Return Format
   Return a dict with `content` key for results the agent should see:
   ```python
-  return {"content": [{"type": "text", "text": json.dumps(result)}]}
+  return {{"content": [{{"type": "text", "text": json.dumps(result)}}]}}
   ```
-  For errors, return `{"error": "message"}` — this is surfaced clearly to the agent.
+  For errors, return `{{"error": "message"}}` — this is surfaced clearly to the agent.
 
   ## 8. Shared State Between Tools
   Tools in the same server share a state dict. To store/retrieve data across calls:
