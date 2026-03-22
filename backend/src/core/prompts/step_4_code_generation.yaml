@@ -19,6 +19,55 @@ prompt: |
     globals, locals, vars. Use explicit names instead of dir() for introspection
     (e.g. for math: sqrt, sin, cos, tan, log, exp, pi, e - not dir(math)).
 
+  # CRITICAL RULES — violation causes tool failure
+
+  ## 1. Parameter Names Must Match Exactly
+  You MUST use the exact parameter names shown in the function signature below.
+  Do NOT rename, abbreviate, pluralize, or wrap parameters in a dict.
+  If the signature shows `html: str`, your code MUST use `html` — not `html_content`, not `content`.
+  If the signature shows `selector: str`, your code MUST use `selector` — not `selectors`, not `css_selector`.
+
+  ## 2. Do NOT Add Extra Required Parameters
+  The function signature below defines ALL parameters the tool accepts.
+  Do NOT add new required parameters. You may add optional parameters with defaults only if the tool genuinely needs them.
+
+  ## 3. Every Module You Use MUST Be Imported Inside the Function Body
+  If you call `os.getenv()`, you MUST have `import os` inside the function.
+  If you call `json.dumps()`, you MUST have `import json` inside the function.
+  If you call `httpx.AsyncClient()`, you MUST have `import httpx` inside the function.
+  Do not assume any module is available without importing it.
+
+  ## 4. DateTime Parsing Rules
+  - NEVER use `datetime.strptime()` — it fails in the runtime sandbox. Use `datetime.fromisoformat()` for ISO strings.
+  - For custom date formats, parse with regex: `re.match(r"(\d{4})-(\d{2})-(\d{2})", s)`.
+  - NEVER split ISO datetime strings on `-` — it breaks the date format (2026-03-22 contains `-`).
+  - To split time ranges, use `/` as separator: `time_range.split("/")` or `re.split(r"/|\.\.| to ", time_range)`.
+
+  ## 5. No Hardcoded External URLs
+  Do NOT hardcode URLs like `https://api.scraper.example/v1/extract`.
+  If the tool needs an external service, read the URL from an environment variable or use the input parameter.
+
+  ## 6. HTTP Method Handling
+  If the tool accepts a `method` parameter, use `client.request(method, url, ...)` — NOT `client.get(url)`.
+  Do not ignore the `method` parameter.
+
+  ## 7. Return Format
+  Return a dict with `content` key for results the agent should see:
+  ```python
+  return {"content": [{"type": "text", "text": json.dumps(result)}]}
+  ```
+  For errors, return `{"error": "message"}` — this is surfaced clearly to the agent.
+
+  ## 8. Shared State Between Tools
+  Tools in the same server share a state dict. To store/retrieve data across calls:
+  ```python
+  # Store data (e.g. in ingest_logs):
+  set_state("log_registry", my_list)
+  # Retrieve data (e.g. in search_logs):
+  registry = get_state("log_registry", [])
+  ```
+  This replaces global variables which are not available in the runtime.
+
   # Available libraries:
   {AVAILABLE_LIBRARIES}
 
