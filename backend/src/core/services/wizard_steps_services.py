@@ -88,18 +88,9 @@ class EnvVarsResponse(BaseModel):
     env_vars: list[EnvVar]
 
 
-# Parameter types that are safe to use in tool schemas.
-# "object" type should be avoided — it leads to the LLM wrapping flat params into dicts.
-PRIMITIVE_TYPES = frozenset({"string", "integer", "number", "boolean", "array"})
-
-
 def _validate_tool_schemas(tools: list[Tool]) -> list[str]:
     """
-    Validate generated tool schemas for common anti-patterns.
-
-    Catches issues that cause runtime failures:
-    - Object-type parameters (LLM wrapped flat params into a dict)
-    - Excessively long parameter names (LLM invented verbose names)
+    Validate generated tool schemas for anti-patterns that cause runtime failures.
 
     Returns list of error strings (empty if valid).
     """
@@ -107,15 +98,6 @@ def _validate_tool_schemas(tools: list[Tool]) -> list[str]:
 
     for tool in tools:
         for param in tool.parameters:
-            # Object-type params indicate the LLM wrapped flat params into a dict
-            # e.g. "options": {"delimiter": str, "quote_char": str} instead of
-            # two separate "delimiter" and "quote_char" params.
-            if param.type == "object":
-                errors.append(
-                    f"Tool '{tool.name}': parameter '{param.name}' has type 'object'. "
-                    f"Use flat primitive parameters instead — split into separate string/integer/boolean params."
-                )
-
             # Parameter names longer than 30 chars are likely verbose renames
             if len(param.name) > 30:
                 errors.append(

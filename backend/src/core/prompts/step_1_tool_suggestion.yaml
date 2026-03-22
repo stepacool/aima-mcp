@@ -11,13 +11,10 @@ prompt: |
 
   # CRITICAL PARAMETER RULES
 
-  ## 1. Use Flat Parameters — Never Wrap Into Objects
-  Each parameter MUST be a primitive type (string, integer, number, boolean, array).
-  NEVER group related parameters into a dict/object.
-  If the user says "delimiter and quote_char", create TWO separate parameters — NOT one "options" dict.
-
-  BAD: `{{"name": "options", "type": "object", ...}}` wrapping delimiter + quote_char
-  GOOD: `{{"name": "delimiter", "type": "string", ...}}` and `{{"name": "quote_char", "type": "string", ...}}`
+  ## 1. Prefer Flat Parameters
+  Prefer primitive types (string, integer, number, boolean, array) for parameters.
+  If the user lists individual fields (e.g. "delimiter and quote_char"), create separate parameters for each.
+  Only use object type when the user explicitly describes a nested structure (e.g. "a JSON schema object", "a dict of headers").
 
   ## 2. Preserve User's Exact Parameter Names
   If the user's description specifies a parameter name, use it EXACTLY.
