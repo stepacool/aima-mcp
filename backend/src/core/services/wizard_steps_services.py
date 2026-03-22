@@ -744,8 +744,18 @@ class WizardStepsService:
         if enable_logging:
             logger_instance.info(f"{log_prefix} [{tool.name}] Generating code for tool")
 
+        # Only advertise libraries that are actually importable in the runtime.
+        # This prevents the LLM from generating code that imports a package
+        # (e.g. dateutil, psycopg) that isn't installed.
+        import importlib
+
         available_libraries: list[str] = []
         for package, imports in CURATED_LIBRARIES.items():
+            base = package.split(".")[0]
+            try:
+                importlib.import_module(base)
+            except ImportError:
+                continue  # Skip packages not installed in the runtime
             available_libraries.append(
                 f"- {package}: "
                 + ("all exports" if imports is None else ", ".join(imports))
@@ -783,6 +793,12 @@ class WizardStepsService:
         )
         code_validator = CodeValidator(tier)
 
+        # Build expected parameter set from the tool schema so we can catch
+        # cases where the LLM renames, drops, or adds parameters.
+        expected_params: set[str] = {
+            param["name"] for param in tool.parameters_schema if param.get("name")
+        }
+
         MAX_RETRIES = 5
         code: str | None = None
 
@@ -796,7 +812,11 @@ class WizardStepsService:
                 logger_instance.info(f"{log_prefix} [{tool.name}] Code: {code}")
             if code is None:
                 continue
-            errors = code_validator.validate(code)
+            errors = code_validator.validate(
+                code,
+                expected_params=expected_params if expected_params else None,
+                expected_name=tool.name,
+            )
             if not errors:
                 break
             if enable_logging:
