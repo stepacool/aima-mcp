@@ -292,6 +292,22 @@ class DynamicToolLoader:
                 # Silently ignore unavailable libraries (free tier behavior)
                 continue
 
+        # Shared state for cross-tool data persistence within a server session.
+        # Tools that need to store and retrieve data (e.g. ingest_logs → search_logs)
+        # can use this dict instead of relying on undefined global variables.
+        namespace["_shared_state"] = {}
+
+        def get_state(key: str, default: Any = None) -> Any:
+            """Access a value from the shared server state."""
+            return namespace["_shared_state"].get(key, default)
+
+        def set_state(key: str, value: Any) -> None:
+            """Store a value in the shared server state."""
+            namespace["_shared_state"][key] = value
+
+        namespace["get_state"] = get_state
+        namespace["set_state"] = set_state
+
         return namespace
 
     def _compile_function(
@@ -346,6 +362,21 @@ class DynamicToolLoader:
         # Define guarded import
         allowed_imports: list[str] = list[str](CURATED_LIBRARIES.keys())
 
+        # CPython internal modules that standard library functions need at runtime.
+        # e.g. datetime.strptime() imports _strptime; codecs/encodings handle text I/O.
+        cpython_internals = frozenset(
+            {
+                "_strptime",
+                "_codecs",
+                "encodings",
+                "encodings.utf_8",
+                "encodings.ascii",
+                "io",
+                "abc",
+                "contextvars",
+            }
+        )
+
         def guarded_import(
             name: str,
             globals: dict[str, Any] | None = None,
@@ -354,6 +385,9 @@ class DynamicToolLoader:
             level: int = 0,
         ) -> Any:
             if tier != Tier.FREE:
+                return real_import(name, globals, locals, fromlist, level)
+            # Allow CPython internals needed by curated stdlib modules
+            if name in cpython_internals:
                 return real_import(name, globals, locals, fromlist, level)
             if name not in allowed_imports:
                 raise ImportError(f"Import of {name} not allowed in this context.")
