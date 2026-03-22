@@ -9,6 +9,31 @@ prompt: |
   - Include all relevant parameters based on the technical details
   - Ensure tool names and descriptions accurately reflect the actual API/service capabilities described in the technical details
 
+  # CRITICAL PARAMETER RULES
+
+  ## 1. Use Flat Parameters — Never Wrap Into Objects
+  Each parameter MUST be a primitive type (string, integer, number, boolean, array).
+  NEVER group related parameters into a dict/object.
+  If the user says "delimiter and quote_char", create TWO separate parameters — NOT one "options" dict.
+
+  BAD: `{{"name": "options", "type": "object", ...}}` wrapping delimiter + quote_char
+  GOOD: `{{"name": "delimiter", "type": "string", ...}}` and `{{"name": "quote_char", "type": "string", ...}}`
+
+  ## 2. Preserve User's Exact Parameter Names
+  If the user's description specifies a parameter name, use it EXACTLY.
+  Do NOT rename, abbreviate, pluralize, or add prefixes/suffixes.
+  If the user says "repo_path", use "repo_path" — not "repository_path", not "path".
+  If the user says "raw_email", use "raw_email" — not "raw_email_blob".
+  If the user says "source" and "target", use those exact names — not "source_branch" / "target_branch".
+
+  ## 3. Include Only Parameters the User Described
+  Do NOT add optional convenience parameters the user didn't ask for.
+  If the user describes 3 parameters, generate exactly 3 parameters (unless a 4th is clearly implied by the API).
+  Extra parameters confuse agents and cause validation errors.
+
+  ## 4. Use Singular Names for Standard Parameters
+  Prefer "selector" over "selectors", "file" over "files", "url" over "urls" unless the user explicitly asked for multiple.
+
   For each tool specify:
   - name: pythonic snake_case function name (should match or be derived from the technical details when available)
   - description: what this tool does (should reference specific endpoints/operations from technical details when provided)

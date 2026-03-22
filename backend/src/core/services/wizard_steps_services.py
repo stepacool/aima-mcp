@@ -88,6 +88,44 @@ class EnvVarsResponse(BaseModel):
     env_vars: list[EnvVar]
 
 
+# Parameter types that are safe to use in tool schemas.
+# "object" type should be avoided — it leads to the LLM wrapping flat params into dicts.
+PRIMITIVE_TYPES = frozenset({"string", "integer", "number", "boolean", "array"})
+
+
+def _validate_tool_schemas(tools: list[Tool]) -> list[str]:
+    """
+    Validate generated tool schemas for common anti-patterns.
+
+    Catches issues that cause runtime failures:
+    - Object-type parameters (LLM wrapped flat params into a dict)
+    - Excessively long parameter names (LLM invented verbose names)
+
+    Returns list of error strings (empty if valid).
+    """
+    errors: list[str] = []
+
+    for tool in tools:
+        for param in tool.parameters:
+            # Object-type params indicate the LLM wrapped flat params into a dict
+            # e.g. "options": {"delimiter": str, "quote_char": str} instead of
+            # two separate "delimiter" and "quote_char" params.
+            if param.type == "object":
+                errors.append(
+                    f"Tool '{tool.name}': parameter '{param.name}' has type 'object'. "
+                    f"Use flat primitive parameters instead — split into separate string/integer/boolean params."
+                )
+
+            # Parameter names longer than 30 chars are likely verbose renames
+            if len(param.name) > 30:
+                errors.append(
+                    f"Tool '{tool.name}': parameter '{param.name}' is very long ({len(param.name)} chars). "
+                    f"Use concise snake_case names."
+                )
+
+    return errors
+
+
 def load_prompt(filename: str, as_string: bool = True) -> str | dict[str, object]:
     try:
         with open(PROMPTS_DIR / filename, "r") as file:
@@ -360,10 +398,31 @@ class WizardStepsService:
                 parsed_response = response.choices[0].message.parsed
                 parsed = parsed_response.tools if parsed_response else []
                 if parsed:
-                    break
-                logger.warning(
-                    f"[{mcp_server_id}] step_1a returned no tools (attempt {attempt + 1}/{max_retries}), retrying"
-                )
+                    # Validate schemas before saving — catch anti-patterns early
+                    schema_errors = _validate_tool_schemas(parsed)
+                    if not schema_errors:
+                        break
+                    logger.warning(
+                        f"[{mcp_server_id}] step_1a schema errors (attempt {attempt + 1}/{max_retries}): {schema_errors}"
+                    )
+                    # Feed errors back to LLM for correction
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": response.choices[0].message.content or "",
+                        }
+                    )
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": "Your tool definitions have issues. Please fix them and return corrected tools.\n\nErrors:\n"
+                            + "\n".join(f"- {e}" for e in schema_errors),
+                        }
+                    )
+                else:
+                    logger.warning(
+                        f"[{mcp_server_id}] step_1a returned no tools (attempt {attempt + 1}/{max_retries}), retrying"
+                    )
 
             create_payloads: list[MCPToolCreate] = []
             for tool in parsed:
@@ -452,6 +511,35 @@ class WizardStepsService:
             parsed: list[Tool] = cast(
                 list[Tool], parsed_response.tools if parsed_response else []
             )
+
+            # Validate schemas — retry once if anti-patterns found
+            schema_errors = _validate_tool_schemas(parsed)
+            if schema_errors:
+                logger.warning(
+                    f"[{mcp_server_id}] step_1b schema errors (first attempt): {schema_errors}"
+                )
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": response.choices[0].message.content or "",
+                    }
+                )
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": "Your tool definitions have issues. Please fix them.\n\nErrors:\n"
+                        + "\n".join(f"- {e}" for e in schema_errors),
+                    }
+                )
+                response = await openai_client.chat.completions.parse(
+                    model=settings.TOOL_GENERATION_MODEL,
+                    messages=messages,
+                    response_format=ToolsResponse,
+                )
+                parsed_response = response.choices[0].message.parsed
+                parsed = cast(
+                    list[Tool], parsed_response.tools if parsed_response else []
+                )
 
             # Extract and merge additional technical details
             new_technical_details = (
