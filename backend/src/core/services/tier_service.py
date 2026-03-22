@@ -94,7 +94,7 @@ class CodeValidationError(Exception):
 
 
 class CodeValidator:
-    """Validates that code only uses curated libraries."""
+    """Validates that code only uses curated libraries and matches expected schema."""
 
     tier: Tier
     limits: TierLimits
@@ -103,21 +103,38 @@ class CodeValidator:
         self.tier = tier
         self.limits = TIER_LIMITS[tier]
 
-    def validate(self, code: str) -> list[str]:
+    def validate(
+        self,
+        code: str,
+        expected_params: set[str] | None = None,
+        expected_name: str | None = None,
+    ) -> list[str]:
         """
-        Validate code against tier restrictions.
+        Validate code against tier restrictions and optional schema constraints.
 
-        Returns list of validation errors (empty if valid).
+        Args:
+            code: Python source code to validate.
+            expected_params: If provided, the function signature must contain
+                exactly these parameter names (no more, no less).
+            expected_name: If provided, the function must be named this.
+
+        Returns:
+            List of validation errors (empty if valid).
         """
         errors: list[str] = []
-
-        if not self.limits.curated_only:
-            return errors  # Paid tier can use any library
 
         try:
             tree = ast.parse(code)
         except SyntaxError as e:
             return [f"Syntax error: {e}"]
+
+        if not self.limits.curated_only:
+            # Paid tier: skip import checks but still validate signature
+            if expected_params is not None or expected_name is not None:
+                errors.extend(
+                    self._validate_signature(tree, expected_params, expected_name)
+                )
+            return errors
 
         # Check imports
         for node in ast.walk(tree):
@@ -149,6 +166,74 @@ class CodeValidator:
                         errors.append(
                             f"Function '{node.func.id}' is not allowed (restricted at runtime)"
                         )
+
+        # Validate function signature against expected schema
+        if expected_params is not None or expected_name is not None:
+            errors.extend(
+                self._validate_signature(tree, expected_params, expected_name)
+            )
+
+        return errors
+
+    def _validate_signature(
+        self,
+        tree: ast.Module,
+        expected_params: set[str] | None,
+        expected_name: str | None,
+    ) -> list[str]:
+        """
+        Check that the first async def in the code has the expected name and params.
+
+        This prevents the LLM from renaming parameters that the tool schema defines,
+        which would cause runtime validation failures when MCP clients call the tool
+        with the schema-defined parameter names.
+        """
+        errors: list[str] = []
+
+        # Find the first async function definition
+        func_def: ast.AsyncFunctionDef | ast.FunctionDef | None = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.AsyncFunctionDef):
+                func_def = node
+                break
+            if isinstance(node, ast.FunctionDef) and func_def is None:
+                func_def = node
+
+        if func_def is None:
+            errors.append("No function definition found in generated code")
+            return errors
+
+        # Check function name
+        if expected_name is not None and func_def.name != expected_name:
+            errors.append(
+                f"Function name mismatch: expected '{expected_name}', "
+                f"got '{func_def.name}'"
+            )
+
+        # Check parameter names
+        if expected_params is not None:
+            # Collect actual param names, excluding 'self' and params with defaults
+            actual_params: set[str] = set()
+            for arg in func_def.args.args:
+                if arg.arg != "self":
+                    actual_params.add(arg.arg)
+            # Also include keyword-only args
+            for arg in func_def.args.kwonlyargs:
+                actual_params.add(arg.arg)
+
+            missing = expected_params - actual_params
+            extra = actual_params - expected_params
+
+            if missing:
+                errors.append(
+                    f"Missing parameters in code signature: {sorted(missing)}. "
+                    f"Expected exactly: {sorted(expected_params)}"
+                )
+            if extra:
+                errors.append(
+                    f"Extra parameters in code signature: {sorted(extra)}. "
+                    f"Expected exactly: {sorted(expected_params)}"
+                )
 
         return errors
 
