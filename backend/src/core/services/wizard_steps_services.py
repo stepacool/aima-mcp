@@ -791,6 +791,108 @@ class WizardStepsService:
         _ = await Provider.mcp_server_repo().update_auth_type(mcp_server_id, "bearer")
         return token
 
+    @staticmethod
+    def _format_param_for_signature(param: dict[str, object]) -> str:
+        """
+        Format a single parameter for the function signature.
+
+        Optional params get `= None` default so the LLM doesn't write them as required.
+        """
+        name = str(param.get("name", "arg"))
+        ptype = str(param.get("type", "str"))
+        desc = str(param.get("description", ""))
+        required = bool(param.get("required", True))
+
+        field_str = f"Field(description='{desc}')"
+        if required:
+            return f"{name}: {ptype} = {field_str}"
+        else:
+            return f"{name}: {ptype} = None  # optional — {desc}"
+
+    @staticmethod
+    def _build_shared_state_keys(tools: list[MCPTool]) -> str:
+        """
+        Generate canonical shared state key names from tool names.
+
+        Analyzes tool name patterns (ingest, store, cache, schedule, etc.) to
+        generate key names that all tools in the server should use consistently.
+
+        Returns a multi-line string like:
+            - log_store: ingested log entries (used by: ingest_logs, search_logs)
+            - alert_rules: active alert rules (used by: create_alert_rule)
+        """
+        # Patterns that indicate a tool writes data to shared state
+        _WRITE_PATTERNS: dict[str, str] = {
+            "ingest": "{domain}_store",
+            "store": "{domain}_store",
+            "cache": "{domain}_cache",
+            "schedule": "{domain}_registry",
+            "create": "{domain}_registry",
+            "add": "{domain}_registry",
+            "register": "{domain}_registry",
+            "connect": "{domain}_sessions",
+            "set": "{domain}_store",
+        }
+
+        # Patterns that indicate a tool reads from shared state
+        _READ_PATTERNS: dict[str, str] = {
+            "search": "{domain}_store",
+            "list": "{domain}_registry",
+            "get": "{domain}_store",
+            "retrieve": "{domain}_store",
+            "detect": "{domain}_store",
+            "find": "{domain}_store",
+            "query": "{domain}_store",
+            "pause": "{domain}_registry",
+            "resume": "{domain}_registry",
+        }
+
+        keys: dict[
+            str, dict[str, list[str]]
+        ] = {}  # key_name -> {"writers": [...], "readers": [...]}
+
+        for tool in tools:
+            name_lower = tool.name.lower()
+
+            # Check write patterns
+            for pattern, key_template in _WRITE_PATTERNS.items():
+                if name_lower.startswith(pattern) or f"_{pattern}" in name_lower:
+                    # Derive domain from tool name
+                    domain = (
+                        name_lower.split("_")[0]
+                        if "_" in name_lower
+                        else name_lower[:8]
+                    )
+                    key = key_template.format(domain=domain)
+                    if key not in keys:
+                        keys[key] = {"writers": [], "readers": []}
+                    keys[key]["writers"].append(tool.name)
+                    break
+
+            # Check read patterns
+            for pattern, key_template in _READ_PATTERNS.items():
+                if name_lower.startswith(pattern) or f"_{pattern}" in name_lower:
+                    domain = (
+                        name_lower.split("_")[0]
+                        if "_" in name_lower
+                        else name_lower[:8]
+                    )
+                    key = key_template.format(domain=domain)
+                    if key not in keys:
+                        keys[key] = {"writers": [], "readers": []}
+                    keys[key]["readers"].append(tool.name)
+                    break
+
+        if not keys:
+            return "No shared state keys needed for this server."
+
+        lines = []
+        for key_name, usage in sorted(keys.items()):
+            all_tools = usage["writers"] + usage["readers"]
+            lines.append(f'    - "{key_name}": used by: {", ".join(all_tools)}')
+
+        return "\n".join(lines)
+
     async def _generate_tool_code(
         self,
         server: MCPServer,
@@ -799,6 +901,8 @@ class WizardStepsService:
         tier: Tier,
         enable_logging: bool = False,
         server_id_for_log: UUID | None = None,
+        server_tools_desc: str = "",
+        shared_state_keys: str = "",
     ) -> str:
         """
         Build the code-generation prompt for a single tool and call the LLM
@@ -850,9 +954,12 @@ class WizardStepsService:
                 for param in tool.parameters_schema
             ),
             TOOL_ARGUMENTS="\n".join(
-                f"{param.get('name', 'arg')}: {param.get('type', 'str')} = Field(description='{param.get('description', '')}')"
+                self._format_param_for_signature(param)
                 for param in tool.parameters_schema
             ),
+            SERVER_TOOLS=server_tools_desc or "No other tools in this server.",
+            SHARED_STATE_KEYS=shared_state_keys
+            or "No shared state keys defined for this server.",
         )
         if enable_logging:
             logger_instance.info(f"{log_prefix} [{tool.name}] Prompt: {prompt}")
@@ -976,7 +1083,19 @@ class WizardStepsService:
                 tier=tier,
                 enable_logging=enable_logging,
                 server_id_for_log=mcp_server_id,
+                server_tools_desc=server_tools_desc,
+                shared_state_keys=shared_state_keys,
             )
+
+        # Build descriptions of all tools in this server so the LLM can see
+        # what other tools exist and coordinate shared state key names.
+        server_tools_desc = "\n".join(
+            f"- {t.name}: {t.description[:120]}" for t in server.tools
+        )
+
+        # Generate canonical shared state key names based on tool analysis.
+        # Each key gets a name derived from the most "writer" tool's domain.
+        shared_state_keys = self._build_shared_state_keys(server.tools)
 
         tasks = [generate_code_for_tool(prompt_template, tool) for tool in server.tools]
 
@@ -1053,6 +1172,10 @@ class WizardStepsService:
             tier=tier,
             enable_logging=False,
             server_id_for_log=mcp_server_id,
+            server_tools_desc="\n".join(
+                f"- {t.name}: {t.description[:120]}" for t in server.tools
+            ),
+            shared_state_keys=self._build_shared_state_keys(server.tools),
         )
 
         _ = await Provider.mcp_tool_repo().update_tool_code(tool_id, code)

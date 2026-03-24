@@ -59,14 +59,27 @@ prompt: |
   For errors, return `{{"error": "message"}}` — this is surfaced clearly to the agent.
 
   ## 8. Shared State Between Tools
-  Tools in the same server share a state dict. To store/retrieve data across calls:
-  ```python
-  # Store data (e.g. in ingest_logs):
-  set_state("log_registry", my_list)
-  # Retrieve data (e.g. in search_logs):
-  registry = get_state("log_registry", [])
-  ```
-  This replaces global variables which are not available in the runtime.
+  Tools in the same server share a state dict via `get_state(key, default)` and `set_state(key, value)`.
+
+  **CRITICAL**: You MUST use the exact key names listed in the Shared State Keys section below.
+  Do NOT invent your own key names. If the key manifest says `log_store`, use `"log_store"` — not `"log_registry"`, not `"logs"`.
+
+  When retrieving data that may not exist yet, always provide a safe default: `get_state("log_store", [])`.
+
+  ## 9. Optional Parameters
+  If a parameter is listed as optional (not in the Required list below), you MUST add a default value
+  in the function signature. Use `= None` for optional params, and handle the None case in your code.
+  Example: `cc: list[str] = None` → then use `cc or []` in the function body.
+
+  ## 10. JSON Serialization
+  Always use `json.dumps()` to serialize dicts/lists to strings. NEVER use `str(dict).replace("'", '"')`
+  — it breaks on nested structures, booleans, and special characters.
+
+  # All tools in this server:
+  {SERVER_TOOLS}
+
+  # Shared state keys for this server (USE THESE EXACT NAMES):
+  {SHARED_STATE_KEYS}
 
   # Available libraries:
   {AVAILABLE_LIBRARIES}
