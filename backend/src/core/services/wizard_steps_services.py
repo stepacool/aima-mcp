@@ -96,31 +96,6 @@ def _validate_tool_schemas(tools: list[Tool]) -> list[str]:
     """
     errors: list[str] = []
 
-    # Parameter names that conventionally carry structured data (dict/object).
-    # If the schema types these as "string", the code gen LLM will annotate them
-    # as dict, causing Pydantic validation failures at runtime.
-    _STRUCTURED_PARAM_NAMES: frozenset[str] = frozenset(
-        {
-            "headers",
-            "body",
-            "metadata",
-            "config",
-            "options",
-            "params",
-            "settings",
-            "payload",
-            "data",
-            "query",
-            "filters",
-            "properties",
-            "attributes",
-            "labels",
-            "tags",
-            "annotations",
-            "mapping",
-        }
-    )
-
     for tool in tools:
         for param in tool.parameters:
             # Parameter names longer than 30 chars are likely verbose renames
@@ -128,14 +103,6 @@ def _validate_tool_schemas(tools: list[Tool]) -> list[str]:
                 errors.append(
                     f"Tool '{tool.name}': parameter '{param.name}' is very long ({len(param.name)} chars). "
                     f"Use concise snake_case names."
-                )
-
-            # Flag structured-data params typed as string — the code gen will
-            # naturally annotate these as dict, causing a type mismatch.
-            if param.name in _STRUCTURED_PARAM_NAMES and param.type == "string":
-                errors.append(
-                    f"Tool '{tool.name}': parameter '{param.name}' is typed as 'string' but "
-                    f"conventionally holds structured data. Use 'object' or 'array' type."
                 )
 
     return errors
@@ -896,10 +863,15 @@ class WizardStepsService:
         )
         code_validator = CodeValidator(tier)
 
-        # Build expected parameter set from the tool schema so we can catch
-        # cases where the LLM renames, drops, or adds parameters.
+        # Build expected parameter set and type map from the tool schema so we can catch
+        # cases where the LLM renames, drops, adds parameters, or uses wrong types.
         expected_params: set[str] = {
             param["name"] for param in tool.parameters_schema if param.get("name")
+        }
+        expected_types: dict[str, str] = {
+            param["name"]: param["type"]
+            for param in tool.parameters_schema
+            if param.get("name") and param.get("type")
         }
 
         MAX_RETRIES = 5
@@ -919,6 +891,7 @@ class WizardStepsService:
                 code,
                 expected_params=expected_params if expected_params else None,
                 expected_name=tool.name,
+                expected_types=expected_types if expected_types else None,
             )
             if not errors:
                 break

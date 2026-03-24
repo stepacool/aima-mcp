@@ -51,19 +51,6 @@ prompt: |
   If the tool accepts a `method` parameter, use `client.request(method, url, ...)` — NOT `client.get(url)`.
   Do not ignore the `method` parameter.
 
-  ## 7. SSL/TLS in Sandboxed Runtime
-  The runtime is sandboxed and may lack CA certificate bundles. When making HTTPS requests,
-  catch SSL errors and retry without verification:
-  ```python
-  try:
-      response = await client.get(url)
-  except httpx.ConnectError as e:
-      if "CERTIFICATE_VERIFY_FAILED" in str(e):
-          response = await client.get(url, verify=False)
-      else:
-          raise
-  ```
-
   ## 7. Return Format
   Return a dict with `content` key for results the agent should see:
   ```python

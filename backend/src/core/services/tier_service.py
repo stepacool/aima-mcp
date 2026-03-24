@@ -108,6 +108,7 @@ class CodeValidator:
         code: str,
         expected_params: set[str] | None = None,
         expected_name: str | None = None,
+        expected_types: dict[str, str] | None = None,
     ) -> list[str]:
         """
         Validate code against tier restrictions and optional schema constraints.
@@ -132,7 +133,9 @@ class CodeValidator:
             # Paid tier: skip import checks but still validate signature
             if expected_params is not None or expected_name is not None:
                 errors.extend(
-                    self._validate_signature(tree, expected_params, expected_name)
+                    self._validate_signature(
+                        tree, expected_params, expected_name, expected_types
+                    )
                 )
             return errors
 
@@ -170,7 +173,9 @@ class CodeValidator:
         # Validate function signature against expected schema
         if expected_params is not None or expected_name is not None:
             errors.extend(
-                self._validate_signature(tree, expected_params, expected_name)
+                self._validate_signature(
+                    tree, expected_params, expected_name, expected_types
+                )
             )
 
         return errors
@@ -180,13 +185,15 @@ class CodeValidator:
         tree: ast.Module,
         expected_params: set[str] | None,
         expected_name: str | None,
+        expected_types: dict[str, str] | None = None,
     ) -> list[str]:
         """
-        Check that the first async def in the code has the expected name and params.
+        Check that the first async def in the code has the expected name, params, and types.
 
-        This prevents the LLM from renaming parameters that the tool schema defines,
-        which would cause runtime validation failures when MCP clients call the tool
-        with the schema-defined parameter names.
+        This prevents:
+        - LLM renaming parameters (would cause Pydantic validation failures)
+        - LLM annotating params with types that don't match the schema
+          (e.g. schema says headers is string but code annotates it as dict)
         """
         errors: list[str] = []
 
@@ -210,14 +217,21 @@ class CodeValidator:
                 f"got '{func_def.name}'"
             )
 
+        # Build a map of param name -> AST annotation string
+        ast_annotations: dict[str, str] = {}
+        all_args = func_def.args.args + func_def.args.kwonlyargs
+        for arg in all_args:
+            if arg.arg == "self":
+                continue
+            if arg.annotation is not None:
+                ast_annotations[arg.arg] = ast.unparse(arg.annotation)
+
         # Check parameter names
         if expected_params is not None:
-            # Collect actual param names, excluding 'self' and params with defaults
             actual_params: set[str] = set()
             for arg in func_def.args.args:
                 if arg.arg != "self":
                     actual_params.add(arg.arg)
-            # Also include keyword-only args
             for arg in func_def.args.kwonlyargs:
                 actual_params.add(arg.arg)
 
@@ -234,6 +248,43 @@ class CodeValidator:
                     f"Extra parameters in code signature: {sorted(extra)}. "
                     f"Expected exactly: {sorted(expected_params)}"
                 )
+
+        # Check type annotations against schema types.
+        # If schema says "string" but code annotates as "dict"/"list"/"Dict"/"List",
+        # the runtime Pydantic validation will reject calls with string arguments.
+        if expected_types is not None:
+            # Map schema type names to Python annotation patterns that indicate a mismatch
+            _SCHEMA_TO_PYTHON: dict[str, set[str]] = {
+                "string": {
+                    "dict",
+                    "Dict",
+                    "list",
+                    "List",
+                    "set",
+                    "Set",
+                    "tuple",
+                    "Tuple",
+                },
+                "integer": {"dict", "Dict", "str", "string"},
+                "boolean": {"dict", "Dict", "str", "string", "int", "integer"},
+                "number": {"dict", "Dict", "str", "string"},
+                "array": {"dict", "Dict", "str", "string", "int", "integer"},
+            }
+
+            for param_name, schema_type in expected_types.items():
+                ast_type = ast_annotations.get(param_name)
+                if ast_type is None:
+                    continue  # No annotation — can't check
+
+                bad_types = _SCHEMA_TO_PYTHON.get(schema_type, set())
+                # Normalize: "typing.Dict" → "Dict", "dict" → "dict"
+                normalized = ast_type.split(".")[-1].split("[")[0]
+                if normalized in bad_types:
+                    errors.append(
+                        f"Type mismatch: parameter '{param_name}' is '{schema_type}' in schema "
+                        f"but annotated as '{ast_type}' in code. "
+                        f"Change annotation to match schema type."
+                    )
 
         return errors
 
