@@ -75,6 +75,20 @@ prompt: |
   Always use `json.dumps()` to serialize dicts/lists to strings. NEVER use `str(dict).replace("'", '"')`
   — it breaks on nested structures, booleans, and special characters.
 
+  ## 11. Playwright Load State
+  When using Playwright, NEVER use `wait_for_load_state("networkidle")` — it hangs on
+  pages with continuous background requests (analytics, ads, CDNs). Use
+  `wait_for_timeout(5000)` or `wait_for_load_state("domcontentloaded")` instead.
+  For Cloudflare-protected pages, use `wait_for_timeout(8000)` after `goto()`.
+
+  ## 12. Playwright Data Extraction
+  Prefer `page.evaluate()` with JavaScript for data extraction over CSS selectors.
+  JavaScript evaluation is more reliable for React SPAs where CSS class names
+  are obfuscated (styled-components, CSS modules). Example:
+  ```python
+  data = await page.evaluate("() => {{ ... extract data from DOM ... }}")
+  ```
+
   # All tools in this server:
   {SERVER_TOOLS}
 
