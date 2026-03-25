@@ -50,6 +50,19 @@ CURATED_LIBRARIES = {
     "functools": None,  # Function utilities
     "time": None,  # Time functions
     "dateutil": None,  # Date utilities
+    # Browser automation
+    "playwright": None,  # Playwright browser automation
+    "playwright.async_api": [
+        "async_playwright",
+        "Page",
+        "Browser",
+        "BrowserContext",
+        "Playwright",
+        "expect",
+    ],
+    "beautifulsoup4": None,  # HTML parsing (imported as bs4)
+    "bs4": ["BeautifulSoup", "Tag", "NavigableString"],
+    "lxml": ["etree", "html"],
 }
 
 # Dangerous modules that should never be allowed

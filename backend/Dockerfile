@@ -13,6 +13,9 @@ COPY pyproject.toml uv.lock ./
 # Install dependencies using uv
 RUN uv sync --frozen
 
+# Install Playwright browsers (Chromium for headless scraping)
+RUN uv run playwright install --with-deps chromium
+
 # Copy the contents of src directly to /app
 COPY src/ ./
 
