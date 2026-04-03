@@ -167,6 +167,8 @@ export function useWizardPolling(
 		completedStep: null,
 	});
 
+	const POLLING_INTERVAL = 2000;
+
 	// Update refs when callbacks change
 	useEffect(() => {
 		onCompleteRef.current = options?.onComplete;
@@ -194,11 +196,11 @@ export function useWizardPolling(
 				// Otherwise, stop polling once processing is complete or has failed
 				refetchInterval: (query) => {
 					const state = query.state.data;
-					if (!state) return 3000; // Keep polling if no data yet
+					if (!state) return POLLING_INTERVAL; // Keep polling if no data yet
 					// If indefinite refetch is enabled, always poll
-					if (refetchIndefinitely) return 3000;
+					if (refetchIndefinitely) return POLLING_INTERVAL;
 					// Otherwise, continue polling only while processing
-					return isProcessingStatus(state.processingStatus) ? 3000 : false;
+					return isProcessingStatus(state.processingStatus) ? POLLING_INTERVAL : false;
 				},
 				refetchIntervalInBackground: true, // Continue polling even when tab is inactive
 			},
